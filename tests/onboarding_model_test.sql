@@ -15,8 +15,8 @@ BEGIN
     FROM information_schema.tables
     WHERE table_type = 'BASE TABLE'
       AND table_schema IN ('plataforma', 'organizacion', 'auditoria');
-    IF table_count <> 13 THEN
-        RAISE EXCEPTION 'Expected 13 tables, found %', table_count;
+    IF table_count <> 14 THEN
+        RAISE EXCEPTION 'Expected 14 tables, found %', table_count;
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'plataforma')

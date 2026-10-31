@@ -52,7 +52,7 @@ jobs:
           . "$env_file"
           set +a
           export PGHOST="$MASTERERP_DB_HOST" PGPORT="$MASTERERP_DB_PORT" PGDATABASE="$MASTERERP_DB_NAME" PGUSER="$MASTERERP_DB_USER" PGPASSWORD="$MASTERERP_DB_PASSWORD" PGSSLMODE="$MASTERERP_DB_SSLMODE"
-          for sql_file in schema/001_extensions_and_schemas.sql schema/002_platform_core.sql schema/003_tenant_onboarding.sql seeds/001_module_catalog.sql tests/onboarding_model_test.sql; do
+          for sql_file in schema/001_extensions_and_schemas.sql schema/002_platform_core.sql schema/003_tenant_onboarding.sql schema/004_tenant_security.sql seeds/001_module_catalog.sql tests/onboarding_model_test.sql; do
             psql --set=ON_ERROR_STOP=1 --quiet --file="$sql_file" >/dev/null
           done
           echo 'Schemas:'
