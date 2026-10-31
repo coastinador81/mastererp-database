@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: mastererp-dev-rds
@@ -24,10 +23,11 @@ jobs:
       STACK_NAME: mastererp-dev-data
     steps:
       - uses: actions/checkout@v4
-      - name: Configure AWS credentials through OIDC
+      - name: Configure AWS credentials from repository secrets
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::277352717693:role/mastererp-dev-database-infrastructure-github-role
+          aws-access-key-id: ${{ secrets.MASTERERP_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.MASTERERP_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-1
       - name: Resolve default VPC and deploy stack
         shell: bash
