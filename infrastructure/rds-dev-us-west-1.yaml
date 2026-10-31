@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: MasterERP DEV PostgreSQL database in California.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  ClientCidr:
+    Type: String
+    AllowedPattern: ^([0-9]{1,3}\.){3}[0-9]{1,3}/32$
+
+Resources:
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: PostgreSQL DEV access for MasterERP
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: !Ref ClientCidr
+          Description: GitHub Actions deployment runner
+      Tags:
+        - Key: Project
+          Value: MasterERP
+        - Key: Environment
+          Value: dev
+        - Key: Component
+          Value: database
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Default VPC subnets for MasterERP DEV database
+      SubnetIds: !Ref SubnetIds
+      Tags:
+        - Key: Project
+          Value: MasterERP
+        - Key: Environment
+          Value: dev
+        - Key: Component
+          Value: database
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBInstanceIdentifier: mastererp-dev-data
+      Engine: postgres
+      EngineVersion: '17.9'
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: 20
+      StorageType: gp3
+      DBName: mastererp
+      MasterUsername: mastererp_admin
+      ManageMasterUserPassword: true
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups:
+        - !GetAtt DatabaseSecurityGroup.GroupId
+      PubliclyAccessible: true
+      BackupRetentionPeriod: 1
+      MultiAZ: false
+      EnablePerformanceInsights: false
+      DeletionProtection: false
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Project
+          Value: MasterERP
+        - Key: Environment
+          Value: dev
+        - Key: Component
+          Value: database
+        - Key: ManagedBy
+          Value: CloudFormation
+
+Outputs:
+  DatabaseInstanceIdentifier:
+    Value: !Ref Database
+  DatabaseEndpoint:
+    Value: !GetAtt Database.Endpoint.Address
+  DatabasePort:
+    Value: !GetAtt Database.Endpoint.Port
+  DatabaseSecurityGroupId:
+    Value: !GetAtt DatabaseSecurityGroup.GroupId

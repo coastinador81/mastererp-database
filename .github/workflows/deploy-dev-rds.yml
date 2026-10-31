@@ -1,0 +1,53 @@
+name: Deploy DEV RDS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - 'infrastructure/rds-dev-us-west-1.yaml'
+      - '.github/workflows/deploy-dev-rds.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: mastererp-dev-rds
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-west-1
+      STACK_NAME: mastererp-dev-data
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::277352717693:role/mastererp-dev-database-infrastructure-github-role
+          aws-region: us-west-1
+      - name: Resolve default VPC and deploy stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          vpc_id="$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query 'Vpcs[0].VpcId' --output text)"
+          test -n "$vpc_id" && test "$vpc_id" != "None"
+          subnet_ids="$(aws ec2 describe-subnets --filters Name=vpc-id,Values="$vpc_id" Name=default-for-az,Values=true --query 'Subnets[].SubnetId' --output text | tr '\t' ',')"
+          test "$(tr ',' '\n' <<< "$subnet_ids" | sed '/^$/d' | wc -l)" -ge 2
+          client_cidr="$(curl --fail --silent --show-error https://checkip.amazonaws.com | tr -d '\n')/32"
+          aws cloudformation deploy \
+            --stack-name "$STACK_NAME" \
+            --template-file infrastructure/rds-dev-us-west-1.yaml \
+            --parameter-overrides "VpcId=$vpc_id" "SubnetIds=$subnet_ids" "ClientCidr=$client_cidr" \
+            --no-fail-on-empty-changeset
+      - name: Report non-secret database configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws rds describe-db-instances \
+            --db-instance-identifier mastererp-dev-data \
+            --query 'DBInstances[0].{Identifier:DBInstanceIdentifier,Status:DBInstanceStatus,Endpoint:Endpoint.Address,Port:Endpoint.Port,Database:DBName,User:MasterUsername,Vpc:DBSubnetGroup.VpcId,SecurityGroups:VpcSecurityGroups[].VpcSecurityGroupId}' \
+            --output json
