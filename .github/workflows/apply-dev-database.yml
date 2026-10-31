@@ -1,0 +1,61 @@
+name: Apply DEV database model
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'schema/**'
+      - 'seeds/**'
+      - 'tests/**'
+      - '.github/workflows/apply-dev-database.yml'
+
+concurrency:
+  group: mastererp-dev-database
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: [self-hosted, linux, mastererp-db-dev]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load local connection settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          env_file="$HOME/.mastererp/.env"
+          test -f "$env_file" || { echo 'Missing local database environment file.' >&2; exit 1; }
+          set -a
+          . "$env_file"
+          set +a
+          required=(MASTERERP_DB_HOST MASTERERP_DB_PORT MASTERERP_DB_NAME MASTERERP_DB_USER MASTERERP_DB_PASSWORD MASTERERP_DB_SSLMODE)
+          for variable in "${required[@]}"; do
+            test -n "${!variable:-}" || { echo "Missing required variable: $variable" >&2; exit 1; }
+          done
+          {
+            echo "MASTERERP_DB_HOST=$MASTERERP_DB_HOST"
+            echo "MASTERERP_DB_PORT=$MASTERERP_DB_PORT"
+            echo "MASTERERP_DB_NAME=$MASTERERP_DB_NAME"
+            echo "MASTERERP_DB_USER=$MASTERERP_DB_USER"
+            echo "MASTERERP_DB_SSLMODE=$MASTERERP_DB_SSLMODE"
+          } >> "$GITHUB_ENV"
+      - name: Install PostgreSQL client when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v psql >/dev/null || { sudo apt-get update -qq; sudo apt-get install -y -qq postgresql-client; }
+      - name: Apply model and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          env_file="$HOME/.mastererp/.env"
+          set -a
+          . "$env_file"
+          set +a
+          export PGHOST="$MASTERERP_DB_HOST" PGPORT="$MASTERERP_DB_PORT" PGDATABASE="$MASTERERP_DB_NAME" PGUSER="$MASTERERP_DB_USER" PGPASSWORD="$MASTERERP_DB_PASSWORD" PGSSLMODE="$MASTERERP_DB_SSLMODE"
+          for sql_file in schema/001_extensions_and_schemas.sql schema/002_platform_core.sql schema/003_tenant_onboarding.sql seeds/001_module_catalog.sql tests/onboarding_model_test.sql; do
+            psql --set=ON_ERROR_STOP=1 --quiet --file="$sql_file" >/dev/null
+          done
+          echo 'Schemas:'
+          psql --no-psqlrc --tuples-only --no-align --command "SELECT nspname FROM pg_namespace WHERE nspname IN ('plataforma', 'organizacion', 'auditoria') ORDER BY nspname;"
+          echo 'Table count:'
+          psql --no-psqlrc --tuples-only --no-align --command "SELECT count(*) FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema IN ('plataforma', 'organizacion', 'auditoria');"

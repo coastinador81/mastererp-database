@@ -1,1 +1,1 @@
-Cambios versionados de base de datos.
+Reservado para cambios versionados posteriores al modelo inicial.

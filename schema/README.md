@@ -1,1 +1,1 @@
-Modelo y definiciones de datos. Los esquemas iniciales están en `001_domains.sql`.
+Modelo idempotente de 13 tablas: extensiones y schemas, núcleo de plataforma y onboarding de tenant.

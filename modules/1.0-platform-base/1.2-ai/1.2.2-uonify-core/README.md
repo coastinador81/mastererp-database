@@ -1,3 +1,3 @@
 # Uonify Core data
 
-Responsabilidad: conversaciones, mensajes, contextos y ejecuciones de herramientas. Estado: modelled en `schema/002_tenant_model.sql`.
+Responsabilidad: acceso temporal a Uonify Core. PostgreSQL no conserva historial de conversación ni contexto. Estado: planned.
