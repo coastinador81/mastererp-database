@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pip install --no-compile --target package pg8000==1.31.5
+          pip install --no-compile --target package pg8000==1.31.5 scramp==1.4.6
           cp migrations/lambda/handler.py package/
           mkdir package/sql
           cp schema/*.sql seeds/*.sql tests/*.sql package/sql/
