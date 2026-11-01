@@ -1,5 +1,22 @@
 # MasterERP Database
 
+## Mapa físico y referencias
+
+```text
+modules/
+schema/
+seeds/
+tests/
+migrations/lambda/
+infrastructure/
+documentation/
+docs/
+scripts/
+.github/workflows/
+```
+
+[Permisos de onboarding](documentation/onboarding-permissions.md) y [validación DEV y recuperación](documentation/dev-authorization-validation.md). Las rutas con llaves resumen carpetas existentes, no son nombres literales. Database usa workflows existentes; publicar cambios observados puede aplicar SQL automáticamente. En Platform las pruebas Python de onboarding requieren sus dependencias y, para integración, una base desechable autorizada. Infrastructure no tiene un despliegue consolidado listo: revisar transición de stacks antes de aplicar plantillas.
+
 Modelo de datos, migraciones y pruebas SQL de MasterERP. Tenant es la unidad de aislamiento: un usuario puede pertenecer a varios tenants, con rol y módulos habilitados dentro de cada uno. La jerarquía funcional se replica en `modules/`.
 
 ```
@@ -10,3 +27,9 @@ mastererp-database/
 ├── seeds/                   Sin datos demo.
 └── documentation/           Diccionario de datos y decisiones asociadas.
 ```
+
+## Guía de trabajo
+
+Leer [PROJECT.md](PROJECT.md), [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.md), [carpetas](docs/FOLDER_STANDARD.md), [desarrollo](docs/DEVELOPMENT_STANDARD.md) y [registro](docs/MODULE_REGISTRY.md). Requisito para validación local: Python disponible; ejecutar `python scripts/validate_structure.py` (en Windows puede usarse `py scripts/validate_structure.py`) y `git diff --check`. No es obligatorio instalar herramientas locales para consultar documentación; el workflow existente Validate structure realiza el control en GitHub.
+
+Estado: estructura funcional creada; las implementaciones y despliegues se distinguen en PROJECT.md y README de cada módulo. No hay un build frontend operativo declarado en este repositorio.

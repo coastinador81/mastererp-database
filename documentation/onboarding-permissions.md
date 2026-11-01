@@ -1,4 +1,4 @@
-# Onboarding authorization — local candidate, pending PostgreSQL validation
+# Onboarding authorization — validado en RDS DEV
 
 | Resource | Active owner in matching context | Non-admin member | Outsider / missing tenant |
 | --- | --- | --- | --- |
@@ -18,4 +18,4 @@ create_tenant_with_owner retains its signature; clear tenant context for bootstr
 
 004 removes blanket/default grants and checks creation authorization. 005 reapplies explicit grants and stricter policies on every migration run, before seeds/tests. Packaging already includes schema/*.sql. No table/data deletion and no new BYPASSRLS grant.
 
-Validation status: no PostgreSQL execution yet. SET ROLE fixtures cover owner/member updates, roles denial, owner spoofing, missing/incompatible context, outsider reads/writes, session INSERT/UPDATE reassociation, idempotency actor/operation isolation and provisioning primitives. The handler reapplies the schema before these assertions. These checks are prepared but NOT passed on PostgreSQL. Full backend provisioning remains a separate integration dependency. SECURITY DEFINER ownership must remain a trusted migration role; application must not own tables or functions or inherit an elevated role. See dev-authorization-validation.md for execution and recovery.
+Validado en PostgreSQL RDS DEV mediante commit 454fec7 y ejecución 41310430235. Las comprobaciones SQL como mastererp_app pasaron, incluida reaplicación. No acredita funcionamiento completo del backend. Mantener credenciales de aplicación y contexto transaccional de confianza; ver dev-authorization-validation.md para recuperación.

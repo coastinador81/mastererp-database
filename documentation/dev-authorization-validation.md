@@ -1,8 +1,8 @@
-# Validación autorizaciones DEV — pendiente de ejecución real
+# Validación autorizaciones DEV — ejecutado en DEV
 
 ## Preparación y alcance
 
-No se ha ejecutado SQL remoto ni se han instalado herramientas locales. El push a dev inicia automáticamente Apply DEV database model: no publicar sin revisar el diff y autorizar explícitamente la aplicación a DEV.
+La validación se ejecutó en RDS DEV mediante commit 454fec7, ejecución 41310430235, con éxito; no se instalaron herramientas locales. El push a dev inicia automáticamente Apply DEV database model: no publicar sin revisar el diff y autorizar explícitamente la aplicación a DEV.
 
 El paquete existente copia schema/*.sql, seeds/*.sql y tests/*.sql. Orden explícito del handler: 001 extensiones, 002 core, 003 onboarding, 004 seguridad, 005 autorización, catálogo; reaplica esta fase una segunda vez y finalmente ejecuta onboarding_model_test.sql y onboarding_authorization_test.sql. La segunda pasada comprueba repetibilidad y las pruebas posteriores comprueban los permisos efectivos resultantes.
 
@@ -26,4 +26,4 @@ Los fixtures usan UUID fijos identificables y correos example.invalid. No usan O
 - Aprovisionamiento probado a nivel SQL (tenant, módulos, empresa), no ejecución end-to-end de Lambdas backend. Revisar contratos backend por separado.
 - Si falla: conservar logs sanitizados/correlation_id, detener nuevos despliegues y analizar la fase. No desactivar RLS ni restaurar grants generales. Preparar una corrección hacia delante, revisar y reejecutar el flujo completo. Revertir Git por sí solo no restaura ACL/policies ya confirmadas. Restaurar un backup solo mediante un plan independiente aprobado; no borrar tenants ni tablas para recuperar.
 
-Las pruebas PostgreSQL siguen PENDIENTES. Las verificaciones estáticas no acreditan ejecución, grants de SET ROLE reales ni comportamiento del motor RDS.
+Las pruebas PostgreSQL descritas se ejecutaron y pasaron en la ejecución 41310430235. Las verificaciones estáticas no acreditan ejecución, grants de SET ROLE reales ni comportamiento del motor RDS.

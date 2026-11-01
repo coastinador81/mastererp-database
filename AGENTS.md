@@ -1,6 +1,6 @@
 # Instrucciones para IA
 
-Antes de modificar archivos, leer README.md, CONTRIBUTING.md y docs/FOLDER_STANDARD.md. Estas instrucciones no sustituyen las indicaciones explícitas del propietario ni las políticas del entorno.
+Antes de modificar archivos, leer PROJECT.md, README.md, CONTRIBUTING.md, docs/DEVELOPMENT_STANDARD.md, docs/FOLDER_STANDARD.md y el README del módulo afectado. Estas instrucciones no sustituyen las indicaciones explícitas del propietario ni las políticas del entorno.
 
 ## Responsabilidad de este repositorio
 
@@ -27,3 +27,15 @@ Continuar las comprobaciones independientes. No inventar permisos, implementacio
 ## Alcance del control
 
 El validador comprueba estructura local básica; no certifica seguridad, equivalencia con AWS, propiedad entre stacks ni sincronización de repositorios separados. Su resultado es orientativo: mostrar advertencias y recomendar correcciones. No configurar este workflow como obligatorio ni añadir protección de rama para imponer este estándar. La decisión de integración corresponde al desarrollador y al propietario.
+
+## Alcance y decisiones
+
+## Definición progresiva y responsabilidades
+
+Los módulos comienzan con objetivos generales y límites de responsabilidad. No es obligatorio especificar todos los módulos, requisitos o contratos por adelantado: el detalle de cada tarea se define cuando se prioriza.
+
+El Product Owner ampliará progresivamente los objetivos, prioridades, reglas de negocio y criterios de aceptación. Cada desarrollador elaborará la solución técnica y actualizará la documentación del módulo conforme avance, conservando los objetivos generales y límites acordados.
+
+Las IA pueden resolver decisiones técnicas dentro de los estándares y contratos vigentes. Las decisiones funcionales no definidas se marcan como pendientes y se acuerdan con el Product Owner antes de implementar el comportamiento afectado; el trabajo independiente puede continuar. No inventar requisitos ni expandir artificialmente los README para simular una especificación completa.
+
+No instalar herramientas, publicar ni desplegar por una tarea documental. Respetar contratos y alcance; no inventar recursos o pruebas aprobadas. Preguntar solo cuando la ambigüedad cambie contratos, propiedad o arquitectura; continuar comprobaciones independientes. Verificar implementación real y comunicar validaciones omitidas.
