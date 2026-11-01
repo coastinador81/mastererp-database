@@ -1,3 +1,3 @@
 # Transport data
 
-Responsabilidad: repartidores, transportistas y despacho. Estado: planned.
+Responsabilidad: repartidores, transportistas, Chipipro y MRW. Estado: planned.
