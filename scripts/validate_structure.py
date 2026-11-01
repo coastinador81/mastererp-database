@@ -27,10 +27,10 @@ for base in bases:
         if "1.2-ai" in relative or "1.2.2-uonify" in relative:
             errors.append(f"{relative}: ubicación antigua; usar 0-uonify")
     if not paths:
-        errors.append(f"{base}: no hay módulos numerados")
+        errors.append(f"{base}: no hay carpetas funcionales de módulos o pantallas reconocidas")
     sets.append(paths)
 if platform and sets[0] != sets[1]:
-    errors.append("frontend/backend: las rutas numeradas no coinciden")
+    errors.append("frontend/backend: las rutas funcionales de módulos y pantallas no coinciden")
 if infra:
     for name in ("README.md", "resources.yml"):
         if not (root / "modules" / name).is_file():

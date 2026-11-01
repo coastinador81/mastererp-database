@@ -17,15 +17,23 @@ No especificar todo el producto de antemano. El Product Owner amplía prioridade
 
 ## Ejemplo ilustrativo; no son carpetas ni recursos implementados
 
-| Nivel | Ruta relativa equivalente en las cuatro capas | Recursos ilustrativos |
-| --- | --- | --- |
-| General | raíz modules/ | API compartida existente: modules/api-gateways.yml, sin duplicarla |
-| Módulo | 2.1-catalog/ | Un recurso común del catálogo, solo si se necesita |
-| Submódulo | 2.1-catalog/2.1.1-products/ | Dependencia propia compartida por sus pantallas, si procede |
-| Pantalla sin recursos | …/screens/list/ | resources.yml vacío; consume API general y recurso de catálogo |
-| Subpantalla exclusiva | …/screens/detail/screens/history/ | Un recurso exclusivo ilustrativo, pendiente de diseño |
+| Elemento ilustrativo | Platform frontend | Platform backend | Database | Infrastructure |
+| --- | --- | --- | --- | --- |
+| Módulo | `frontend/modules/2.1-catalog/` | `backend/modules/2.1-catalog/` | `modules/2.1-catalog/` | `modules/2.1-catalog/` |
+| Submódulo | `frontend/modules/2.1-catalog/2.1.1-products/` | `backend/modules/2.1-catalog/2.1.1-products/` | `modules/2.1-catalog/2.1.1-products/` | `modules/2.1-catalog/2.1.1-products/` |
+| Pantalla listado | `frontend/modules/2.1-catalog/2.1.1-products/screens/list/` | `backend/modules/2.1-catalog/2.1.1-products/screens/list/` | `modules/2.1-catalog/2.1.1-products/screens/list/` | `modules/2.1-catalog/2.1.1-products/screens/list/` |
+| Pantalla detalle | `frontend/modules/2.1-catalog/2.1.1-products/screens/detail/` | `backend/modules/2.1-catalog/2.1.1-products/screens/detail/` | `modules/2.1-catalog/2.1.1-products/screens/detail/` | `modules/2.1-catalog/2.1.1-products/screens/detail/` |
+| Subpantalla historial | `frontend/modules/2.1-catalog/2.1.1-products/screens/detail/screens/history/` | `backend/modules/2.1-catalog/2.1.1-products/screens/detail/screens/history/` | `modules/2.1-catalog/2.1.1-products/screens/detail/screens/history/` | `modules/2.1-catalog/2.1.1-products/screens/detail/screens/history/` |
 
-Prefijos: Platform frontend/modules/ y backend/modules/; Database modules/; Infrastructure modules/. Cada carpeta funcional tiene README; solo Infrastructure añade resources.yml. Los recursos del ejemplo no son plantillas ni una autorización para crear AWS. Cada consumidor documenta referencias que recibe del padre u otro nivel; carpeta y stack son conceptos distintos. Un stack puede incluir varias carpetas. Una pantalla no exige Lambda, API ni stack.
+| Alcance ilustrativo | Declaración en Infrastructure |
+| --- | --- |
+| General compartido | Raíz funcional `modules/`; API ya declaradas en `modules/api-gateways.yml`, sin duplicarlas |
+| Común del módulo | `modules/2.1-catalog/resources.yml` |
+| Común del submódulo | `modules/2.1-catalog/2.1.1-products/resources.yml` |
+| Pantalla sin recursos propios | `modules/2.1-catalog/2.1.1-products/screens/list/resources.yml` vacío y excluido del despliegue |
+| Subpantalla con recurso exclusivo | `modules/2.1-catalog/2.1.1-products/screens/detail/screens/history/resources.yml`, cuando se implemente |
+
+Todo el ejemplo es ilustrativo: no acredita carpetas o recursos implementados ni es una plantilla desplegable. Cada carpeta funcional tiene README; solo Infrastructure añade resources.yml. Los consumidores reciben referencias explícitas mediante parámetros/salidas documentados. Cada recurso se declara una sola vez y, si es compartido, en el padre común más cercano. Se pueden consumir recursos de distintos niveles. Las carpetas no conectan stacks automáticamente; un stack puede abarcar varias carpetas. Una pantalla no exige Lambda, API ni stack.
 
 ## Datos y ejecución reales
 
