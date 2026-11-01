@@ -1,9 +1,11 @@
 name: Deploy DEV migrator
 on:
-  workflow_dispatch:
-  push:
-    branches: [dev]
-    paths: ['.github/workflows/deploy-migrator.yml']
+  workflow_call:
+    secrets:
+      MASTERERP_AWS_ACCESS_KEY_ID:
+        required: true
+      MASTERERP_AWS_SECRET_ACCESS_KEY:
+        required: true
 permissions:
   contents: read
 jobs:

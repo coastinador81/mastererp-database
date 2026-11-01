@@ -10,6 +10,7 @@ on:
       - 'tests/**'
       - 'migrations/lambda/**'
       - '.github/workflows/apply-dev-database.yml'
+      - '.github/workflows/deploy-migrator.yml'
 
 permissions:
   contents: read
@@ -19,7 +20,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  deploy-migrator:
+    uses: ./.github/workflows/deploy-migrator.yml
+    secrets: inherit
   apply:
+    needs: deploy-migrator
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
