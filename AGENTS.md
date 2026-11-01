@@ -8,6 +8,8 @@ RDS, migrador, SQL, seeds, pruebas y workflows de base de datos pertenecen aquí
 
 ## Comportamiento obligatorio
 
+Secuencia de trabajo: leer contexto y README afectado/padres; identificar dominio y capas; buscar código y recursos existentes; conservar contratos/cambios; definir una sola propiedad por recurso y documentar conexiones explícitas; implementar solo la tarea priorizada; actualizar documentación y ejecutar validaciones proporcionales informando omitidas. Usar docs/HOW_TO_BUILD_A_MODULE.md. Resolver decisiones técnicas rutinarias sin confirmaciones adicionales dentro del alcance autorizado.
+
 - Mantener nombres, numeración y rutas funcionales equivalentes en las cuatro capas. Uonify es 0-uonify; Marketing 2.8.2, MasterCRM 2.8.3, Google 2.8.4, Microsoft 2.8.5. Transporte incluye Chipipro y MRW; no crear Despacho.
 - Cada nuevo módulo, submódulo o pantalla necesita README de responsabilidad, estado, dependencias y propietario. Infrastructure añade resources.yml. Sin implementación, no generar código vacío.
 - No duplicar recursos: los compartidos pertenecen al padre común. Referenciar explícitamente parámetros y salidas; las carpetas no crean relaciones de stacks automáticamente.

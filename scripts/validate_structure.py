@@ -4,15 +4,19 @@ import re
 import sys
 
 root = pathlib.Path(__file__).resolve().parents[1]
-platform = root.name == "mastererp-platform"
-infra = root.name == "mastererp-infrastructure"
+platform = (root / "frontend/modules").is_dir() and (root / "backend/modules").is_dir()
+infra = (root / "modules/api-gateways.yml").is_file()
+database = (root / "schema").is_dir() and (root / "migrations/lambda").is_dir()
+if sum((platform, infra, database)) != 1:
+    sys.exit("ADVERTENCIA: no se identifica un único tipo de repositorio por su estructura")
 bases = [root / "frontend/modules", root / "backend/modules"] if platform else [root / "modules"]
 errors = []
 sets = []
 for base in bases:
     paths = set()
     for folder in sorted(base.rglob("*")):
-        if not folder.is_dir() or not re.match(r"^\d", folder.name):
+        screen = folder.parent.name == "screens"
+        if not folder.is_dir() or not (re.match(r"^\d", folder.name) or screen):
             continue
         relative = folder.relative_to(base).as_posix()
         paths.add(relative)

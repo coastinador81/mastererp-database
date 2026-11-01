@@ -2,7 +2,7 @@
 
 Objetivo específico: Guiar el alta de tenants, conservar su progreso y aprovisionar las capacidades autorizadas.
 
-Responsabilidad: configuración inicial de tenant. Estado: planned.
+Responsabilidad: configuración inicial de tenant. Estado: parcial; ver evidencia de esta capa más abajo.
 
 ## Contrato y estado de esta capa
 
