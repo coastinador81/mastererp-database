@@ -8,4 +8,6 @@ El aislamiento se mantiene con `tenant_id` en relaciones operativas. `auditoria.
 
 Uonify es temporal: PostgreSQL no conserva historial de conversaciones, mensajes, prompts, respuestas, audio ni contexto. El acceso a Uonify se resuelve durante la sesión mediante sus contratos de plataforma.
 
-Durante DEV, el runner self-hosted lee su conexión local desde `$HOME/.mastererp/.env`. Más adelante la conexión migrará de `.env` a AWS Secrets Manager.
+Durante DEV, GitHub Actions usa credenciales AWS guardadas como secretos del repositorio para invocar la Lambda `mastererp-dev-database-migrator` en California (`us-west-1`). La Lambda se conecta de forma privada y lee las credenciales del secreto administrado por RDS; GitHub Actions no recibe la contraseña PostgreSQL ni se conecta directamente a la base.
+
+Este repositorio mantiene RDS, el migrador, sus workflows y los SQL. `mastererp-infrastructure` mantiene las definiciones de API Gateway compartidos y las tres Lambdas funcionales de onboarding; `mastererp-platform` mantiene su código.
