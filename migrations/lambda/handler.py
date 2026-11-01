@@ -26,7 +26,7 @@ def _connection():
     return pg8000.native.Connection(
         user=settings["username"],
         password=settings["password"],
-        host=settings["host"],
+        host=os.environ["DB_HOST"],
         port=int(settings.get("port", 5432)),
         database=os.environ.get("DB_NAME", "mastererp"),
         ssl_context=ssl.create_default_context(),

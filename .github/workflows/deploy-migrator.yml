@@ -47,12 +47,15 @@ jobs:
           aws iam attach-role-policy --role-name "$role" --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
           jq -n --arg secret "$secret" '{Version:"2012-10-17",Statement:[{Effect:"Allow",Action:"secretsmanager:GetSecretValue",Resource:$secret}]}' > policy.json
           aws iam put-role-policy --role-name "$role" --policy-name ReadDatabaseSecret --policy-document file://policy.json
-          jq -n --arg secret "$secret" '{Variables:{DB_SECRET_ARN:$secret,DB_NAME:"mastererp",ENVIRONMENT:"dev",PROJECT:"mastererp"}}' > environment.json
+          db_host=$(aws rds describe-db-instances --db-instance-identifier mastererp-dev-data --query 'DBInstances[0].Endpoint.Address' --output text)
+          jq -n --arg secret "$secret" --arg host "$db_host" '{Variables:{DB_SECRET_ARN:$secret,DB_HOST:$host,DB_NAME:"mastererp",ENVIRONMENT:"dev",PROJECT:"mastererp"}}' > environment.json
           jq -n --argjson subnets "$subnets" --arg sg "$sg" '{SubnetIds:$subnets,SecurityGroupIds:[$sg]}' > vpc.json
           sleep 15
           name=mastererp-dev-database-migrator
           if aws lambda get-function --function-name "$name" >/dev/null 2>&1; then
             aws lambda update-function-code --function-name "$name" --zip-file fileb://function.zip >/dev/null
+            aws lambda wait function-updated-v2 --function-name "$name"
+            aws lambda update-function-configuration --function-name "$name" --environment file://environment.json >/dev/null
             aws lambda wait function-updated-v2 --function-name "$name"
           else
             aws lambda create-function --function-name "$name" --runtime python3.12 --handler handler.lambda_handler --role "arn:aws:iam::277352717693:role/$role" --memory-size 512 --timeout 300 --zip-file fileb://function.zip --environment file://environment.json --vpc-config file://vpc.json --tags Project=MasterERP,Environment=dev,Component=database-migrator >/dev/null
