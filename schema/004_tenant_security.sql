@@ -8,11 +8,10 @@ END;
 $$;
 
 GRANT USAGE ON SCHEMA plataforma, organizacion, auditoria TO mastererp_app;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA plataforma, organizacion, auditoria TO mastererp_app;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA plataforma, organizacion, auditoria TO mastererp_app;
-ALTER DEFAULT PRIVILEGES IN SCHEMA plataforma GRANT SELECT, INSERT, UPDATE ON TABLES TO mastererp_app;
-ALTER DEFAULT PRIVILEGES IN SCHEMA organizacion GRANT SELECT, INSERT, UPDATE ON TABLES TO mastererp_app;
-ALTER DEFAULT PRIVILEGES IN SCHEMA auditoria GRANT INSERT ON TABLES TO mastererp_app;
+-- Explicit grants are applied after all tables and policies below.
+ALTER DEFAULT PRIVILEGES IN SCHEMA plataforma REVOKE ALL ON TABLES FROM mastererp_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA organizacion REVOKE ALL ON TABLES FROM mastererp_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA auditoria REVOKE ALL ON TABLES FROM mastererp_app;
 
 CREATE TABLE IF NOT EXISTS plataforma.idempotency_keys (
     idempotency_key varchar(128) PRIMARY KEY,
@@ -52,7 +51,7 @@ RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = plataforma, public
+SET search_path = pg_catalog, plataforma, pg_temp
 AS $$
     SELECT EXISTS (
         SELECT 1
@@ -74,13 +73,28 @@ CREATE OR REPLACE FUNCTION plataforma.create_tenant_with_owner(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = plataforma, public
+SET search_path = pg_catalog, plataforma, pg_temp
 AS $$
 DECLARE
     v_tenant_id uuid;
     v_owner_role_id uuid;
     v_cached jsonb;
 BEGIN
+    IF plataforma.current_app_user_id() IS NULL
+       OR p_owner_user_id IS DISTINCT FROM plataforma.current_app_user_id()
+       OR plataforma.current_app_tenant_id() IS NOT NULL
+       OR NOT EXISTS (SELECT 1 FROM plataforma.users
+                      WHERE id = p_owner_user_id AND status = 'active') THEN
+        RAISE EXCEPTION 'Unauthorized tenant creation' USING ERRCODE = '42501';
+    END IF;
+    IF p_idempotency_key IS NOT NULL THEN
+        PERFORM pg_advisory_xact_lock(hashtextextended(p_idempotency_key, 0));
+        IF EXISTS (SELECT 1 FROM plataforma.idempotency_keys
+                   WHERE idempotency_key = p_idempotency_key
+                     AND (actor_user_id <> p_owner_user_id OR operation <> 'tenant.create')) THEN
+            RAISE EXCEPTION 'Idempotency key unavailable' USING ERRCODE = '42501';
+        END IF;
+    END IF;
     IF p_idempotency_key IS NOT NULL THEN
         SELECT response_body INTO v_cached
         FROM plataforma.idempotency_keys

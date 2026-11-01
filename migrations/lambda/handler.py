@@ -9,14 +9,19 @@ import boto3
 import pg8000.native
 
 
-SQL_FILES = (
+SCHEMA_FILES = (
     "001_extensions_and_schemas.sql",
     "002_platform_core.sql",
     "003_tenant_onboarding.sql",
     "004_tenant_security.sql",
-    "001_module_catalog.sql",
-    "onboarding_model_test.sql",
+    "005_onboarding_authorization.sql",
 )
+SEED_FILES = ("001_module_catalog.sql",)
+TEST_FILES = (
+    "onboarding_model_test.sql",
+    "onboarding_authorization_test.sql",
+)
+SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 
 
 def _connection():
@@ -39,10 +44,30 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
+    phase = "lock"
+    filename = "none"
+    committed_passes = 0
     try:
         connection.run("SELECT pg_advisory_lock(734561903)")
-        for filename in SQL_FILES:
-            connection.run((sql_dir / filename).read_text(encoding="utf-8"))
+        # Commit the model independently of rollback-only fixtures. A second
+        # application exercises repeatability before checking effective ACLs.
+        for _ in range(2):
+            phase = "schema" if committed_passes == 0 else "reapply"
+            connection.run("BEGIN")
+            try:
+                for filename in SCHEMA_FILES + SEED_FILES:
+                    connection.run((sql_dir / filename).read_text(encoding="utf-8"))
+                connection.run("COMMIT")
+                committed_passes += 1
+            except Exception:
+                connection.run("ROLLBACK")
+                raise
+        for filename in TEST_FILES:
+            phase = "tests"
+            try:
+                connection.run((sql_dir / filename).read_text(encoding="utf-8"))
+            finally:
+                connection.run("ROLLBACK")
         schemas = [row[0] for row in connection.run(
             "SELECT nspname FROM pg_namespace "
             "WHERE nspname IN ('plataforma', 'organizacion', 'auditoria') ORDER BY nspname"
@@ -61,7 +86,12 @@ def lambda_handler(event, context):
             "correlation_id": correlation_id,
         }
     except Exception as error:
-        raise RuntimeError("Database migration failed") from error
+        details = error.args[0] if error.args and isinstance(error.args[0], dict) else {}
+        sqlstate = details.get("C", "unknown")
+        raise RuntimeError(
+            f"phase={phase}; file={filename}; sqlstate={sqlstate}; "
+            f"committed_passes={committed_passes}; correlation_id={correlation_id}"
+        ) from None
     finally:
         try:
             connection.run("SELECT pg_advisory_unlock(734561903)")
