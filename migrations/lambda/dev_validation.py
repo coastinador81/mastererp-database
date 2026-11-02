@@ -138,7 +138,7 @@ def foundation_state(connection, event, context):
     if label not in ("admin_a", "admin_b"):
         raise ValueError("Invalid QA actor label")
     suffix = label[-1]
-    allowed = {"inspect", "baseline", "user_inactive", "tenant_inactive", "membership_inactive", "permission_denied", "module_disabled", "restore"}
+    allowed = {"inspect", "baseline", "user_inactive", "tenant_inactive", "membership_inactive", "permission_denied", "module_disabled", "restore", "cleanup_session"}
     if not re.fullmatch(r"qa-identity-[0-9a-f]{12}", run) or case not in allowed:
         raise ValueError("Invalid QA foundation case")
     connection.run("BEGIN")
@@ -151,6 +151,17 @@ def foundation_state(connection, event, context):
         if len(rows)!=1:
             raise ValueError("QA state not uniquely identified")
         actor,tenant,user_status,tenant_status,member_status,module=rows[0]
+        if case == 'cleanup_session':
+            session_id=str(UUID(str(event.get('session_id',''))))
+            nonce=str(UUID(str(event.get('nonce',''))))
+            removed=connection.run("""DELETE FROM plataforma.onboarding_sessions
+              WHERE id=:id AND initiated_by_user_id=:actor AND tenant_id IS NULL
+              AND context->>'qa_validation'=:run AND context->>'qa_probe'=:nonce
+              RETURNING id""",id=session_id,actor=actor,run=run,nonce=nonce)
+            if len(removed)!=1:
+                raise ValueError("QA session cleanup did not identify exactly one owned probe")
+            connection.run("COMMIT")
+            return {"status":"succeeded","case":case,"removed_own_probe":1}
         overrides = connection.run("SELECT permissions_override FROM plataforma.user_tenants WHERE user_id=:actor AND tenant_id=:tenant",actor=actor,tenant=tenant)[0][0]
         assignment = connection.run("SELECT status FROM plataforma.tenant_modules WHERE tenant_id=:tenant AND module_id=:module",tenant=tenant,module=module)
         baseline = {"user":user_status,"tenant":tenant_status,"membership":member_status,
@@ -180,3 +191,31 @@ def foundation_state(connection, event, context):
         connection.run("ROLLBACK")
         data=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
         raise RuntimeError("QA foundation state failed; sqlstate="+data.get('C','unknown')) from None
+
+
+def inspect_foundation(connection,event,context):
+    """Read-only catalog evidence, hashes and integrity counts; no customer rows."""
+    _dev_guard(context)
+    connection.run("BEGIN READ ONLY")
+    try:
+        functions=connection.run("""SELECT n.nspname||'.'||p.proname,
+          encode(sha256(convert_to(p.prosrc,'UTF8')),'hex'),p.prosecdef,
+          p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+          WHERE n.nspname IN ('plataforma','organizacion') AND p.proname IN
+          ('resolve_external_identity','has_current_tenant_permission','list_current_user_spaces',
+           'has_current_tenant_capability','create_tenant_with_owner','register_company_once')
+          ORDER BY 1""")
+        ledgers=connection.run("""SELECT table_schema||'.'||table_name FROM information_schema.tables
+          WHERE table_schema NOT IN ('pg_catalog','information_schema') AND
+          (table_name ILIKE '%migration%' OR table_name IN
+           ('schema_version','schema_migrations','flyway_schema_history','alembic_version','databasechangelog')) ORDER BY 1""")
+        constraints=connection.run("""SELECT conname,convalidated FROM pg_constraint
+          WHERE conname='branches_tenant_company_fk' AND conrelid='organizacion.branches'::regclass""")
+        inconsistent=connection.run("""SELECT count(*) FROM organizacion.branches b
+          WHERE NOT EXISTS(SELECT 1 FROM organizacion.companies c WHERE c.id=b.company_id AND c.tenant_id=b.tenant_id)""")[0][0]
+        legacy=connection.run("SELECT count(*) FROM plataforma.idempotency_keys WHERE request_fingerprint IS NULL")[0][0]
+        return {"status":"succeeded","functions":[{"name":r[0],"body_sha256":r[1],"security_definer":r[2],"config":r[3]} for r in functions],
+                "migration_ledgers_detected":[r[0] for r in ledgers],"constraints":[{"name":r[0],"validated":r[1]} for r in constraints],
+                "inconsistent_branch_links":inconsistent,"legacy_unfingerprinted_keys":legacy}
+    finally:
+        connection.run("ROLLBACK")

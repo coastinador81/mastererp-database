@@ -2,6 +2,7 @@
   "postgresql": "17.9",
   "model_applied_twice": true,
   "sql_tests_passed": [
+    "active_session_context_test.sql",
     "foundation_boundaries_test.sql",
     "onboarding_authorization_test.sql",
     "onboarding_model_test.sql",

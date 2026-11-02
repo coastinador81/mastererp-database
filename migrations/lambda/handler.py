@@ -17,6 +17,7 @@ SCHEMA_FILES = (
     "005_onboarding_authorization.sql",
     "006_shared_identity_permissions.sql",
     "007_foundation_boundaries.sql",
+    "008_active_session_context.sql",
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
@@ -24,6 +25,7 @@ TEST_FILES = (
     "onboarding_authorization_test.sql",
     "shared_identity_permissions_test.sql",
     "foundation_boundaries_test.sql",
+    "active_session_context_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 
@@ -47,11 +49,11 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
-    if event.get("action") in ("configure_dev_validation", "verify_dev_identity", "qa_membership_state", "qa_foundation_state"):
-        from dev_validation import configure, verify, membership_state, foundation_state
+    if event.get("action") in ("configure_dev_validation", "verify_dev_identity", "qa_membership_state", "qa_foundation_state", "inspect_foundation"):
+        from dev_validation import configure, verify, membership_state, foundation_state, inspect_foundation
         try:
             actions = {"configure_dev_validation": configure, "verify_dev_identity": verify,
-                       "qa_membership_state": membership_state, "qa_foundation_state": foundation_state}
+                       "qa_membership_state": membership_state, "qa_foundation_state": foundation_state, "inspect_foundation": inspect_foundation}
             return actions[event["action"]](connection, event, context)
         finally:
             connection.close()
@@ -97,6 +99,7 @@ def lambda_handler(event, context):
             "schemas": schemas,
             "table_count": table_count,
             "tests": "passed",
+            "model_passes": committed_passes,
             "correlation_id": correlation_id,
         }
     except Exception as error:

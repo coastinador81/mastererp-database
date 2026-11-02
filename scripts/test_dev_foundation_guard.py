@@ -15,6 +15,13 @@ class GuardTests(unittest.TestCase):
                 database=MagicMock()
                 with self.assertRaises(ValueError): module.foundation_state(database,event,CONTEXT)
                 database.run.assert_not_called()
+    def test_cleanup_rejects_unidentified_session_before_delete(self):
+        database=MagicMock();database.run.side_effect=[None,[["actor","tenant","active","active","active","module"]],None]
+        with patch.dict(os.environ,{'ENVIRONMENT':'dev','DB_NAME':'mastererp'}),self.assertRaises(RuntimeError):
+            module.foundation_state(database,{'run':'qa-identity-123456abcdef','case':'cleanup_session','session_id':'not-a-uuid','nonce':'not-a-uuid'},CONTEXT)
+        self.assertEqual(database.run.call_args.args[0],'ROLLBACK')
+        self.assertFalse(any('DELETE' in call.args[0] for call in database.run.call_args_list))
+
     def test_other_environment_never_touches_sql(self):
         database=MagicMock()
         with patch.dict(os.environ,{'ENVIRONMENT':'prod','DB_NAME':'mastererp'}),self.assertRaises(ValueError):

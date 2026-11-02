@@ -7,3 +7,5 @@ Procedimiento: inspeccionar cada baseline con case=inspect antes de cambiar esta
 El test SQL del migrador sigue usando fixtures y ROLLBACK, separado del esquema confirmado. La concurrencia SQL del informe local no se presenta como concurrencia DEV. No se altera SQL 006 ni 007 para añadir esta instrumentación.
 
 La habilitación temporal de uonify.core de QA permite probar el guard real; no autoriza activar módulos de clientes ni implica OAuth/Gemini. Restaurar módulo ausente deja la operación correctamente denegada hasta su habilitación autorizada.
+
+Las pruebas HTTP de sesión crean una fila nueva con qa_validation=run y qa_probe=UUID aleatorio, sin tenant. cleanup_session solo elimina exactamente esa fila, con id, iniciador QA, tenant NULL y ambos marcadores coincidentes. No permite borrar sesiones previas ni acepta SQL. Ejecutar limpieza en finally; registrar un fallo de limpieza sin ocultarlo.

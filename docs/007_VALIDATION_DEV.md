@@ -9,3 +9,7 @@ El paquete usa el manifiesto explícito del handler, no glob de candidatos. Appl
 Respaldo anterior disponible: mastererp-dev-before-foundation-20261102171909. Ante fallo, detener publicaciones, conservar evidencia y revisar committed_passes. Preferir corrección hacia delante; no editar 006 aplicada ni otorgar bypass. Restaurar el snapshot crea una instancia aparte y requiere revisar endpoints/secretos y una decisión explícita; no sustituir ni borrar la RDS actual automáticamente. Restaurar el ZIP previo solo revierte código, no SQL confirmado.
 
 Pendiente: resultados de ejecución 007 DEV y reparación de las operaciones HTTP heredadas. No declarar cerrada la base por aprobar SQL ni health.
+
+## Corrección hacia delante 008
+
+Tras aplicar 007, la revisión detectó que las sesiones sin tenant y las lecturas de claves pre-tenant todavía podían autorizarse solo por ID de actor aunque el usuario estuviera inactivo. 008 añade políticas RESTRICTIVE de actor activo y contexto de tenant activo para idempotencia; no cambia 006/007 aplicadas ni concede privilegios. active_session_context_test.sql prueba realmente como mastererp_app usuario activo, ajeno, inactivo y contexto ausente, con ROLLBACK. Debe pasar PostgreSQL desechable antes de publicarse y el migrador oficial después.
