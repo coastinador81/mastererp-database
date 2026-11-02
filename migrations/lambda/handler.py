@@ -26,6 +26,7 @@ TEST_FILES = (
     "shared_identity_permissions_test.sql",
     "foundation_boundaries_test.sql",
     "active_session_context_test.sql",
+    "foundation_idempotency_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 
