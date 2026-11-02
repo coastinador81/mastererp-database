@@ -1,0 +1,114 @@
+{
+  "inspect_foundation": {
+    "status": "succeeded",
+    "functions": [
+      {
+        "name": "organizacion.register_company_once",
+        "body_sha256": "c91a7032e87d361095b156753f0952441021494e24e7b8fc7492e4a6f89e1409",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, plataforma, organizacion, pg_temp"
+        ],
+        "matches_reviewed_source": true
+      },
+      {
+        "name": "plataforma.create_tenant_with_owner",
+        "body_sha256": "02aef6b552c482411165be50b4f5e85096fe228542e3b2a057cbb5fcfb9026aa",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, plataforma, pg_temp"
+        ],
+        "matches_reviewed_source": true
+      },
+      {
+        "name": "plataforma.has_current_tenant_capability",
+        "body_sha256": "403358dc4ad1c6ce6bf1b84c87f5511dc88d075b11f80db06722d1fa06d447a3",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, plataforma, organizacion, pg_temp"
+        ],
+        "matches_reviewed_source": true
+      },
+      {
+        "name": "plataforma.has_current_tenant_permission",
+        "body_sha256": "c61b2876159aca8c842fd9364122462579ec576f276be9d5e85a599053142b3f",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, plataforma, pg_temp"
+        ],
+        "matches_reviewed_source": true
+      },
+      {
+        "name": "plataforma.list_current_user_spaces",
+        "body_sha256": "f04f6fdc65d4263079ee0cde7fb6bd7125c04258534a60eb25f24b6a2c6c2487",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, plataforma, pg_temp"
+        ],
+        "matches_reviewed_source": true
+      },
+      {
+        "name": "plataforma.resolve_external_identity",
+        "body_sha256": "4d8ee16df425dbdad28ebd3793a8254f784dc74522233d9f76b0c83b1a6d4fe9",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, plataforma, pg_temp"
+        ],
+        "matches_reviewed_source": true
+      }
+    ],
+    "migration_ledgers_detected": [],
+    "constraints": [
+      {
+        "name": "branches_tenant_company_fk",
+        "validated": true
+      }
+    ],
+    "inconsistent_branch_links": 0,
+    "legacy_unfingerprinted_keys": 2
+  },
+  "verify_dev_identity": {
+    "status": "succeeded",
+    "identity_tables": 3,
+    "application_role_flags": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "application_role_memberships": [],
+    "correlation_id": "96216643-513e-4cca-89a5-36701228652d"
+  },
+  "migrator": {
+    "CodeSha256": "MajGlPcTvtrC5KicEJtaoX8D+vLxRdyLhzA9ecU7u1Q=",
+    "State": "Active",
+    "LastUpdateStatus": "Successful",
+    "manifest": {
+      "SCHEMA_FILES": [
+        "001_extensions_and_schemas.sql",
+        "002_platform_core.sql",
+        "003_tenant_onboarding.sql",
+        "004_tenant_security.sql",
+        "005_onboarding_authorization.sql",
+        "006_shared_identity_permissions.sql",
+        "007_foundation_boundaries.sql",
+        "008_active_session_context.sql"
+      ],
+      "SEED_FILES": [
+        "001_module_catalog.sql"
+      ],
+      "TEST_FILES": [
+        "onboarding_model_test.sql",
+        "onboarding_authorization_test.sql",
+        "shared_identity_permissions_test.sql",
+        "foundation_boundaries_test.sql",
+        "active_session_context_test.sql",
+        "foundation_idempotency_test.sql"
+      ]
+    },
+    "sql_count": 15,
+    "driver": "pg8000 pure Python",
+    "no_local_secrets_or_native_windows_files": true,
+    "source_commit": "3c24386ae4308d1545b4c63845f2169aa273b189"
+  }
+}

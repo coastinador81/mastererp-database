@@ -9,3 +9,5 @@ El test SQL del migrador sigue usando fixtures y ROLLBACK, separado del esquema 
 La habilitación temporal de uonify.core de QA permite probar el guard real; no autoriza activar módulos de clientes ni implica OAuth/Gemini. Restaurar módulo ausente deja la operación correctamente denegada hasta su habilitación autorizada.
 
 Las pruebas HTTP de sesión crean una fila nueva con qa_validation=run y qa_probe=UUID aleatorio, sin tenant. cleanup_session solo elimina exactamente esa fila, con id, iniciador QA, tenant NULL y ambos marcadores coincidentes. No permite borrar sesiones previas ni acepta SQL. Ejecutar limpieza en finally; registrar un fallo de limpieza sin ocultarlo.
+
+La restauración compara los campos funcionales guardados (estados, overrides y asignación de módulo). Los updated_at automáticos de los fixtures QA reflejan la actividad de prueba; no se reescriben timestamps históricos para ocultarla. No se modifican datos de clientes.

@@ -1,45 +1,49 @@
-# Reutilización de la base compartida — candidato y requisitos
+# Reutilización de la base compartida DEV
 
-Estado: base NO cerrada. DEV us-west-1 únicamente. La existencia de health endpoints o validadores aprobados no prueba autorización, RLS ni operaciones funcionales.
+Estado: cierre parcial comprobado, base completa NO cerrada. Solo cuenta 277352717693, us-west-1. Los validadores y los health de Administración no prueban capacidades de negocio.
 
-## Contrato acordado
+## Contrato de identidad y autorización
 
-El Product Owner confirmó que cualquier usuario interno activo, autenticado con Cognito, puede crear su propio tenant. El propietario solicitado debe ser el actor autenticado. No usar Cognito groups, platform.admin o coincidencias de email para conceder acceso. Conservar access tokens, scopes y el autorizador existentes; vincular exclusivamente issuer + sub a una identidad interna activa.
+Cognito compartido por entorno; conservar issuer/client/scopes y JWT de las API existentes. Vinculación exclusiva issuer + sub a usuario interno activo mediante resolve_external_identity. Nunca asociar por correo ni usar grupos Cognito o platform.admin como acceso universal. El permiso uonify.connections.manage y su override booleano se evalúan en PostgreSQL; false prevalece.
 
-Tenant es aislamiento y contratación de módulos. Una empresa pertenece a un tenant y una sucursal a una empresa del mismo tenant. El contrato existente reserva administración de empresas al propietario del tenant; no hay una ACL por usuario/empresa definida. La ACL por empresa, sus roles adicionales y permisos específicos quedan pendientes del Product Owner; no inventarlos al desarrollar un módulo.
+La aprobación previa del propietario permite a cualquier usuario interno activo autenticado crear su propio tenant, cuyo propietario debe ser ese actor. No autoriza registrar identidades por email ni elegir otro propietario. El flag de autorregistro sigue false hasta reparar y validar su ruta real; no basta cambiar configuración.
 
-## Integración Backend preparada, aún sin conectar a handlers
+Tenant es aislamiento y habilitación de módulos. Empresa pertenece a tenant y sucursal a empresa del mismo tenant. La administración de empresas es owner-only conforme al contrato existente; no hay ACL adicional por usuario/empresa definida. Su diseño funcional permanece pendiente del Product Owner.
 
-Platform dispone del candidato backend/shared/tenant-security/tenant_security/foundation_access.py. require_capability consulta plataforma.has_current_tenant_capability usando parámetros: módulo, permiso y empresa/sucursal cuando corresponda. SQL 007 exige permiso efectivo, pertenencia/usuario/tenant activos, módulo activo y vigente, y contención empresa/sucursal. Una revocación explícita del permiso prevalece. No pasar un tenant del navegador sin verificarlo.
+## Controles que debe reutilizar un módulo
 
-request_context recibe una conexión ya abierta como mastererp_app y issuer/sub obtenidos del adaptador JWT verificado. Inicia READ ONLY, limpia actor/tenant/operación/correlación/empresa/sucursal, resuelve identidad y fija contexto local. Siempre ROLLBACK. No es una transacción de escritura ni una implementación de login; nunca usar credenciales administrativas para solicitudes ordinarias.
+1. Autenticar access token antes de leer secretos o abrir RDS. No aceptar identidad de cabeceras del navegador. Uonify usa claims ya verificados por API Gateway. Onboarding comprueba firma RS256, issuer, client_id, token_use y fechas con claves públicas Cognito incluidas en el paquete: kid desconocido falla cerrado hasta reempaquetar.
+2. Conectar exclusivamente con el secreto de mastererp_app y TLS verificado, sin fallback administrativo. Comprobar rol efectivo. Contexto actor/tenant local a la transacción, obtenido después de resolver identidad estable, pertenencia y estados activos. Conexión nueva por petición; cierre y commit/rollback explícitos. No reutilizar contexto global ni valores de otra solicitud.
+3. Para operaciones de negocio usar require_capability de Platform backend/shared/tenant-security/tenant_security/foundation_access.py: módulo habilitado y vigente, permiso efectivo y contención empresa/sucursal. Está integrado en connection_access de Uonify, no solo documentado. No usar un tenant_id del cliente como autorización. Onboarding draft/active es control inicial, no habilitación de todo el negocio.
+4. Definir el permiso real de la nueva operación conforme al contrato priorizado. No reutilizar uonify.connections.manage para otros dominios ni crear un bypass de owner/plataforma. Los permisos funcionales no acordados requieren decisión del Product Owner.
+5. Para lecturas aisladas está disponible request_context, READ ONLY, actor resuelto y limpieza de seis variables, siempre ROLLBACK. Los adaptadores existentes también abren/cerran su propia conexión y contexto local. No confundir este helper con una transacción de escritura.
+6. Para escrituras, autorización y efectos deben ser atómicos. Usar create_tenant_with_owner o register_company_once cuando correspondan; no escribir claves de idempotencia directamente con permisos amplios. La huella incluye actor, operación, tenant cuando existe y contenido. Advisory lock serializa una clave. Replays idénticos no duplican; contenido diferente genera conflicto SQLSTATE 23505 que el backend debe mapear a 409 sin mensajes SQL.
+7. Se conserva unicidad global de clave del contrato anterior. Claves de otro actor/operación no devuelven su respuesta. Claves antiguas sin huella o expiradas se rechazan; no inventar su contenido ni borrarlas. RDS conserva dos claves previas sin huella: riesgo de conflicto para clientes que intenten reutilizarlas.
+8. Auditar actor, tenant, empresa si corresponde, operación, resultado y correlación mediante audit_result, sin cuerpos, tokens, secretos, prompts ni respuestas. Tenant/company SD escriben auditoría SQL; las solicitudes cubiertas emiten auditoría fija en CloudWatch, incluidas denegaciones. No afirmar cobertura de rutas aún no reparadas.
 
-Para escrituras se necesita un comando atómico con su propia transacción, autorización e idempotencia. audit_result acepta solo actor/tenant/empresa/operación/resultado/correlación; no recibe cuerpos, tokens, credenciales, prompts o respuestas. Esta utilidad no se conecta por sí sola a CloudWatch o a los handlers existentes: su cobertura desplegada sigue pendiente.
+## SQL y despliegue comprobados
 
-No activar el guard nuevo hasta aplicar SQL 007 después de publicar y verificar la base 006. El empaquetador actual de Uonify usa lista explícita de archivos y aún no incluye foundation_access.py: añadirlo y conectar el guard será parte de la promoción revisada. No confundir una prueba con dobles en tests con verificación SQL o HTTP.
+006 se concilió por hashes del ZIP AWS con los archivos locales revisados y Git; no se reconstruyó por numeración ni se editó para ocultar drift. 007 se aplicó y reaplicó por el workflow oficial. 008 es una corrección hacia delante: actor activo también para sesiones sin tenant y lectura de idempotencia. Ninguna elimina tablas, tenants ni datos. El FK compuesto de sucursales está validado y no se encontraron relaciones previas incompatibles.
 
-## Candidato Database local
+No se detectó un ledger individual de migraciones por los nombres habituales; el migrador reaplica el manifiesto completo dos veces. Los commits/runs, hashes del paquete y cuerpos de funciones RDS son evidencia de versión; no se inventaron registros o fechas de aplicación.
 
-schema/007_foundation_boundaries.sql (todavía local/no publicado) conserva firmas existentes de creación de tenant y aporta:
+Database conserva deploy-migrator workflow_call y apply con needs, concurrencia y comprobación de FunctionError/succeeded/passed. El empaquetador toma el manifiesto explícito del handler, no glob de candidatos locales. El despliegue actualiza solo el código de la Lambda oficial y verifica SHA/configuración antes de invocarla. No crea otro migrador, SG, endpoint o rol. Las pruebas de acceso usan SET LOCAL ROLE mastererp_app, aserción de current_user y ROLLBACK; ese rollback NO revierte el esquema ya confirmado.
 
-- FK compuesta tenant/empresa de sucursal e índice de referencia, sin borrar ni reasignar datos. NOT VALID primero: nuevas escrituras se verifican; validar filas previas solo si no hay inconsistencias. RLS oculta relaciones heredadas incompatibles. Si quedan filas inconsistentes, informar y resolverlas en otra decisión autorizada.
-- Contexto activo para onboarding (draft/active permitidos para preparación; suspended/cancelled/deleted denegados). Operaciones de negocio requieren active mediante guard de capacidad. No convertir draft en acceso general a negocio.
-- Guard de módulo + permiso con contención de empresa/sucursal; sin inventar una ACL de empresas.
-- Huella de contenido en idempotencia, scope de tenant para lecturas y bloqueo transaccional; creación idempotente de tenant y primitiva register_company_once. Clave/contenido distintos dan conflicto; actor/operación ajenos se deniegan.
-- Auditoría de escrituras con actor, tenant, entidad/empresa, resultado y correlación; sin payload sensible. La auditoría de denegaciones y de replays por petición debe conectarse en Backend, no se acredita con el único evento de efecto confirmado.
+Antes de publicar SQL: PostgreSQL desechable compatible, modelo/reaplicación, pruebas SQL y concurrencia. Snapshot disponible mastererp-dev-before-foundation-20261102171909. Fallos reportan fase/archivo/SQLSTATE/committed_passes; no reintentar automáticamente ni ampliar permisos. Preferir corrección hacia delante. Restaurar snapshot crea otra instancia y requiere revisar recuperación/endpoints explícitamente; restaurar ZIP no revierte SQL.
 
-Se conserva la unicidad global de claves del contrato anterior: una misma clave no es reutilizable entre actores/operaciones/tenants; se rechaza sin devolver otra respuesta. Cambiar a unicidad compuesta requiere transición acordada. Las claves antiguas sin huella o expiradas se rechazan como conflicto en las primitivas nuevas; no se inventa su contenido original ni se borran. El backend deberá mapear el SQLSTATE 23505 de conflicto idempotente a HTTP 409 sin exponer mensajes SQL.
+## Cobertura y límites actuales
 
-## Procedimiento de promoción que queda bloqueado
+- SQL local y RDS: RLS/owner/miembro/ajeno/contextos, sesiones, permisos/overrides, módulo suspendido/caducado, empresa/sucursal, creación y replays de tenants y empresas, con conflicto de contenido y actor ajeno. La concurrencia de escritura (8 tenants y 8 empresas) se ejecutó solo en PostgreSQL desechable; no presentarla como HTTP ni RDS concurrente.
+- HTTP DEV: Cognito Code+PKCE y refresh, espacios, estado Uonify con permiso y módulo activo, denegaciones por usuario/tenant/pertenencia inactivos, miembro, ajeno, override y módulo suspendido; cambios consecutivos y lecturas concurrentes sin filtración observada. Onboarding sesiones se crea/lee con aplicación, y asociación a tenant ajeno se rechaza. Evidencia sanitizada en Platform docs/foundation-http-dev.json.
+- Las habilitaciones de módulo QA fueron temporales y se restauraron. Tenant sin asignación activa recibe 403; no se activaron módulos de clientes para hacer pasar pruebas. Espacios/login/scopes, hosting y OAuth/Gemini no se modifican.
+- Las seis rutas heredadas a funciones retiradas y el aprovisionador interno siguen pendientes. Sus primitivas SQL no prueban sus flujos HTTP. Faltan HTTP de creación/idempotencia/concurrencia de tenant/empresa, cruces empresa/sucursal y un mismo actor con dos pertenencias reales por API.
+- Admin API qx8nmypdhi conserva propietario mastererp-dev-onboarding y doce rutas inline SAM, junto a ocho rutas de Administración de su stack hijo. No reimportar un OpenAPI parcial ni mover propiedad para resolverlo: preparar reparación compatible que preserve IDs y los recursos del otro dominio. Este lote no ejecuta la reorganización global excluida por el propietario.
+- Las ocho funciones de Administración son diagnósticos públicos mínimos por excepción vigente. No se implementa Finanzas. La base no se declara cerrada mientras falten los recorridos funcionales indicados.
 
-1. El propietario del trabajo existente publica su base desplegada: schema/006_shared_identity_permissions.sql, manifiesto/driver/helper oficial del migrador, tests de identidad y modelo de 17 tablas, e integración de identidad/artefactos necesaria. No incluirlos en un commit de otro desarrollador.
-2. Contrastar ese commit con AWS. Hoy Git dev contiene SCHEMA_FILES hasta 005 y un test de 14 tablas; el Lambda oficial contiene 006 y las tres tablas de identidad existen realmente. Un push SQL puede actualizar el migrador con código anterior y volver a aplicar reglas incompletas.
-3. Integrar 007 al final de SCHEMA_FILES y foundation_boundaries_test.sql a TEST_FILES del migrador; confirmar en el ZIP schema 001–007, seed y todos los tests, sin secretos. No modificar ni publicar el manifiesto local ajeno para saltar este bloqueo.
-4. Repetir PostgreSQL desechable 17.9 con modelo/reaplicación y concurrencia real. Revisar compatibilidad de claves heredadas y datos inconsistentes de empresa/sucursal antes de aplicar en DEV.
-5. Publicar el candidato autorizado mediante el workflow existente (deploy-migrator → apply). No invocar simultáneamente otra aplicación manual. Comprobar archivo/fase/commits confirmados si falla.
-6. Corregir y configurar las tres funciones reales de onboarding sin recrear funciones retiradas ni reorganizar stacks: identidad Cognito, secreto de mastererp_app, red privada mínima, JWT/contrato de API y controles comunes. El registro propio debe habilitarse conforme a la decisión del PO, no mediante grupos Cognito. Revisar change set del stack propietario conservando funciones/rutas obsoletas fuera del alcance.
-7. Ejecutar todos los casos por HTTP: dos tenants, actor/tenant/membresía inactivos, override false, módulo suspendido, contención de empresas/sucursales y repeticiones concurrentes. Ninguna prueba SQL local sustituye esas verificaciones.
+## Archivos y validación
 
-## Límites de esta entrega
+Platform: código compartido, handlers y scripts de empaquetado/pruebas. Infrastructure: recursos y reparación selectiva del propietario actual en raíz funcional; no YAML nuevo por Lambda. Database: schemas, tests, migrador y workflows. Conservar numeración y correspondencias existentes, PROJECT.md, AGENTS.md y estándares; no publicar trabajo ajeno.
 
-Las ocho Lambdas de Administración son diagnósticos. No se implementa Finanzas. Los candidatos no están conectados al runtime desplegado y no certifican cobertura de API/pantallas. Se preservaron los cambios previos del equipo. Consultar en Infrastructure docs/FOUNDATION_DEV_DIAGNOSIS.md y foundation-dev-diagnosis.json; resultados SQL desechables en Database docs/foundation-local-validation.json cuando se registre la validación final.
+Ejecutar py scripts/validate_structure.py y git diff --check en los tres repositorios. Platform incluye pruebas de autenticación Linux y scripts/validate_foundation_dev_http.py; Database, scripts/validate_foundation_disposable.py, test_dev_foundation_guard.py y test_migrator_failures.py. Pruebas con dobles son locales y nunca respaldo de ejecución real.
+
+Resultado y matriz detallada: [FOUNDATION_CLOSURE_DEV.md](FOUNDATION_CLOSURE_DEV.md).

@@ -1,0 +1,72 @@
+[
+  {
+    "commit": "8bd0b5b7581d4a34e9dedae7a9f2e4c33c5c4d7c",
+    "url": "https://github.com/eticayservicios/mastererp-database/actions/runs/41491486157",
+    "jobs": {
+      "deploy-migrator / deploy": "success",
+      "apply": "success"
+    },
+    "code_sha256": "yZFe7dnRAhO1fSJRwV2RgwCOUZkVPr72kU+VzApTCHo=",
+    "evidence": [
+      "2026-11-02T17:28:57.5500254Z   \"status\": \"succeeded\",",
+      "2026-11-02T17:28:57.5552123Z   \"table_count\": 17,",
+      "2026-11-02T17:28:57.5552759Z   \"tests\": \"passed\",",
+      "2026-11-02T17:28:57.5553485Z   \"correlation_id\": \"8c1b63a5-9651-4f56-9a14-9e7d31085910\""
+    ]
+  },
+  {
+    "commit": "2a829bd71c7005b7709f36beefa50c80351204f8",
+    "url": "https://github.com/eticayservicios/mastererp-database/actions/runs/41492018133",
+    "jobs": {
+      "deploy-migrator / deploy": "success",
+      "apply": "success"
+    },
+    "code_sha256": "HfeuqTKrF5YtHMf0XGN0a28A+mlvkoJMVtRs771Z6Us=",
+    "evidence": [
+      "2026-11-02T17:32:21.4385882Z   \"status\": \"succeeded\",",
+      "2026-11-02T17:32:21.4438147Z   \"table_count\": 17,",
+      "2026-11-02T17:32:21.4438836Z   \"tests\": \"passed\",",
+      "2026-11-02T17:32:21.4439618Z   \"correlation_id\": \"d56bd377-279f-44ef-8cb3-a29176f8b763\""
+    ]
+  },
+  {
+    "commit": "8d25db5074e677c9daa145fc7ca35a704eb109af",
+    "url": "https://github.com/eticayservicios/mastererp-database/actions/runs/41502636486",
+    "jobs": {
+      "deploy-migrator / deploy": "success",
+      "apply": "success"
+    },
+    "code_sha256": "0Iw9xZcQ6mofL0WAVIrl/x3Z79a8Rwf/k5UyI33MA5k=",
+    "evidence": [
+      "2026-11-02T18:40:01.4502224Z   \"status\": \"succeeded\",",
+      "2026-11-02T18:40:01.4582105Z   \"table_count\": 17,",
+      "2026-11-02T18:40:01.4582765Z   \"tests\": \"passed\",",
+      "2026-11-02T18:40:01.4583565Z   \"correlation_id\": \"a8c66270-8323-4207-877d-e25c7550885b\""
+    ]
+  },
+  {
+    "commit": "467edeecc69eb1534645991f917bf4b303313df1",
+    "url": "https://github.com/eticayservicios/mastererp-database/actions/runs/41505141804",
+    "jobs": {
+      "deploy-migrator / deploy": "success",
+      "apply": "success"
+    },
+    "code_sha256": "mc5lwaw+pqJ1p49i8Yt+Wxoj4Rkz8OjGA3Bv19q2KCM=",
+    "evidence": [
+      "2026-11-02T18:56:18.0572839Z   \"status\": \"succeeded\",",
+      "2026-11-02T18:56:18.0591001Z   \"table_count\": 17,",
+      "2026-11-02T18:56:18.0591583Z   \"tests\": \"passed\",",
+      "2026-11-02T18:56:18.0592301Z   \"correlation_id\": \"56601b24-941c-4ee2-81d6-271e04ce78dd\""
+    ]
+  },
+  {
+    "commit": "3c24386ae4308d1545b4c63845f2169aa273b189",
+    "url": "https://github.com/eticayservicios/mastererp-database/actions/runs/41506822843",
+    "jobs": {
+      "deploy-migrator / deploy": "success",
+      "apply": "success"
+    },
+    "code_sha256": "MajGlPcTvtrC5KicEJtaoX8D+vLxRdyLhzA9ecU7u1Q=",
+    "tests": "six SQL test files passed; 17 tables; model applied/reapplied"
+  }
+]
