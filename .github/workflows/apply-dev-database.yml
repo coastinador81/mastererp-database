@@ -20,11 +20,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      required: ${{ steps.classify.outputs.required }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Decide whether SQL/model validation changed
+        id: classify
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: python scripts/database_apply_required.py
   deploy-migrator:
+    needs: changes
     uses: ./.github/workflows/deploy-migrator.yml
     secrets: inherit
   apply:
-    needs: deploy-migrator
+    needs: [changes, deploy-migrator]
+    if: needs.changes.outputs.required == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
