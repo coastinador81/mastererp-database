@@ -29,3 +29,7 @@ Estructura documental; todas las áreas y sus submódulos están pendientes de i
 - [2.2.1.5 Gastos y fondos menores](2.2.1.5-gastos-fondos-menores/README.md)
 
 Clientes y Proveedores consumen maestros existentes sin duplicarlos. Proveedores referencia Catálogo; la ubicación y el contrato del maestro de Clientes quedan pendientes de identificación antes de implementar. No se definen aquí reglas contables, fiscales ni contratos nuevos.
+
+## Jerarquía de infraestructura
+
+Se conserva la ruta y responsabilidad funcional. La composición Finanzas → Administración y las reservas de Contabilidad/BI se documentan en [docs/FINANCE_HIERARCHY.md](../../../docs/FINANCE_HIERARCHY.md). En Infrastructure, cada recurso permanece en el YAML raíz de su carpeta propietaria; una carpeta no obliga a crear un stack. El resultado AWS se informa por separado en el mapa y evidencia de Infrastructure.
