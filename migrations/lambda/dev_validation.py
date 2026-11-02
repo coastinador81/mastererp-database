@@ -6,7 +6,7 @@ the normal read-only application role. No secrets are accepted in event payloads
 import json
 import os
 import re
-from uuid import UUID
+from uuid import UUID, uuid5, NAMESPACE_URL
 
 import boto3
 from pg8000.native import literal
@@ -219,3 +219,44 @@ def inspect_foundation(connection,event,context):
                 "inconsistent_branch_links":inconsistent,"legacy_unfingerprinted_keys":legacy}
     finally:
         connection.run("ROLLBACK")
+
+
+def dual_tenant(connection,event,context):
+    """Temporary QA-only second membership. Never changes a pre-existing row."""
+    _dev_guard(context)
+    run=event.get('run','');action=event.get('operation')
+    if not re.fullmatch(r'qa-identity-[0-9a-f]{12}',run) or action not in ('prepare','allow','deny','cleanup'):
+        raise ValueError('Invalid dual-tenant QA request')
+    nonce=str(UUID(str(event.get('nonce',''))))
+    membership=str(uuid5(NAMESPACE_URL,run+':dual-tenant-qa:'+nonce))
+    connection.run('BEGIN')
+    try:
+        connection.run('SELECT pg_advisory_xact_lock(hashtextextended(:scope,0))',scope=run+':dual-tenant-qa')
+        rows=connection.run("""SELECT a.id,t.id,r.id FROM plataforma.users a,
+          plataforma.users b,plataforma.tenants t,plataforma.roles r
+          WHERE a.email=:a AND b.email=:b AND t.code=:code
+          AND a.status='active' AND b.status='active' AND t.status='active'
+          AND r.code='tenant.owner' AND EXISTS(SELECT 1 FROM plataforma.user_tenants ut
+          WHERE ut.user_id=b.id AND ut.tenant_id=t.id AND ut.status='active' AND ut.role_id=r.id)""",
+          a=run+'-admin-a@example.invalid',b=run+'-admin-b@example.invalid',code=run+'-b')
+        if len(rows)!=1:raise ValueError('QA fixtures not uniquely identified')
+        actor,tenant,role=rows[0]
+        if action=='prepare':
+            if connection.run('SELECT id FROM plataforma.user_tenants WHERE user_id=:actor AND tenant_id=:tenant',actor=actor,tenant=tenant):
+                raise ValueError('Existing second membership must be preserved')
+            membership=str(connection.run("""INSERT INTO plataforma.user_tenants(id,user_id,tenant_id,role_id,status,permissions_override,joined_at)
+                VALUES(:id,:actor,:tenant,:role,'active','{"uonify.connections.manage":false}'::jsonb,now()) RETURNING id""",
+                id=membership,actor=actor,tenant=tenant,role=role)[0][0])
+        elif action=='cleanup':
+            rows=connection.run('DELETE FROM plataforma.user_tenants WHERE id=:id AND user_id=:actor AND tenant_id=:tenant AND role_id=:role RETURNING id',id=membership,actor=actor,tenant=tenant,role=role)
+            if len(rows)!=1:raise ValueError('QA membership not uniquely identified')
+        else:
+            overrides={} if action=='allow' else {'uonify.connections.manage':False}
+            rows=connection.run('UPDATE plataforma.user_tenants SET permissions_override=:overrides::jsonb WHERE id=:id AND user_id=:actor AND tenant_id=:tenant AND role_id=:role RETURNING id',overrides=json.dumps(overrides),id=membership,actor=actor,tenant=tenant,role=role)
+            if len(rows)!=1:raise ValueError('QA membership not uniquely identified')
+        connection.run('COMMIT')
+        return {'status':'succeeded','operation':action,'membership_id':membership}
+    except Exception as error:
+        connection.run('ROLLBACK')
+        details=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
+        raise RuntimeError('Dual-tenant QA failed; sqlstate='+details.get('C','unknown')) from None

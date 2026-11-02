@@ -50,11 +50,11 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
-    if event.get("action") in ("configure_dev_validation", "verify_dev_identity", "qa_membership_state", "qa_foundation_state", "inspect_foundation"):
-        from dev_validation import configure, verify, membership_state, foundation_state, inspect_foundation
+    if event.get("action") in ("configure_dev_validation", "verify_dev_identity", "qa_membership_state", "qa_foundation_state", "inspect_foundation", "qa_dual_tenant"):
+        from dev_validation import configure, verify, membership_state, foundation_state, inspect_foundation, dual_tenant
         try:
             actions = {"configure_dev_validation": configure, "verify_dev_identity": verify,
-                       "qa_membership_state": membership_state, "qa_foundation_state": foundation_state, "inspect_foundation": inspect_foundation}
+                       "qa_membership_state": membership_state, "qa_foundation_state": foundation_state, "inspect_foundation": inspect_foundation, "qa_dual_tenant": dual_tenant}
             return actions[event["action"]](connection, event, context)
         finally:
             connection.close()

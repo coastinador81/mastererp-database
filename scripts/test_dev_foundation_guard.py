@@ -22,6 +22,15 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(database.run.call_args.args[0],'ROLLBACK')
         self.assertFalse(any('DELETE' in call.args[0] for call in database.run.call_args_list))
 
+    def test_dual_tenant_rejects_invalid_scope_before_sql(self):
+        with patch.dict(os.environ,{'ENVIRONMENT':'dev','DB_NAME':'mastererp'}):
+            for event in ({'run':'real-customer','operation':'prepare'},
+                          {'run':'qa-identity-123456abcdef','operation':'delete_all'},
+                          {'run':'qa-identity-123456abcdef','operation':'cleanup','nonce':'not-uuid'}):
+                database=MagicMock()
+                with self.assertRaises(ValueError):module.dual_tenant(database,event,CONTEXT)
+                database.run.assert_not_called()
+
     def test_other_environment_never_touches_sql(self):
         database=MagicMock()
         with patch.dict(os.environ,{'ENVIRONMENT':'prod','DB_NAME':'mastererp'}),self.assertRaises(ValueError):
