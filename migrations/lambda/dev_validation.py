@@ -123,3 +123,60 @@ def membership_state(connection, event, context):
     except Exception:
         connection.run("ROLLBACK")
         raise RuntimeError("QA membership operation failed") from None
+
+
+def foundation_state(connection, event, context):
+    """DEV-only fault injection limited to the existing identifiable QA fixtures.
+
+    Caller must restore returned baseline in finally. No arbitrary tenant, actor,
+    permission, SQL or secret is accepted. No production identity can match guard.
+    """
+    _dev_guard(context)
+    run = event.get("run", "")
+    case = event.get("case")
+    label = event.get("actor_label", "admin_a")
+    if label not in ("admin_a", "admin_b"):
+        raise ValueError("Invalid QA actor label")
+    suffix = label[-1]
+    allowed = {"inspect", "baseline", "user_inactive", "tenant_inactive", "membership_inactive", "permission_denied", "module_disabled", "restore"}
+    if not re.fullmatch(r"qa-identity-[0-9a-f]{12}", run) or case not in allowed:
+        raise ValueError("Invalid QA foundation case")
+    connection.run("BEGIN")
+    try:
+        rows = connection.run("""SELECT u.id,t.id,u.status,t.status,ut.status,m.id
+          FROM plataforma.users u JOIN plataforma.user_tenants ut ON ut.user_id=u.id
+          JOIN plataforma.tenants t ON t.id=ut.tenant_id CROSS JOIN plataforma.modules m
+          WHERE u.email=:email AND t.code=:code AND m.code='uonify.core'""",
+          email=run+'-admin-'+suffix+'@example.invalid',code=run+'-'+suffix)
+        if len(rows)!=1:
+            raise ValueError("QA state not uniquely identified")
+        actor,tenant,user_status,tenant_status,member_status,module=rows[0]
+        overrides = connection.run("SELECT permissions_override FROM plataforma.user_tenants WHERE user_id=:actor AND tenant_id=:tenant",actor=actor,tenant=tenant)[0][0]
+        assignment = connection.run("SELECT status FROM plataforma.tenant_modules WHERE tenant_id=:tenant AND module_id=:module",tenant=tenant,module=module)
+        baseline = {"user":user_status,"tenant":tenant_status,"membership":member_status,
+                    "overrides":overrides,"module":assignment[0][0] if assignment else None}
+        if case == 'inspect':
+            connection.run("ROLLBACK")
+            return {"status":"succeeded","case":case,"baseline":baseline,"run":run}
+        target = event.get("baseline") if case=='restore' else {**baseline,"user":"active","tenant":"active","membership":"active","overrides":{},"module":"active"}
+        if not isinstance(target,dict) or target.get('user') not in ('active','inactive') or target.get('tenant') not in ('draft','active','suspended','cancelled') or target.get('membership') not in ('active','inactive') or target.get('module') not in (None,'selected','provisioning','active','suspended','cancelled') or not isinstance(target.get('overrides'),dict):
+            raise ValueError("Invalid QA restoration state")
+        if case=='user_inactive': target['user']='inactive'
+        if case=='tenant_inactive': target['tenant']='suspended'
+        if case=='membership_inactive': target['membership']='inactive'
+        if case=='permission_denied': target['overrides']={'uonify.connections.manage':False}
+        if case=='module_disabled': target['module']='suspended'
+        connection.run("UPDATE plataforma.users SET status=:status WHERE id=:id",status=target['user'],id=actor)
+        connection.run("UPDATE plataforma.tenants SET status=:status WHERE id=:id",status=target['tenant'],id=tenant)
+        connection.run("UPDATE plataforma.user_tenants SET status=:status,permissions_override=:overrides::jsonb WHERE user_id=:actor AND tenant_id=:tenant",status=target['membership'],overrides=json.dumps(target['overrides']),actor=actor,tenant=tenant)
+        if target['module'] is None:
+            connection.run("DELETE FROM plataforma.tenant_modules WHERE tenant_id=:tenant AND module_id=:module",tenant=tenant,module=module)
+        else:
+            connection.run("""INSERT INTO plataforma.tenant_modules(tenant_id,module_id,status)
+              VALUES(:tenant,:module,:status) ON CONFLICT(tenant_id,module_id) DO UPDATE SET status=excluded.status""",tenant=tenant,module=module,status=target['module'])
+        connection.run("COMMIT")
+        return {"status":"succeeded","case":case,"baseline":baseline,"run":run}
+    except Exception as error:
+        connection.run("ROLLBACK")
+        data=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
+        raise RuntimeError("QA foundation state failed; sqlstate="+data.get('C','unknown')) from None
