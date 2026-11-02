@@ -84,3 +84,8 @@ Estado basado en archivos versionados; no equivale a un inventario vivo de AWS. 
 | 2.9-pos — POS frontend | experiencia de punto de venta. Estado: planned. | Dominio padre; identidad y tenant cuando corresponda; contratos específicos por definir | Platform: frontend/modules/2.9-pos, backend/modules/2.9-pos; Database e Infrastructure: modules/2.9-pos | Reserva/documentación; no acreditar implementación sin evidencia |
 | 2.9.1-store-sales — Ventas en tienda | Ventas en tienda, dentro de Punto de Venta. | Dominio padre; identidad y tenant cuando corresponda; contratos específicos por definir | Platform: frontend/modules/2.9-pos/2.9.1-store-sales, backend/modules/2.9-pos/2.9.1-store-sales; Database e Infrastructure: modules/2.9-pos/2.9.1-store-sales | Reserva/documentación; no acreditar implementación sin evidencia |
 | 2.9.2-registers — Cajas | Cajas, dentro de Punto de Venta. | Dominio padre; identidad y tenant cuando corresponda; contratos específicos por definir | Platform: frontend/modules/2.9-pos/2.9.2-registers, backend/modules/2.9-pos/2.9.2-registers; Database e Infrastructure: modules/2.9-pos/2.9.2-registers | Reserva/documentación; no acreditar implementación sin evidencia |
+
+
+## Ampliación documental de Administración
+
+[2.2.1 Administración](../modules/2.2-finance/2.2.1-administration/README.md) incorpora cinco áreas (2.2.1.1–2.2.1.5) y 19 submódulos, con rutas equivalentes en frontend, backend, Database e Infrastructure. Los índices de cada área detallan las carpetas. Estado: pendiente de implementación; sin nuevos maestros de Clientes o Proveedores, código, SQL ni recursos desplegables.

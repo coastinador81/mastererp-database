@@ -16,3 +16,16 @@ Estado verificable: la reserva documental no acredita implementación; conservar
 
 Validaciones: estructura local mediante scripts/validate_structure.py. Pendientes: contratos específicos, responsable nominal y pruebas funcionales antes de habilitar esta capacidad.
 
+
+
+## Áreas de Administración
+
+Estructura documental; todas las áreas y sus submódulos están pendientes de implementación. Se mantienen las rutas existentes de Finanzas y Administración. Contabilidad, BI y MasterPay conservan sus carpetas y responsabilidades.
+
+- [2.2.1.1 Gestión comercial](2.2.1.1-gestion-comercial/README.md)
+- [2.2.1.2 Gestión de compras](2.2.1.2-gestion-compras/README.md)
+- [2.2.1.3 Cartera y obligaciones](2.2.1.3-cartera-obligaciones/README.md)
+- [2.2.1.4 Tesorería](2.2.1.4-tesoreria/README.md)
+- [2.2.1.5 Gastos y fondos menores](2.2.1.5-gastos-fondos-menores/README.md)
+
+Clientes y Proveedores consumen maestros existentes sin duplicarlos. Proveedores referencia Catálogo; la ubicación y el contrato del maestro de Clientes quedan pendientes de identificación antes de implementar. No se definen aquí reglas contables, fiscales ni contratos nuevos.
