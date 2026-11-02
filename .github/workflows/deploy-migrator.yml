@@ -13,54 +13,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.MASTERERP_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.MASTERERP_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-1
-      - name: Package and create migration Lambda
+      - name: Package reviewed commit and update official DEV migrator
         shell: bash
         run: |
           set -euo pipefail
-          pip install --no-compile --target package pg8000==1.31.5 scramp==1.4.6
-          cp migrations/lambda/handler.py package/
-          mkdir package/sql
-          cp schema/*.sql seeds/*.sql tests/*.sql package/sql/
-          (cd package && zip -qr ../function.zip .)
-          secret=$(aws rds describe-db-instances --db-instance-identifier mastererp-dev-data --query 'DBInstances[0].MasterUserSecret.SecretArn' --output text)
-          vpc=$(aws rds describe-db-instances --db-instance-identifier mastererp-dev-data --query 'DBInstances[0].DBSubnetGroup.VpcId' --output text)
-          subnets=$(aws ec2 describe-subnets --filters Name=vpc-id,Values="$vpc" --query 'Subnets[].SubnetId' --output json)
-          rds_sg=$(aws rds describe-db-instances --db-instance-identifier mastererp-dev-data --query 'DBInstances[0].VpcSecurityGroups[0].VpcSecurityGroupId' --output text)
-          sg=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$vpc" Name=group-name,Values=mastererp-dev-database-migrator-sg --query 'SecurityGroups[0].GroupId' --output text)
-          if [ "$sg" = None ]; then
-            sg=$(aws ec2 create-security-group --group-name mastererp-dev-database-migrator-sg --description 'MasterERP migration Lambda' --vpc-id "$vpc" --query GroupId --output text)
-            aws ec2 authorize-security-group-ingress --group-id "$rds_sg" --protocol tcp --port 5432 --source-group "$sg" >/dev/null
-          fi
-          endpoint=$(aws ec2 describe-vpc-endpoints --filters Name=vpc-id,Values="$vpc" Name=service-name,Values=com.amazonaws.us-west-1.secretsmanager --query 'VpcEndpoints[0].VpcEndpointId' --output text)
-          if [ "$endpoint" = None ]; then
-            aws ec2 authorize-security-group-ingress --group-id "$sg" --protocol tcp --port 443 --source-group "$sg" >/dev/null
-            aws ec2 create-vpc-endpoint --vpc-id "$vpc" --service-name com.amazonaws.us-west-1.secretsmanager --vpc-endpoint-type Interface --subnet-ids $(echo "$subnets" | jq -r '.[]') --security-group-ids "$sg" --private-dns-enabled >/dev/null
-          fi
-          role=mastererp-dev-database-migrator-california-role
-          jq -n '{Version:"2012-10-17",Statement:[{Effect:"Allow",Principal:{Service:"lambda.amazonaws.com"},Action:"sts:AssumeRole"}]}' > trust.json
-          if ! aws iam get-role --role-name "$role" >/dev/null 2>&1; then
-            aws iam create-role --role-name "$role" --assume-role-policy-document file://trust.json >/dev/null
-          fi
-          aws iam attach-role-policy --role-name "$role" --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-          jq -n --arg secret "$secret" '{Version:"2012-10-17",Statement:[{Effect:"Allow",Action:"secretsmanager:GetSecretValue",Resource:$secret}]}' > policy.json
-          aws iam put-role-policy --role-name "$role" --policy-name ReadDatabaseSecret --policy-document file://policy.json
-          db_host=$(aws rds describe-db-instances --db-instance-identifier mastererp-dev-data --query 'DBInstances[0].Endpoint.Address' --output text)
-          jq -n --arg secret "$secret" --arg host "$db_host" '{Variables:{DB_SECRET_ARN:$secret,DB_HOST:$host,DB_NAME:"mastererp",ENVIRONMENT:"dev",PROJECT:"mastererp"}}' > environment.json
-          jq -n --argjson subnets "$subnets" --arg sg "$sg" '{SubnetIds:$subnets,SecurityGroupIds:[$sg]}' > vpc.json
-          sleep 15
+          test "$(aws sts get-caller-identity --query Account --output text)" = 277352717693
           name=mastererp-dev-database-migrator
-          if aws lambda get-function --function-name "$name" >/dev/null 2>&1; then
-            aws lambda update-function-code --function-name "$name" --zip-file fileb://function.zip >/dev/null
-            aws lambda wait function-updated-v2 --function-name "$name"
-            aws lambda update-function-configuration --function-name "$name" --environment file://environment.json >/dev/null
-            aws lambda wait function-updated-v2 --function-name "$name"
-          else
-            aws lambda create-function --function-name "$name" --runtime python3.12 --handler handler.lambda_handler --role "arn:aws:iam::277352717693:role/$role" --memory-size 512 --timeout 300 --zip-file fileb://function.zip --environment file://environment.json --vpc-config file://vpc.json --tags Project=MasterERP,Environment=dev,Component=database-migrator >/dev/null
-          fi
-          aws lambda wait function-active-v2 --function-name "$name"
-          aws lambda get-function-configuration --function-name "$name" --query '{Arn:FunctionArn,State:State,Runtime:Runtime,Memory:MemorySize,Timeout:Timeout,Vpc:VpcConfig}'
+          aws lambda get-function-configuration --function-name "$name" > before.json
+          jq -e '.Runtime == "python3.12" and .State == "Active" and .Environment.Variables.ENVIRONMENT == "dev" and .Environment.Variables.DB_NAME == "mastererp"' before.json >/dev/null
+          pip install --no-compile --target package -r migrations/lambda/requirements-package.txt
+          python scripts/package_migrator.py function.zip --dependencies package
+          expected=$(openssl dgst -sha256 -binary function.zip | openssl base64 -A)
+          revision=$(jq -r '.RevisionId' before.json)
+          aws lambda update-function-code --function-name "$name" --revision-id "$revision" --zip-file fileb://function.zip > updated.json
+          aws lambda wait function-updated-v2 --function-name "$name"
+          aws lambda get-function-configuration --function-name "$name" > after.json
+          jq -e --arg sha "$expected" '.State == "Active" and .LastUpdateStatus == "Successful" and .CodeSha256 == $sha' after.json >/dev/null
+          jq -e --slurpfile old before.json '.Role == $old[0].Role and .VpcConfig == $old[0].VpcConfig and .Environment == $old[0].Environment' after.json >/dev/null
+          echo "Source commit: $GITHUB_SHA"
+          jq '{FunctionArn,CodeSha256,State,LastUpdateStatus,RevisionId}' after.json

@@ -15,8 +15,13 @@ BEGIN
     FROM information_schema.tables
     WHERE table_type = 'BASE TABLE'
       AND table_schema IN ('plataforma', 'organizacion', 'auditoria');
-    IF table_count <> 14 THEN
-        RAISE EXCEPTION 'Expected 14 tables, found %', table_count;
+    IF table_count <> 17 THEN
+        RAISE EXCEPTION 'Expected 17 tables (including shared identity/permissions), found %', table_count;
+    END IF;
+    IF to_regclass('plataforma.external_identities') IS NULL
+       OR to_regclass('plataforma.permissions') IS NULL
+       OR to_regclass('plataforma.role_permissions') IS NULL THEN
+        RAISE EXCEPTION 'Shared identity/permission tables are missing';
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'plataforma')

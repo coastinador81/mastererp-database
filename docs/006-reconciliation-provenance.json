@@ -1,0 +1,77 @@
+{
+  "code_sha256": "g9qNylzlbmgQi8Ii/6RfdZkvrJEt/PLfDBNbR0jlXUA=",
+  "rows": [
+    {
+      "zip_path": "handler.py",
+      "local": "mastererp-database/migrations/lambda/handler.py",
+      "aws_sha256": "ba5ab2a15203017a13f4a90eede76f8157066530bf3e742b0528ebb5789eea1c",
+      "local_matches_aws_normalized": true
+    },
+    {
+      "zip_path": "dev_validation.py",
+      "local": "mastererp-database/migrations/lambda/dev_validation.py",
+      "aws_sha256": "3d03f79df86e3616abb29f11874cd90c0bc395124d7d5701b97013a6551b409a",
+      "local_matches_aws_normalized": true
+    },
+    {
+      "zip_path": "sql/001_extensions_and_schemas.sql",
+      "local": "mastererp-database/schema/001_extensions_and_schemas.sql",
+      "aws_sha256": "f553c2cf1ab2141e6ed71ecd10736c5e9b3988c95624cc064f0c9e8b264bf7af",
+      "local_matches_aws_normalized": true
+    },
+    {
+      "zip_path": "sql/001_module_catalog.sql",
+      "local": "mastererp-database/seeds/001_module_catalog.sql",
+      "aws_sha256": "d9dd9c6a08d334e7563d59bfcd2d7ab3560acd4a4d96a1daaf2c43aa1cae3dee",
+      "local_matches_aws_normalized": true
+    },
+    {
+      "zip_path": "sql/002_platform_core.sql",
+      "local": "mastererp-database/schema/002_platform_core.sql",
+      "aws_sha256": "e146cf7e3383240cbdd19c5b3620025eaffb23570c3929f78c9172d5ebd6fce3",
+      "local_matches_aws_normalized": true
+    },
+    {
+      "zip_path": "sql/003_tenant_onboarding.sql",
+      "local": "mastererp-database/schema/003_tenant_onboarding.sql",
+      "aws_sha256": "b7c17904e8622f270b5ef3755ed24ea67a4786cfcf83990f2e7e302fcc0c6119",
+      "local_matches_aws_normalized": true
+    },
+    {
+      "zip_path": "sql/004_tenant_security.sql",
+      "local": "mastererp-database/schema/004_tenant_security.sql",
+      "aws_sha256": "05ca176cbe1ed5e326ca2f67eff8fcdb126459fdc3eacb22291a673bd80e1b2b",
+      "local_matches_aws_normalized": true
+    },
+    {
+      "zip_path": "sql/005_onboarding_authorization.sql",
+      "local": "mastererp-database/schema/005_onboarding_authorization.sql",
+      "aws_sha256": "6e79df4efc6a4c3a241eb987ddbcdd1094adb889422500c960968a6f53b9ee8e",
+      "local_matches_aws_normalized": true
+    },
+    {
+      "zip_path": "sql/006_shared_identity_permissions.sql",
+      "local": "mastererp-database/schema/006_shared_identity_permissions.sql",
+      "aws_sha256": "93235b471fbc6f724abc5fc67361973dbe288ba77342127af958816d9cc8e0dc",
+      "local_matches_aws_normalized": true
+    },
+    {
+      "zip_path": "sql/onboarding_authorization_test.sql",
+      "local": "mastererp-database/tests/onboarding_authorization_test.sql",
+      "aws_sha256": "04283cb132a8b420aab95098b1f68a02e41c54464db18395f2efd758bd4213a3",
+      "local_matches_aws_normalized": false
+    },
+    {
+      "zip_path": "sql/onboarding_model_test.sql",
+      "local": "mastererp-database/tests/onboarding_model_test.sql",
+      "aws_sha256": "35cdae57dfe5540749dc03aec1de10dc96b39553072f563e5b8e6c19cedd7d98",
+      "local_matches_aws_normalized": true
+    },
+    {
+      "zip_path": "sql/shared_identity_permissions_test.sql",
+      "local": "mastererp-database/tests/shared_identity_permissions_test.sql",
+      "aws_sha256": "b75de0e22e5aeaa793eceb34cc50b69d3f07592004c12934453dd7835f5a1ee3",
+      "local_matches_aws_normalized": true
+    }
+  ]
+}

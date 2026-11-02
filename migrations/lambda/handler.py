@@ -15,11 +15,13 @@ SCHEMA_FILES = (
     "003_tenant_onboarding.sql",
     "004_tenant_security.sql",
     "005_onboarding_authorization.sql",
+    "006_shared_identity_permissions.sql",
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
     "onboarding_model_test.sql",
     "onboarding_authorization_test.sql",
+    "shared_identity_permissions_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 
@@ -40,10 +42,20 @@ def _connection():
 
 def lambda_handler(event, context):
     """Apply the packaged database model only after an explicit invocation."""
-    del event
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
+    if event.get("action") in ("configure_dev_validation", "verify_dev_identity", "qa_membership_state"):
+        from dev_validation import configure, verify, membership_state
+        try:
+            actions = {"configure_dev_validation": configure, "verify_dev_identity": verify,
+                       "qa_membership_state": membership_state}
+            return actions[event["action"]](connection, event, context)
+        finally:
+            connection.close()
+    if event.get("action", "apply_model") != "apply_model":
+        connection.close()
+        raise ValueError("Unsupported migration action")
     phase = "lock"
     filename = "none"
     committed_passes = 0
