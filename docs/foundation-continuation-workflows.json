@@ -1,0 +1,31 @@
+{
+  "runs": [
+    {
+      "commit": "302a7f91df07d357198bbb53fd1347001886f153",
+      "url": "https://github.com/eticayservicios/mastererp-database/actions/runs/41529465109",
+      "jobs": {
+        "changes": "success",
+        "deploy-migrator / deploy": "success",
+        "apply": "skipped"
+      },
+      "model_invoked": false
+    },
+    {
+      "commit": "48893f4d45b787a14befa63033a967e2807bd00b",
+      "url": "https://github.com/eticayservicios/mastererp-database/actions/runs/41530211106",
+      "jobs": {
+        "changes": "success",
+        "deploy-migrator / deploy": "success",
+        "apply": "skipped"
+      },
+      "model_invoked": false
+    }
+  ],
+  "migrator": {
+    "code_source_commit": "48893f4d45b787a14befa63033a967e2807bd00b",
+    "CodeSha256": "j1rgImg8ve4FgJHLvsjEeq1kB70ORsqYMVUS7BgSJzI=",
+    "State": "Active",
+    "LastUpdateStatus": "Successful"
+  },
+  "sql_model_source_commit_unchanged": "3c24386ae4308d1545b4c63845f2169aa273b189"
+}

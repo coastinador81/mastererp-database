@@ -14,7 +14,7 @@ Antes: Git publicaba hasta 005/modelo de 14 tablas; AWS contenía 006/modelo de 
 | Corrección hacia delante 008 | 467edee | [41505141804](https://github.com/eticayservicios/mastererp-database/actions/runs/41505141804) | Correcta, cinco archivos de pruebas SQL |
 | Prueba positiva de idempotencia de empresas | 3c24386 | [41506822843](https://github.com/eticayservicios/mastererp-database/actions/runs/41506822843) | Correcta, seis archivos de pruebas SQL |
 
-Migrador oficial mastererp-dev-database-migrator, Python 3.12, Active/Successful. **Código SQL y manifiesto vigentes: commit 3c24386ae4308d1545b4c63845f2169aa273b189; CodeSha256 MajGlPcTvtrC5KicEJtaoX8D+vLxRdyLhzA9ecU7u1Q=.** ZIP: schemas 001–008, seed 001, seis tests (15 SQL), pg8000 puro Python; sin .env, secretos o binarios Windows. Los commits documentales posteriores no cambian este paquete.
+Migrador oficial mastererp-dev-database-migrator, Python 3.12, Active/Successful. **Paquete de la última aplicación SQL: commit 3c24386ae4308d1545b4c63845f2169aa273b189; CodeSha256 MajGlPcTvtrC5KicEJtaoX8D+vLxRdyLhzA9ecU7u1Q=.** ZIP: schemas 001–008, seed 001, seis tests (15 SQL), pg8000 puro Python; sin .env, secretos o binarios Windows. El código auxiliar se actualizó después sin reaplicar el modelo; versión actual y resultados nuevos en [continuación](FOUNDATION_CONTINUATION_DEV.md).
 
 No se encontró un ledger individual de migraciones por nombres habituales. No se inventaron registros retrospectivos: evidencia de versión mediante runs, manifiesto, hashes y comparación de seis cuerpos de funciones RDS con el código revisado. Permanecen 17 tablas. FK branches_tenant_company_fk validado; cero enlaces empresa/sucursal incompatibles. Dos claves de idempotencia previas carecen de huella y se conservan; su reutilización genera conflicto, no reconstrucción artificial de contenido.
 
@@ -43,7 +43,7 @@ Drift actual: Uonify, Finanzas y Administración IN_SYNC. Onboarding DRIFTED exc
 | --- | --- | --- | --- |
 | Actor estable, owner/miembro/ajeno, estados y contexto | Aprobado | Aprobado como SET ROLE mastererp_app | 401/403/200 comprobados en rutas cubiertas |
 | Override false y módulo suspendido | Aprobado | Aprobado | 403 y recuperación del estado comprobados en Uonify |
-| Un actor con dos tenants y permisos aislados | Aprobado | Aprobado | Pendiente de fixture HTTP con ambas pertenencias |
+| Un actor con dos tenants y permisos aislados | Aprobado | Aprobado | Aprobado en la continuación; ver FOUNDATION_CONTINUATION_DEV.md |
 | Empresa/sucursal de otro tenant y asociación cruzada | Aprobado | Aprobado, FK validado | Pendiente; no operación HTTP reparada para ese recorrido |
 | Tenant/empresa: replay, contenido diferente y actor ajeno | Aprobado | Aprobado en seis archivos SQL | Pendiente |
 | Creación concurrente sin duplicados ni efectos parciales | Ocho peticiones tenant + ocho empresa, aprobado | No ejecutada concurrentemente | Pendiente de operaciones de escritura reparadas |
@@ -68,7 +68,7 @@ El CORS del Admin API conserva https://admin.dev.mastererp.local y sus cabeceras
 
 La reparación de esas rutas requiere un lote compatible con el API inline SAM y las ocho rutas externas de Administración. ReimportApi sobrescribe la definición ([AWS](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/reimport-api.html)); no se ejecutó una reimportación parcial ni una transición no validada que pudiera retirar recursos del otro dominio. Hay que demostrar preservación de IDs/propiedad antes de modificar ese Body. No se amplió esta tarea a la reorganización global de stacks excluida por el propietario.
 
-Después: reparar esos destinos/contratos reutilizando funciones permitidas, aplicar los helpers en las escrituras reales, habilitar el registro propio con el alcance aprobado y repetir HTTP de idempotencia/concurrencia, dos pertenencias y empresa/sucursal. Aún no hay cierre de estos casos. ACL específica por empresa y nuevos permisos funcionales siguen sujetos a decisión del Product Owner.
+Después: reparar esos destinos/contratos reutilizando funciones permitidas, aplicar los helpers en las escrituras reales, habilitar el registro propio con el alcance aprobado y repetir HTTP de idempotencia/concurrencia y empresa/sucursal. Aún no hay cierre de estos casos. ACL específica por empresa y nuevos permisos funcionales siguen sujetos a decisión del Product Owner.
 
 ## Evidencia y recuperación
 
