@@ -1,0 +1,24 @@
+{
+  "postgresql": "17.9",
+  "model_applied_twice": true,
+  "sql_tests_passed": [
+    "foundation_boundaries_test.sql",
+    "onboarding_authorization_test.sql",
+    "onboarding_model_test.sql",
+    "shared_identity_permissions_test.sql"
+  ],
+  "effective_role": "mastererp_app",
+  "concurrent_requests": 8,
+  "distinct_tenants": 1,
+  "different_content_conflict": true,
+  "no_partial_effects": true,
+  "remote_sql_executed": false,
+  "concurrent_company_requests": 8,
+  "distinct_companies": 1,
+  "company_content_conflict": true,
+  "company_no_partial_effects": true,
+  "write_audit_actor_tenant_entity_result_correlation": true,
+  "reapply_does_not_restore_revoked_role_grant": true,
+  "fixture_lifetime": "ephemeral_container_only",
+  "scope_limit": "SQL tenant/company primitives; HTTP concurrency pending"
+}
