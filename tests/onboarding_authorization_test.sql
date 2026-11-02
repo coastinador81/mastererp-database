@@ -45,9 +45,9 @@ INSERT INTO plataforma.users(id,email,display_name) VALUES
  ('10000000-0000-0000-0000-000000000003','outsider-security@example.invalid','Outsider');
 INSERT INTO plataforma.tenants(id,code,slug,name) VALUES
  ('20000000-0000-0000-0000-000000000002','security-other','security-other','Other');
-INSERT INTO plataforma.idempotency_keys(idempotency_key,actor_user_id,operation) VALUES
- ('security-owner-key','10000000-0000-0000-0000-000000000001','tenant.create'),
- ('security-member-key','10000000-0000-0000-0000-000000000002','tenant.create');
+INSERT INTO plataforma.idempotency_keys(idempotency_key,actor_user_id,operation,request_tenant_id) VALUES
+ ('security-owner-key','10000000-0000-0000-0000-000000000001','tenant.create','20000000-0000-0000-0000-000000000001'),
+ ('security-member-key','10000000-0000-0000-0000-000000000002','tenant.create','20000000-0000-0000-0000-000000000001');
 
 CREATE FUNCTION pg_temp.assert_app() RETURNS void LANGUAGE plpgsql AS $$
 BEGIN IF current_user <> 'mastererp_app' THEN

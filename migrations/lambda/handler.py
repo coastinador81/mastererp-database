@@ -16,12 +16,14 @@ SCHEMA_FILES = (
     "004_tenant_security.sql",
     "005_onboarding_authorization.sql",
     "006_shared_identity_permissions.sql",
+    "007_foundation_boundaries.sql",
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
     "onboarding_model_test.sql",
     "onboarding_authorization_test.sql",
     "shared_identity_permissions_test.sql",
+    "foundation_boundaries_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 
