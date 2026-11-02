@@ -12,6 +12,7 @@ Secuencia de trabajo: leer contexto y README afectado/padres; identificar domini
 
 - Mantener nombres, numeración y rutas funcionales equivalentes en las cuatro capas. Uonify es 0-uonify; Marketing 2.8.2, MasterCRM 2.8.3, Google 2.8.4, Microsoft 2.8.5. Transporte incluye Chipipro y MRW; no crear Despacho.
 - Cada nuevo módulo, submódulo o pantalla necesita README de responsabilidad, estado, dependencias y propietario. Infrastructure añade resources.yml. Sin implementación, no generar código vacío.
+- Infrastructure: declarar todas las Lambdas y recursos exclusivos en el resources.yml raíz del módulo, submódulo o pantalla propietario; no crear YAML por Lambda. Backend conserva lambdas/<nombre>/ para código; esa carpeta técnica no se replica entre capas. Las plantillas heredadas por Lambda requieren transición explícita, nunca traslado automático. Ver docs/FOLDER_STANDARD.md.
 - No duplicar recursos: los compartidos pertenecen al padre común. Referenciar explícitamente parámetros y salidas; las carpetas no crean relaciones de stacks automáticamente.
 - Un YAML vacío es una reserva y se excluye del despliegue. No vaciar plantillas que ya contienen recursos. No recrear las cinco Lambdas eliminadas sin una petición explícita del propietario.
 - Respetar cambios existentes y no publicar secretos. No ejecutar SQL, despliegues, eliminaciones ni cambios de DNS como consecuencia implícita de una reorganización.

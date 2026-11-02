@@ -42,3 +42,23 @@ Database modules/ es correspondencia funcional documental: no se ejecuta automá
 ## Infrastructure actual
 
 Las definiciones reorganizadas no son todavía un despliegue consolidado equivalente a AWS. Falta preparar el empaquetado del código backend de Platform, publicar artefactos autorizados y conectar referencias entre plantillas/stacks conservando API, rutas, autorización y permisos. Ver RESOURCE_OWNERSHIP.md cuando exista en este repo; no dar por migrada la propiedad del Admin API. No crear un stack por carpeta por defecto.
+
+
+## Propiedad de recursos y carpetas de Lambdas
+
+Regla vigente: en Infrastructure, cada módulo, submódulo, pantalla o subpantalla declara sus recursos exclusivos en `resources.yml` ubicado directamente en la raíz de esa carpeta funcional. Ese único archivo puede declarar cero, una o varias Lambdas, sus roles, Log Groups y demás recursos propios. No se crea un YAML, una carpeta de infraestructura ni un stack por cada Lambda.
+
+`lambdas/<nombre>/` es una carpeta técnica de código en Platform Backend, con su handler y documentación; no obliga a replicar esa carpeta en Infrastructure, frontend o Database. La correspondencia entre capas se mantiene en la carpeta funcional propietaria. Frontend y Database no añaden YAML de infraestructura por esta regla; se conservan las plantillas técnicas de datos existentes en Database.
+
+Los recursos compartidos se declaran una sola vez en el `resources.yml` del padre funcional común más cercano. Los API Gateway compartidos conservan `modules/api-gateways.yml` y su stack propietario vigente durante la transición. Los consumidores reciben referencias explícitas mediante parámetros/salidas documentados. No duplicar declaraciones en padre e hijo. Un YAML vacío es una reserva excluida del despliegue; no implica crear una Lambda.
+
+Las plantillas preexistentes bajo `lambdas/<nombre>/resources.yml` son excepciones heredadas pendientes de revisión y transición, no ejemplos para nuevas funciones. No moverlas, copiarlas, vaciarlas ni desplegarlas por aplicar esta regla documental: primero identificar el stack propietario, preservar sus recursos y preparar una transición explícita autorizada. Documentar su ubicación real hasta completar esa transición.
+
+
+## Ejemplo ilustrativo: varias Lambdas de un mismo submódulo
+
+En Infrastructure, la ubicación propietaria es `modules/2.2-finance/2.2.1-administration/2.2.1.1-gestion-comercial/2.2.1.1.1-clientes/resources.yml`. Allí se declaran las Lambdas exclusivas de Clientes y sus recursos; no se crea `lambdas/<nombre>/resources.yml`.
+
+En Platform, el código correspondiente se ubica en `backend/modules/2.2-finance/2.2.1-administration/2.2.1.1-gestion-comercial/2.2.1.1.1-clientes/lambdas/mastererp-dev-adm-clientes/handler.py`. Si Clientes necesita otra función, su código recibe otra carpeta dentro de `lambdas/`, pero ambas funciones se declaran en el mismo `resources.yml` raíz de Clientes en Infrastructure.
+
+Las pantallas siguen la misma regla: cada `screens/<pantalla>/resources.yml` declara solo sus recursos exclusivos; los compartidos con otra pantalla pertenecen al padre común. Este ejemplo no acredita código, recursos ni despliegues implementados.

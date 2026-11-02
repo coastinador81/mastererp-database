@@ -37,3 +37,8 @@ Reserva, parcial, implementado o validado; archivo/prueba/ejecución que lo acre
 ## Validaciones y pendientes
 
 Comandos ejecutados, resultados y límites. Pendiente de definir con motivo cuando proceda.
+
+
+## Plantilla propietaria de infraestructura
+
+Indicar el resources.yml raíz de esta carpeta funcional en Infrastructure; listar las Lambdas y recursos exclusivos que declara. Para recursos compartidos, indicar el YAML del padre común y las referencias consumidas. Código Backend en lambdas/<nombre>/; no crear YAML por Lambda. Si existe una plantilla heredada por función, identificarla y documentar la transición pendiente sin duplicarla ni moverla implícitamente.
