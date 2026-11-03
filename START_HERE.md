@@ -1,5 +1,7 @@
 # Empieza aquí
 
+Contrato de lectura previa para frontend, navegación, autenticación, contexto y hosting: [arquitectura frontend común](docs/FRONTEND_ARCHITECTURE.md). La fuente oficial está en Platform y las copias deben coincidir.
+
 MasterERP centraliza operaciones empresariales por módulos; Uonify es su entrada conversacional. El tenant delimita acceso y módulos habilitados; una empresa es una entidad organizativa dentro de ese tenant.
 
 Platform mantiene frontend/ y backend/; Infrastructure recursos funcionales; Database RDS, migrador y SQL. Esta copia es mastererp-database.

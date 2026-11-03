@@ -1,5 +1,9 @@
 # Instrucciones para IA
 
+## Lectura obligatoria del contrato frontend
+
+Antes de modificar frontends, navegación, autenticación, contexto de tenant/empresa o hosting, es obligatorio leer [docs/FRONTEND_ARCHITECTURE.md](docs/FRONTEND_ARCHITECTURE.md). Su fuente oficial es Platform/dev; las copias de Infrastructure y Database deben permanecer idénticas. Aplicar sus límites de responsabilidad y distinguir arquitectura objetivo de implementación verificada.
+
 Antes de modificar archivos, leer PROJECT.md, README.md, CONTRIBUTING.md, docs/DEVELOPMENT_STANDARD.md, docs/FOLDER_STANDARD.md y el README del módulo afectado. Estas instrucciones no sustituyen las indicaciones explícitas del propietario ni las políticas del entorno.
 
 ## Responsabilidad de este repositorio

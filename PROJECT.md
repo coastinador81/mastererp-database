@@ -1,8 +1,12 @@
 # MasterERP — contexto común
 
+## Contrato de arquitectura frontend
+
+MasterERP es el núcleo de negocio y autorización; Uonify es el front general y chat operativo objetivo en `app.uonify.com`. Los módulos principales tendrán frontends independientes con navegación federada y ciclos de entrega propios; Finanzas concentra `/administracion`, `/contabilidad` y `/bi` bajo `finanzas.uonify.com`, sin frontend/subdominio separado de Administración. Identidad y contexto se comparten mediante un contrato explícito, sin asumir sesión automática entre subdominios. La fuente oficial, decisiones y límites están en [docs/FRONTEND_ARCHITECTURE.md](docs/FRONTEND_ARCHITECTURE.md), idéntico en los tres repositorios. Es arquitectura objetivo, no evidencia de implementación; solo se trabaja en DEV.
+
 ## Visión objetivo
 
-MasterERP busca centralizar operaciones empresariales para usuarios individuales, empresas y grupos que contratan módulos según sus necesidades. Uonify (0-uonify) es el cerebro y la entrada conversacional para consultar y operar el sistema. Cada módulo ejecuta sus operaciones y aplica sus reglas; el chat no sustituye su autorización ni es propietario de todos sus datos. Esta es la visión objetivo, no una afirmación de que todos los módulos estén implementados.
+MasterERP busca centralizar operaciones empresariales para usuarios individuales, empresas y grupos que contratan módulos según sus necesidades. Uonify (0-uonify) es el front general y la entrada conversacional para consultar y operar el sistema; MasterERP conserva el núcleo de negocio y autorización. Cada módulo ejecuta sus operaciones y aplica sus reglas; el chat no sustituye su autorización ni es propietario de todos sus datos. Esta es la visión objetivo, no una afirmación de que todos los módulos estén implementados.
 
 ## Identidad y aislamiento
 

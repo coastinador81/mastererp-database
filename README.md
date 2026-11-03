@@ -1,5 +1,9 @@
 # MasterERP Database
 
+## Arquitectura frontend
+
+MasterERP conserva datos, reglas, procesos y autorización; Uonify es el front general y chat operativo objetivo. Los frontends de módulos principales se integran por navegación federada, sin microfrontends embebidos iniciales. Finanzas tiene como raíz objetivo `finanzas.uonify.com`; Administración, Contabilidad y BI viven bajo esa raíz, sin un frontend separado de Administración. Contrato, contexto/sesión, estado DEV y sincronización: [docs/FRONTEND_ARCHITECTURE.md](docs/FRONTEND_ARCHITECTURE.md). Estas decisiones documentales no acreditan su despliegue.
+
 Entrada rápida: [START_HERE.md](START_HERE.md).
 
 ## Mapa físico y referencias
