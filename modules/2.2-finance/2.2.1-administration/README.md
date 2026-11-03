@@ -33,3 +33,9 @@ Clientes y Proveedores consumen maestros existentes sin duplicarlos. Proveedores
 ## Jerarquía de infraestructura
 
 Se conserva la ruta y responsabilidad funcional. La composición Finanzas → Administración y las reservas de Contabilidad/BI se documentan en [docs/FINANCE_HIERARCHY.md](../../../docs/FINANCE_HIERARCHY.md). En Infrastructure, cada recurso permanece en el YAML raíz de su carpeta propietaria; una carpeta no obliga a crear un stack. El resultado AWS se informa por separado en el mapa y evidencia de Infrastructure.
+
+## Candidato SQL local de Administración
+
+El [modelo y matriz de responsabilidades](MODEL.md) y el [inventario de tablas](tables.json) describen las migraciones candidatas 009–013. Se reutilizan los mecanismos compartidos; no existen aún comandos de negocio ni despliegue de estas tablas en DEV. Los maestros mínimos canónicos se proponen en catalogo porque 001–008 no contiene esas tablas; no se crean maestros separados de cliente/proveedor en Administración.
+
+Las [pruebas locales y límites](../../../docs/ADMINISTRATION_VALIDATION.md) distinguen integridad SQL y permisos de funcionamiento completo del backend. El migrador publicado y sus workflows no se modifican; no publicar este candidato sin revisar antes el circuito de aplicación automática.

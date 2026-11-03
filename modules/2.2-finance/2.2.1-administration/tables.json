@@ -1,0 +1,39 @@
+{
+  "canonical": [
+    "catalogo.monedas",
+    "catalogo.terceros",
+    "catalogo.roles_tercero",
+    "catalogo.productos"
+  ],
+  "administration": [
+    "condiciones_comerciales",
+    "descuentos_pronto_pago",
+    "perfiles_tercero",
+    "documentos",
+    "detalles_documento",
+    "relaciones_documento",
+    "destinos_compra",
+    "detalle_destinos",
+    "cuentas_tesoreria",
+    "operaciones_tesoreria",
+    "movimientos_tesoreria",
+    "transferencias",
+    "extractos_bancarios",
+    "lineas_extracto",
+    "conciliaciones",
+    "partidas_conciliacion",
+    "partidas_cartera",
+    "vencimientos",
+    "aplicaciones_cartera",
+    "categorias_gasto",
+    "gastos",
+    "fondos_caja_chica",
+    "reposiciones",
+    "anticipos",
+    "rendiciones",
+    "rendicion_gastos",
+    "politicas_reserva",
+    "reservas_fondos",
+    "soportes"
+  ]
+}

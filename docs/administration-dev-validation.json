@@ -1,0 +1,9 @@
+{
+  "status": "preparing",
+  "snapshot": "mastererp-dev-before-administration-20261103010411",
+  "region": "us-west-1",
+  "baseline_source_commit": "2631c7a46292b15f0cfecd14ed54a2ff205fbddd",
+  "deployed_sql_001_008": "matches_git_normalized_line_endings",
+  "migration_ledger": "not_present; do not infer file registrations",
+  "snapshot_status": "available"
+}

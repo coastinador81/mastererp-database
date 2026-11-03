@@ -18,6 +18,11 @@ SCHEMA_FILES = (
     "006_shared_identity_permissions.sql",
     "007_foundation_boundaries.sql",
     "008_active_session_context.sql",
+    "009_shared_master_references.sql",
+    "010_administration_documents.sql",
+    "011_administration_treasury.sql",
+    "012_administration_portfolio_expenses.sql",
+    "013_administration_integrity_security.sql",
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
@@ -50,6 +55,14 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
+    if event.get("action") == "validate_administration":
+        from administration_validation import validate, concurrency
+        try:
+            if event.get("mode") == "concurrency":
+                return concurrency(connection, context, _connection)
+            return validate(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action") in ("configure_dev_validation", "verify_dev_identity", "qa_membership_state", "qa_foundation_state", "inspect_foundation", "qa_dual_tenant"):
         from dev_validation import configure, verify, membership_state, foundation_state, inspect_foundation, dual_tenant
         try:
@@ -87,12 +100,12 @@ def lambda_handler(event, context):
                 connection.run("ROLLBACK")
         schemas = [row[0] for row in connection.run(
             "SELECT nspname FROM pg_namespace "
-            "WHERE nspname IN ('plataforma', 'organizacion', 'auditoria') ORDER BY nspname"
+            "WHERE nspname IN ('plataforma', 'organizacion', 'auditoria', 'catalogo', 'administracion') ORDER BY nspname"
         )]
         table_count = connection.run(
             "SELECT count(*) FROM information_schema.tables "
             "WHERE table_type = 'BASE TABLE' "
-            "AND table_schema IN ('plataforma', 'organizacion', 'auditoria')"
+            "AND table_schema IN ('plataforma', 'organizacion', 'auditoria', 'catalogo', 'administracion')"
         )[0][0]
         return {
             "status": "succeeded",
