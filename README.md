@@ -2,7 +2,7 @@
 
 ## Arquitectura frontend
 
-MasterERP conserva datos, reglas, procesos y autorización; Uonify es el front general y chat operativo objetivo. Los frontends de módulos principales se integran por navegación federada, sin microfrontends embebidos iniciales. Finanzas tiene como raíz objetivo `finanzas.uonify.com`; Administración, Contabilidad y BI viven bajo esa raíz, sin un frontend separado de Administración. Contrato, contexto/sesión, estado DEV y sincronización: [docs/FRONTEND_ARCHITECTURE.md](docs/FRONTEND_ARCHITECTURE.md). Estas decisiones documentales no acreditan su despliegue.
+MasterERP conserva datos, reglas, procesos y autorización. `app-dev.uonify.com` es la entrada general DEV: la experiencia objetivo es un dashboard con chat y menú de módulos habilitados para el tenant y autorizados para el usuario. Sus pantallas se presentan dentro de Uonify, con navegación, identidad y contexto comunes; conversar no es obligatorio. Finanzas agrupa Administración, Contabilidad, BI y capacidades asociadas y conserva build/pipeline/despliegue propios. Su hosting `finanzas-dev.uonify.com` existe como acceso independiente de desarrollo y pruebas, no como navegación objetivo del usuario final; no se exige un subdominio financiero en producción ni una entrada `/finanzas`. La integración técnica de pantallas sigue pendiente. Cognito autentica; MasterERP autoriza cada operación por API. Ver [contrato oficial y estado desplegado](docs/FRONTEND_ARCHITECTURE.md).
 
 Entrada rápida: [START_HERE.md](START_HERE.md).
 

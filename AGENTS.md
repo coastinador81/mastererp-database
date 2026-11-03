@@ -2,7 +2,7 @@
 
 ## Lectura obligatoria del contrato frontend
 
-Antes de modificar frontends, navegación, autenticación, contexto de tenant/empresa o hosting, es obligatorio leer [docs/FRONTEND_ARCHITECTURE.md](docs/FRONTEND_ARCHITECTURE.md). Su fuente oficial es Platform/dev; las copias de Infrastructure y Database deben permanecer idénticas. Aplicar sus límites de responsabilidad y distinguir arquitectura objetivo de implementación verificada.
+Antes de modificar frontends, navegación, autenticación, contexto de tenant/empresa o hosting, es obligatorio leer y respetar [docs/FRONTEND_ARCHITECTURE.md](docs/FRONTEND_ARCHITECTURE.md). Su fuente oficial es Platform/dev; las copias de Infrastructure y Database deben permanecer idénticas. Aplicar la experiencia objetivo dentro del espacio común de Uonify y distinguirla del hosting independiente de pruebas ya desplegado. No imponer una tecnología de integración ni rutas internas sin el diseño correspondiente; menús, URLs y contexto frontend no conceden permisos. La API valida cada operación.
 
 Antes de modificar archivos, leer PROJECT.md, README.md, CONTRIBUTING.md, docs/DEVELOPMENT_STANDARD.md, docs/FOLDER_STANDARD.md y el README del módulo afectado. Estas instrucciones no sustituyen las indicaciones explícitas del propietario ni las políticas del entorno.
 

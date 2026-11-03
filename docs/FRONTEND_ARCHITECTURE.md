@@ -1,6 +1,6 @@
 # Contrato general de arquitectura frontend — MasterERP + Uonify
 
-Estado: decisiones de arquitectura objetivo para implementación progresiva. Este documento no acredita que los frontends, dominios, pipelines o continuidad de sesión descritos estén implementados. Actualmente solo se trabaja en DEV.
+Estado: contrato de experiencia integrada objetivo, con implementación progresiva y solo DEV. El hosting independiente de Finanzas DEV está publicado; la integración de sus pantallas en Uonify y el dashboard común de módulos siguen pendientes. El estado desplegado se distingue de las decisiones objetivo en la sección 7.
 
 Fuente oficial: `mastererp-platform/docs/FRONTEND_ARCHITECTURE.md`, rama `dev`. Infrastructure y Database conservan copias idénticas en `docs/FRONTEND_ARCHITECTURE.md`; no son fuentes independientes. Este contrato debe leerse antes de modificar frontends, navegación, autenticación, contexto o hosting.
 
@@ -8,35 +8,39 @@ Fuente oficial: `mastererp-platform/docs/FRONTEND_ARCHITECTURE.md`, rama `dev`. 
 
 MasterERP es el núcleo de negocio: datos, reglas, procesos, módulos y autorización. Cada dominio conserva sus responsabilidades; presentar una operación en una pantalla o en el chat no cambia quién la ejecuta ni quién posee sus datos.
 
-Uonify es el front general y el chat operativo objetivo en `app.uonify.com`. Coordina la experiencia, la navegación y el contexto de trabajo; utiliza las APIs y herramientas autorizadas de MasterERP. No sustituye sus reglas ni concentra por ello la propiedad de todos los módulos.
+Uonify es el front general y chat operativo de MasterERP; `app-dev.uonify.com` es la entrada general en DEV. `app.uonify.com` identifica la entrada general objetivo fuera de DEV, sin acreditar un despliegue productivo. Uonify coordina navegación, identidad y contexto de trabajo; utiliza las APIs y herramientas autorizadas de MasterERP. Los módulos conservan sus reglas y datos.
 
 El Centro de Agentes (`2.6-agent-center`) crea y gobierna agentes especializados. Uonify puede invocarlos dentro de los permisos y contexto autorizados. Invocar un agente no concede privilegios adicionales ni desplaza la autorización del backend.
 
-## 2. Frontends por módulo principal y navegación federada
+## 2. Un espacio común con chat y módulos
 
-Los frontends especializados son independientes por módulo principal. Se incorporan al Front Uonify mediante navegación federada, menú y chat: entradas y enlaces hacia aplicaciones especializadas, y operaciones mediante APIs autorizadas. Uonify permite descubrir y abrir el módulo, sin asumir la ejecución de su interfaz o de sus reglas.
+La experiencia objetivo es un dashboard común en Uonify: el usuario accede a chat y a los módulos habilitados para su tenant y autorizados para su usuario. Si solo tiene Finanzas habilitado y autorizado, únicamente verá ese módulo. Cuando se habiliten otros módulos para el tenant, aparecerán en el mismo espacio para los usuarios autorizados. El catálogo backend o una habilitación comercial no prueban que una pantalla esté implementada.
 
-No comenzar con microfrontends embebidos. No se adopta Module Federation, composición remota de bundles o iframes como mecanismo inicial de integración. Compartir bibliotecas de UI o contratos no convierte las aplicaciones en un único despliegue. Cualquier cambio posterior de este modelo requiere una decisión arquitectónica explícita.
+Las pantallas de los módulos se presentan dentro del espacio general de Uonify, conservando navegación, identidad y contexto comunes. No es obligatorio conversar para navegar: el usuario también puede abrir los módulos desde el menú. El chat es otra forma de acceder a operaciones autorizadas, no un paso obligatorio para abrir pantallas.
 
-Cada frontend de módulo principal tendrá build, artefacto, pipeline, despliegue y rollback propios. Las capacidades internas de ese módulo se integran en esa unidad; no se deduce un frontend desplegable por cada submódulo o pantalla. Esta independencia es una responsabilidad de entrega, no evidencia de pipelines ya existentes.
+Los módulos principales mantienen componentes, build, artefacto, pipeline, despliegue y rollback propios, preparados para integrarse en el front general. La independencia de entrega no obliga al usuario a abandonar Uonify ni a usar un subdominio por módulo. Tampoco implica un frontend independiente por cada submódulo o pantalla.
 
-Se conserva la organización actual: frontend y backend en `mastererp-platform`, recursos funcionales en `mastererp-infrastructure` y datos/migraciones en `mastererp-database`. No se crean, separan o renombran repositorios por este contrato. Tampoco se trasladan carpetas, stacks o código existente como consecuencia implícita de documentarlo.
+El mecanismo técnico de integración de pantallas sigue pendiente de diseño y validación. Esta tarea no impone iframe, Module Federation, composición de bundles u otra solución, ni declara ninguna implementada. Las referencias anteriores a «navegación federada» como enlaces obligatorios a aplicaciones separadas y la exclusión anticipada de mecanismos quedan sustituidas por este contrato de experiencia; no deciden la solución técnica.
 
-## 3. Finanzas: una raíz para sus capacidades
+Se conserva la organización de repositorios y carpetas: frontend y backend en Platform, recursos funcionales en Infrastructure, datos/migraciones en Database. Este contrato no mueve código, stacks o recursos ni crea repositorios.
 
-`finanzas.uonify.com` es la raíz objetivo del frontend principal de Finanzas. Administración no tiene frontend ni subdominio separado: forma parte de ese frontend financiero.
+## 3. Finanzas agrupa sus capacidades
 
-| Responsabilidad | Carpeta funcional vigente | Entrada web objetivo bajo `finanzas.uonify.com` |
+Finanzas mantiene sus componentes, build, pipeline y despliegue propios y agrupa Administración, Contabilidad, BI y las capacidades asociadas existentes. Sus pantallas deben integrarse en el espacio general de Uonify. Administración no tiene frontend desplegable ni subdominio separado.
+
+| Responsabilidad | Carpeta funcional vigente | Presentación objetivo |
 | --- | --- | --- |
-| Finanzas | `2.2-finance` | `/` |
-| Administración | `2.2-finance/2.2.1-administration` | `/administracion` |
-| Contabilidad | `2.2-finance/2.2.2-accounting` | `/contabilidad` |
-| BI | `2.2-finance/2.2.3-bi` | `/bi` |
-| Otras capacidades financieras | Sus carpetas numeradas existentes | Bajo la misma raíz; rutas concretas pendientes de priorización |
+| Finanzas | `2.2-finance` | Módulo dentro del espacio general de Uonify |
+| Administración | `2.2-finance/2.2.1-administration` | Capacidad financiera dentro de ese espacio |
+| Contabilidad | `2.2-finance/2.2.2-accounting` | Capacidad financiera dentro de ese espacio |
+| BI | `2.2-finance/2.2.3-bi` | Capacidad financiera dentro de ese espacio |
+| Otras capacidades financieras | Sus carpetas numeradas existentes | Bajo la responsabilidad de Finanzas |
 
-Las rutas web son contratos de navegación; no obligan a renombrar las carpetas numeradas existentes en inglés. Administración, Contabilidad y BI no adquieren un frontend independiente por tener una carpeta, API o stack propios. El nombre técnico del API administrativo y las Lambdas `adm-*` tampoco determina el dominio de una interfaz.
+No se establece `/finanzas` como entrada independiente obligatoria. Las rutas internas, rutas de capacidades y enlaces directos se definirán al implementar la navegación; esta documentación no las fija. Las URLs no obligan a renombrar carpetas numeradas ni se deducen de nombres de APIs o Lambdas `adm-*`.
 
-`admin.uonify.com` y `finance.uonify.com` no son destinos vigentes de Finanzas en este contrato. Una referencia anterior a esos nombres solo puede conservarse claramente identificada como histórica. No se establecen redirecciones ni registros DNS por escribir esta decisión.
+`finanzas-dev.uonify.com` se conserva como acceso independiente de desarrollo y pruebas del frontend financiero. Existe una página inicial pública, pero ese subdominio no es la navegación objetivo del usuario final. No es obligatorio crear `finanzas.uonify.com` en producción. La decisión anterior que lo establecía como raíz obligatoria y fijaba rutas bajo ella queda sustituida; no se elimina ni modifica el hosting DEV.
+
+`admin.uonify.com` y `finance.uonify.com` tampoco son destinos vigentes definidos por este contrato. Las referencias históricas deben identificarse como tales.
 
 ## 4. Congruencia de las cuatro capas
 
@@ -56,39 +60,38 @@ Cada API valida siempre identidad, usuario, tenant y pertenencia activos, empres
 
 La autorización por empresa conserva el contrato backend vigente; este documento no inventa una ACL individual por empresa que aún no esté definida. Reglas funcionales adicionales se acuerdan con el Product Owner antes de implementar el comportamiento afectado.
 
-Ocultar menús, botones o herramientas del chat no sustituye autorización backend. El chat, las pantallas y los agentes usan los mismos controles de negocio. El frontend no accede directamente a RDS ni recibe secretos de base de datos. Cambiar tenant/empresa exige evitar cachés o solicitudes que arrastren el contexto anterior.
+Menús, URLs y contexto enviado por el frontend no conceden permisos. Ocultar menús, botones o herramientas del chat no sustituye autorización backend. El chat, las pantallas y los agentes usan los mismos controles de negocio. El frontend no accede directamente a RDS ni recibe secretos de base de datos. Cambiar tenant/empresa exige evitar cachés o solicitudes que arrastren el contexto anterior.
 
-## 6. Continuidad entre subdominios
+## 6. Identidad y contexto comunes: integración pendiente
 
-La continuidad de sesión y contexto requiere un mecanismo explícito, versionado y probado. No se asume que dos subdominios comparten automáticamente autenticación, almacenamiento o selección de tenant/empresa.
+El espacio integrado debe conservar identidad, tenant y empresa activos con un contrato explícito, versionado y probado. Cada módulo consume ese contrato común; la API revalida cada operación. La selección visual o una ruta directa no autoriza al actor.
 
-No transferir access tokens, ID tokens ni refresh tokens en URLs, fragmentos, enlaces de menú, mensajes del chat o parámetros de redirección. Si se utiliza un flujo OAuth de código de autorización, su callback validado y sus protecciones se rigen por el contrato de identidad; un código de un solo uso no es un mecanismo genérico para transportar tokens entre aplicaciones.
+El diseño debe concretar cómo se obtiene o renueva la sesión, cómo se recibe y revalida el contexto, y cómo funcionan logout, expiración, navegación directa, pestañas simultáneas y cambio de tenant/empresa. Debe evitar cachés y solicitudes que arrastren contexto anterior. No se adopta un mecanismo técnico de integración o transporte por este documento.
 
-Queda pendiente seleccionar y validar cómo cada frontend obtiene o renueva su sesión, cómo recibe/revalida el contexto y cómo funcionan logout, expiración, acceso directo, pestañas simultáneas y cambio de tenant/empresa. Las opciones técnicas deben respetar los estándares existentes; este documento no adopta cookies compartidas, BFF, almacenamiento del navegador o un canal entre ventanas sin diseño y pruebas.
+Para los accesos independientes de desarrollo tampoco se asume que los subdominios comparten automáticamente autenticación o almacenamiento. No transferir access tokens, ID tokens ni refresh tokens en URLs, fragmentos, enlaces de menú o mensajes del chat. Si se usa OAuth de código de autorización, el callback validado y sus protecciones se rigen por el contrato de identidad; no es un canal genérico para transportar tokens entre aplicaciones.
 
-## 7. Dominios y entornos: objetivo frente a evidencia
+## 7. Objetivo y estado desplegado en DEV
 
-| Experiencia | Hostname objetivo | DEV y alcance de la evidencia |
+| Experiencia | Decisión vigente | Estado y alcance de la evidencia |
 | --- | --- | --- |
-| Front general Uonify | `app.uonify.com` | Nombre DEV documentado en inventario previo: `app-dev.uonify.com` |
-| Frontend principal de Finanzas | `finanzas.uonify.com` | Hostname y publicación DEV de Finanzas no verificados; pendientes de definición |
-| Administración, Contabilidad y BI | La misma raíz de Finanzas | Sin subdominios propios; sus rutas pertenecen al frontend financiero |
+| Uonify general | `app-dev.uonify.com` es la entrada general DEV; dashboard común, chat y módulos autorizados | Hosting DEV documentado; el dashboard integrado y las pantallas financieras no se declaran implementados |
+| Finanzas independiente DEV | `finanzas-dev.uonify.com` para desarrollo y pruebas | Página pública «Finanzas — MasterERP», «Desarrollo», «Hola mundo» publicada; sin login, datos ni APIs |
+| Finanzas dentro de Uonify | Pantallas integradas con navegación, identidad y contexto comunes | Pendiente de diseño e implementación; las rutas internas y enlaces directos no están fijados |
+| Producción | `app.uonify.com` como entrada general objetivo; subdominio financiero no obligatorio | No se crea ni acredita producción o QA por este contrato |
 
-`app-dev.uonify.com` figura como registro DNS del alojamiento DEV en el [inventario CFN versionado de Infrastructure](https://github.com/eticayservicios/mastererp-infrastructure/blob/9faf6392ac3125df5789c56e502faa8878e5254e/docs/FINANCE_RESOURCE_MAP_DEV.md), cuya base se fechó el 2026-11-02. Esa referencia acredita el nombre configurado documentado previamente, no una nueva prueba de DNS/TLS/HTTP en esta tarea ni la implementación de navegación federada. No se inventa un dominio financiero DEV a partir de una convención.
+El nombre de Uonify DEV consta en el [inventario CFN versionado](https://github.com/eticayservicios/mastererp-infrastructure/blob/9faf6392ac3125df5789c56e502faa8878e5254e/docs/FINANCE_RESOURCE_MAP_DEV.md), con base fechada el 2026-11-02. El hosting financiero y sus comprobaciones del 2026-11-03 constan en [HOSTING.md versionado de Infrastructure](https://github.com/eticayservicios/mastererp-infrastructure/blob/0df8d9c/modules/2.2-finance/HOSTING.md) y en la [publicación DEV final](https://github.com/eticayservicios/mastererp-platform/actions/runs/41638169436). Esa evidencia demuestra alojamiento independiente, no integración de pantallas ni operaciones financieras. No se repiten consultas DNS, AWS o HTTP por esta tarea documental.
 
-Los nombres sin sufijo indicados arriba son arquitectura objetivo; no acreditan servicios productivos ni entornos QA/PROD. Una evidencia anterior de `app.uonify.com` debe leerse con su fecha y entorno, no como autorización para publicar allí desde `dev`.
-
-Los dominios personalizados requieren DNS autoritativo, certificados y configuración de hosting explícitos, además de callbacks/orígenes autorizados cuando correspondan. Hostname y marca no conceden acceso ni determinan por sí solos el tenant. Cualquier asociación de dominio con una experiencia o contexto candidato debe resolverse mediante configuración validada y autorización posterior del usuario.
+Los dominios personalizados requieren DNS autoritativo, certificados y configuración de hosting explícitos. Hostname y marca no conceden acceso ni determinan por sí solos el tenant. Una configuración de dominio/contexto candidato debe validarse y someterse a la autorización del usuario. No se eliminan recursos existentes ni se crean dominios por actualizar esta documentación.
 
 ## 8. Decisiones técnicas pendientes
 
-- Protocolo y versión de sesión/contexto entre aplicaciones, renovación y logout; pruebas de aislamiento entre subdominios, tenants y empresas.
-- Catálogo de entradas federadas para menú/chat, enlaces profundos y comportamiento ante frontend no disponible o versión incompatible.
-- Framework, composición del shell y reutilización de UI dentro de los estándares, sin adoptar microfrontends embebidos por defecto.
-- Builds, pipelines, hosting, artefactos versionados y procedimiento de rollback de cada frontend principal; no se crean en esta entrega.
-- Nombre DEV y publicación de Finanzas, rutas de otras capacidades y eventuales dominios personalizados, con DNS/certificados/hosting revisados.
+- Diseñar y validar el mecanismo de integración de pantallas dentro del espacio común, con compatibilidad entre las entregas independientes de Uonify y Finanzas; sin imponer una tecnología en esta tarea.
+- Definir navegación, menú, rutas internas y enlaces directos, incluida la respuesta ante módulo no disponible o versión incompatible; no asumir una entrada `/finanzas` obligatoria.
+- Versionar el contrato de identidad/contexto y probar renovación, logout, expiración, pestañas, cambio de tenant/empresa y ausencia de filtraciones entre módulos.
+- Implementar el dashboard con la intersección de módulos habilitados y permisos del usuario; los controles visuales complementan los de las APIs.
+- Mantener el build, pipeline, hosting y rollback propios de Finanzas ya existentes; preparar su integración sin eliminar el acceso independiente de pruebas. Las capacidades financieras de UI siguen pendientes.
 
-El Product Owner amplía progresivamente objetivos, prioridades, reglas y criterios de aceptación. El desarrollador concreta la solución técnica y actualiza el módulo; las IA pueden resolver decisiones técnicas dentro de los estándares. Las decisiones funcionales no definidas se marcan pendientes y se acuerdan antes de implementar el comportamiento afectado. No es necesario especificar todos los módulos por adelantado.
+El Product Owner amplía progresivamente objetivos, prioridades, reglas y criterios de aceptación. Cada desarrollador concreta la solución técnica dentro de los estándares y actualiza la documentación. Las IA deben respetar este contrato; pueden resolver decisiones técnicas dentro de sus límites. Las decisiones funcionales no definidas se acuerdan antes de implementar el comportamiento afectado.
 
 ## 9. Fuente oficial y sincronización
 

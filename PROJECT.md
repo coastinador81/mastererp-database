@@ -2,11 +2,11 @@
 
 ## Contrato de arquitectura frontend
 
-MasterERP es el núcleo de negocio y autorización; Uonify es el front general y chat operativo objetivo en `app.uonify.com`. Los módulos principales tendrán frontends independientes con navegación federada y ciclos de entrega propios; Finanzas concentra `/administracion`, `/contabilidad` y `/bi` bajo `finanzas.uonify.com`, sin frontend/subdominio separado de Administración. Identidad y contexto se comparten mediante un contrato explícito, sin asumir sesión automática entre subdominios. La fuente oficial, decisiones y límites están en [docs/FRONTEND_ARCHITECTURE.md](docs/FRONTEND_ARCHITECTURE.md), idéntico en los tres repositorios. Es arquitectura objetivo, no evidencia de implementación; solo se trabaja en DEV.
+MasterERP conserva datos, reglas, procesos y autorización. `app-dev.uonify.com` es la entrada general DEV: la experiencia objetivo es un dashboard con chat y menú de módulos habilitados para el tenant y autorizados para el usuario. Sus pantallas se presentan dentro de Uonify, con navegación, identidad y contexto comunes; conversar no es obligatorio. Finanzas agrupa Administración, Contabilidad, BI y capacidades asociadas y conserva build/pipeline/despliegue propios. Su hosting `finanzas-dev.uonify.com` existe como acceso independiente de desarrollo y pruebas, no como navegación objetivo del usuario final; no se exige un subdominio financiero en producción ni una entrada `/finanzas`. La integración técnica de pantallas sigue pendiente. Cognito autentica; MasterERP autoriza cada operación por API. Ver [contrato oficial y estado desplegado](docs/FRONTEND_ARCHITECTURE.md). La fuente oficial está en Platform/dev y sus copias en Infrastructure y Database deben ser idénticas; solo se trabaja en DEV.
 
 ## Visión objetivo
 
-MasterERP busca centralizar operaciones empresariales para usuarios individuales, empresas y grupos que contratan módulos según sus necesidades. Uonify (0-uonify) es el front general y la entrada conversacional para consultar y operar el sistema; MasterERP conserva el núcleo de negocio y autorización. Cada módulo ejecuta sus operaciones y aplica sus reglas; el chat no sustituye su autorización ni es propietario de todos sus datos. Esta es la visión objetivo, no una afirmación de que todos los módulos estén implementados.
+MasterERP busca centralizar operaciones empresariales para usuarios individuales, empresas y grupos que contratan módulos según sus necesidades. Uonify (0-uonify) es el front general con dashboard, menú y chat para consultar y operar el sistema; MasterERP conserva el núcleo de negocio y autorización. Cada módulo ejecuta sus operaciones y aplica sus reglas; el chat no sustituye su autorización ni es propietario de todos sus datos. Esta es la visión objetivo, no una afirmación de que todos los módulos estén implementados.
 
 ## Identidad y aislamiento
 
@@ -32,9 +32,11 @@ Las cuatro capas replican rutas funcionales; directorios técnicos internos no r
 
 ## Estado comprobado y pendientes
 
+Frontend: el hosting independiente de Finanzas DEV está publicado como página inicial pública; el dashboard integrado y las pantallas de los módulos dentro de Uonify siguen pendientes. Esa publicación no implementa operaciones financieras ni autorización de UI; ver el contrato frontend enlazado arriba.
+
 Según la ejecución reportada del commit 454fec7 de database, la autorización SQL de onboarding se aplicó y reaplicó en RDS DEV us-west-1, con pruebas efectivas como mastererp_app: propietario, miembro, ajeno, contexto, sesiones, idempotencia y primitivas de aprovisionamiento SQL. Esto no prueba el backend completo. Evidencia: https://github.com/eticayservicios/mastererp-database/actions/runs/41310430235.
 
-Platform contiene implementación Python de onboarding y seguridad compartida; el frontend funcional de este repositorio sigue pendiente (App Shell tiene README). La existencia de carpetas no acredita funcionalidad. Infrastructure conserva definiciones en transición: aún hay que preservar integraciones, autorización y propiedad del Admin API al consolidar stacks. La Lambda migradora oficial pertenece a database; código histórico adicional no implica una segunda función autorizada. No inferir estado AWS actual sin consulta explícita.
+Platform contiene implementación Python de onboarding y seguridad compartida; el dashboard común y la integración de pantallas de módulos en Uonify siguen pendientes; Finanzas DEV dispone de una página inicial pública. La existencia de carpetas no acredita funcionalidad. Infrastructure conserva definiciones en transición: aún hay que preservar integraciones, autorización y propiedad del Admin API al consolidar stacks. La Lambda migradora oficial pertenece a database; código histórico adicional no implica una segunda función autorizada. No inferir estado AWS actual sin consulta explícita.
 
 
 ## Definición progresiva y responsabilidades
