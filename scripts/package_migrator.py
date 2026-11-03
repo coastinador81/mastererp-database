@@ -18,6 +18,7 @@ def package(destination, dependencies):
             if "sql/" + name in files:
                 raise ValueError("SQL basename collision")
             files["sql/" + name] = root / folder / name
+    files["party_validation.py"] = handler.with_name("party_validation.py")
     files["administration_validation.py"] = handler.with_name("administration_validation.py")
     for source in (root / "tests/administration").glob("*.sql"):
         files["administration_tests/" + source.name] = source

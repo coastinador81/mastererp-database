@@ -23,6 +23,7 @@ SCHEMA_FILES = (
     "011_administration_treasury.sql",
     "012_administration_portfolio_expenses.sql",
     "013_administration_integrity_security.sql",
+    "014_administration_parties.sql",
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
@@ -32,6 +33,7 @@ TEST_FILES = (
     "foundation_boundaries_test.sql",
     "active_session_context_test.sql",
     "foundation_idempotency_test.sql",
+    "administration_parties_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 
@@ -55,6 +57,12 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
+    if event.get("action") == "party_fixture":
+        from party_validation import fixture
+        try:
+            return fixture(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action") == "validate_administration":
         from administration_validation import validate, concurrency
         try:
@@ -77,6 +85,11 @@ def lambda_handler(event, context):
     phase = "lock"
     filename = "none"
     committed_passes = 0
+    # 001-013 already reconciled/applied in DEV. Never replay their GRANTs for this upgrade.
+    applied_schema = ("014_administration_parties.sql",)
+    if connection.run("SELECT to_regclass('administracion.perfiles_tercero')")[0][0] is None:
+        connection.close()
+        raise RuntimeError("Reconciled 001-013 baseline required; no automatic bootstrap")
     try:
         connection.run("SELECT pg_advisory_lock(734561903)")
         # Commit the model independently of rollback-only fixtures. A second
@@ -85,7 +98,7 @@ def lambda_handler(event, context):
             phase = "schema" if committed_passes == 0 else "reapply"
             connection.run("BEGIN")
             try:
-                for filename in SCHEMA_FILES + SEED_FILES:
+                for filename in applied_schema:
                     connection.run((sql_dir / filename).read_text(encoding="utf-8"))
                 connection.run("COMMIT")
                 committed_passes += 1
@@ -109,7 +122,7 @@ def lambda_handler(event, context):
         )[0][0]
         return {
             "status": "succeeded",
-            "files_applied": list(SQL_FILES),
+            "files_applied": list(applied_schema + TEST_FILES),
             "schemas": schemas,
             "table_count": table_count,
             "tests": "passed",

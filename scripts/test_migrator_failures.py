@@ -7,7 +7,7 @@ spec=importlib.util.spec_from_file_location('migrator',Path(__file__).resolve().
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 class FailureTests(unittest.TestCase):
     def test_failure_is_propagated_for_every_phase(self):
-        size=len(module.SCHEMA_FILES)+len(module.SEED_FILES)
+        size=1
         for threshold,phase,commits in ((1,'schema',0),(size+1,'reapply',1),(2*size+1,'tests',2)):
             with self.subTest(phase=phase):
                 connection=MagicMock();seen=0
@@ -16,6 +16,7 @@ class FailureTests(unittest.TestCase):
                     if sql=='PACKAGED_SQL':
                         seen+=1
                         if seen==threshold:raise RuntimeError({'C':'42501','M':'sentinel_private_value'})
+                    if sql.startswith('SELECT to_regclass'):return [['administracion.perfiles_tercero']]
                     return []
                 connection.run.side_effect=execute
                 with patch.object(module,'_connection',return_value=connection),patch.object(module,'Path') as source:

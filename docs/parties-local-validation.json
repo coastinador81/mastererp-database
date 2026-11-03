@@ -1,0 +1,81 @@
+{
+  "status": "passed",
+  "postgres": "17.9",
+  "environment": "disposable container, network none, no host ports",
+  "results": [
+    {
+      "case": "migration_pass_1",
+      "result": "passed"
+    },
+    {
+      "case": "migration_pass_2",
+      "result": "passed"
+    },
+    {
+      "case": "baseline_active_session_context_test.sql",
+      "result": "passed"
+    },
+    {
+      "case": "baseline_administration_parties_test.sql",
+      "result": "passed"
+    },
+    {
+      "case": "baseline_foundation_boundaries_test.sql",
+      "result": "passed"
+    },
+    {
+      "case": "baseline_foundation_idempotency_test.sql",
+      "result": "passed"
+    },
+    {
+      "case": "baseline_onboarding_authorization_test.sql",
+      "result": "passed"
+    },
+    {
+      "case": "baseline_onboarding_model_test.sql",
+      "result": "passed"
+    },
+    {
+      "case": "baseline_shared_identity_permissions_test.sql",
+      "result": "passed"
+    },
+    {
+      "case": "access_test.sql",
+      "result": "passed"
+    },
+    {
+      "case": "integrity_test.sql",
+      "result": "passed"
+    },
+    {
+      "case": "positive_test.sql",
+      "result": "passed"
+    },
+    {
+      "case": "concurrent_over_application",
+      "transactions": 2,
+      "committed": 1,
+      "rejected_sqlstate": "23514",
+      "remaining": 10,
+      "result": "passed"
+    },
+    {
+      "case": "concurrent_stale_version",
+      "transactions": 2,
+      "committed": 1,
+      "rejected_sqlstate": "40001",
+      "result": "passed"
+    },
+    {
+      "case": "failed_write_has_no_audit_or_allocation_effect",
+      "result": "passed"
+    },
+    {
+      "case": "candidate_reapply_preserves_revoked_role_permissions_and_no_app_writes",
+      "result": "passed"
+    }
+  ],
+  "remote_sql_executed": false,
+  "administration_tables": "29",
+  "canonical_tables": "4"
+}

@@ -1,0 +1,7 @@
+{
+  "snapshot": "mastererp-dev-before-parties-20261103014555",
+  "status": "preparing",
+  "migration": "014_administration_parties.sql",
+  "previous_SQL": "001-013 preserved; not replayed by this upgrade",
+  "snapshot_status": "available"
+}
