@@ -11,3 +11,7 @@ Pruebas: administration_parties_test.sql usa SET ROLE real, replay/conflicto, do
 El backend usa el secreto de aplicación y no credenciales de migración. Auditoría de escrituras en events e idempotencia se confirman atómicamente; los cuerpos y secretos no se registran en logs. No se implementan reglas fiscales/aprobaciones. La autorización por empresa conserva contención del contrato 007, no añade ACL individuales inexistentes.
 
 Evidencia actual: parties-local-validation.json, parties-dev-validation.json, parties-http-validation.json y regresiones antes/después. Restaurar ZIP no revierte SQL; un snapshot requiere revisión de recuperación y endpoint. Correcciones SQL hacia delante; no borrar maestros para revertir el despliegue.
+
+## Resultado verificado DEV
+
+Desplegado: 33 comprobaciones HTTP funcionales aprobadas, con persistencia, idempotencia, versiones, permisos, aislamiento y limpieza acotada. Evidencia principal en Database/docs/ADMINISTRATION_PARTIES_DEV.md y parties-http-validation.json. Se documentan aparte los tres 403 previos de Uonify y la incidencia de reimportación SAM recuperada con nuevos IDs de rutas/integraciones. Las ocho Lambdas conservaron sus IDs y las otras seis su código.

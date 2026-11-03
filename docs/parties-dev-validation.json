@@ -1,7 +1,43 @@
 {
   "snapshot": "mastererp-dev-before-parties-20261103014555",
-  "status": "preparing",
+  "status": "passed",
   "migration": "014_administration_parties.sql",
   "previous_SQL": "001-013 preserved; not replayed by this upgrade",
-  "snapshot_status": "available"
+  "snapshot_status": "available",
+  "database_commit": "8aaf311dcdab29da56a3f5693af2a601a7e3ed52",
+  "platform_commit": "5f3a0d8",
+  "infrastructure_commits": [
+    "b341c43",
+    "cf4c459"
+  ],
+  "workflow": "https://github.com/eticayservicios/mastererp-database/actions/runs/41562645928",
+  "jobs": {
+    "deploy-migrator": "success",
+    "apply": "success"
+  },
+  "applied_sql": [
+    "014_administration_parties.sql"
+  ],
+  "previous_migrations_reexecuted": false,
+  "migrator_code_sha256": "dNyFduQ8lQl3VIlAuK90QTil/KEq9ATHCoKadI4ePR0=",
+  "all_14_packaged_schemas_match_source": true,
+  "shared_foundation_inspection_unchanged": true,
+  "http_cases": 33,
+  "http_all_passed": true,
+  "persisted_before_cleanup": {
+    "catalogo.terceros": 3,
+    "administracion.perfiles_tercero": 5,
+    "plataforma.idempotency_keys": 5,
+    "auditoria.events": 13
+  },
+  "valid_business_audit_events": 8,
+  "fixture_cleanup": "succeeded",
+  "regressions_before_after_identical": true,
+  "preexisting_failures": [
+    "uonify_admin_a",
+    "uonify_admin_b",
+    "uonify_context_return"
+  ],
+  "new_HTTP_failures": [],
+  "onboarding_write_flow": "not_exercised; prior blockers remain outside scope"
 }
