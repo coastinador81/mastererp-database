@@ -1,33 +1,35 @@
-# ValidaciÃ³n local de AdministraciÃ³n
+# Validación local de Administración
+
+Estado actual: [publicación y validación DEV](ADMINISTRATION_DEV.md). Las secciones locales documentan la preparación anterior a la autorización.
 
 ## Alcance y estado
 
-Candidato de datos exclusivamente en mastererp-database/dev. No se ejecutÃ³ SQL remoto, no se modificÃ³ AWS, no hubo commit ni push. No se modificaron SQL 001â€“008, seeds, workflows ni el migrador publicado. Los cambios previos del equipo permanecen sin incluirlos en esta entrega. El intento de actualizar referencias Git fallÃ³ por resoluciÃ³n DNS de github.com: no se certifica que el checkout local sea el Ãºltimo remoto.
+Candidato de datos exclusivamente en mastererp-database/dev. No se ejecutó SQL remoto, no se modificó AWS, no hubo commit ni push. No se modificaron SQL 001–008, seeds, workflows ni el migrador publicado. Los cambios previos del equipo permanecen sin incluirlos en esta entrega. El intento de actualizar referencias Git falló por resolución DNS de github.com: no se certifica que el checkout local sea el último remoto.
 
-No se utiliza documentaciÃ³n Algedis ni se declara cumplimiento de ella. No se implementan operaciones de Finanzas ni se habilita CRUD directo a mastererp_app.
+No se utiliza documentación Algedis ni se declara cumplimiento de ella. No se implementan operaciones de Finanzas ni se habilita CRUD directo a mastererp_app.
 
 ## Migraciones candidatas
 
 | Orden | Archivo | Responsabilidad |
 | --- | --- | --- |
-| 009 | schema/009_shared_master_references.sql | Referencias canÃ³nicas mÃ­nimas de CatÃ¡logo y Ã¡mbito sucursal |
-| 010 | schema/010_administration_documents.sql | Condiciones, perfiles, documentos/detalles, orÃ­genes y destinos |
-| 011 | schema/011_administration_treasury.sql | Caja/bancos, dinero, transferencias, extractos y conciliaciÃ³n |
+| 009 | schema/009_shared_master_references.sql | Referencias canónicas mínimas de Catálogo y ámbito sucursal |
+| 010 | schema/010_administration_documents.sql | Condiciones, perfiles, documentos/detalles, orígenes y destinos |
+| 011 | schema/011_administration_treasury.sql | Caja/bancos, dinero, transferencias, extractos y conciliación |
 | 012 | schema/012_administration_portfolio_expenses.sql | Cartera, gastos, fondos menores, reservas y soportes |
-| 013 | schema/013_administration_integrity_security.sql | Integridad diferida, auditorÃ­a, privilegios, RLS y vistas |
+| 013 | schema/013_administration_integrity_security.sql | Integridad diferida, auditoría, privilegios, RLS y vistas |
 
-Estas migraciones se prueban por un runner explÃ­cito; aÃºn no estÃ¡n en el manifiesto de la Lambda. NO publicar: los paths schema/** activan la aplicaciÃ³n automÃ¡tica del repositorio. Una entrega remota futura debe conciliar manifiesto, orden, respaldo y autorizaciÃ³n antes del push.
+Estas migraciones se prueban por un runner explícito; aún no están en el manifiesto de la Lambda. NO publicar: los paths schema/** activan la aplicación automática del repositorio. Una entrega remota futura debe conciliar manifiesto, orden, respaldo y autorización antes del push.
 
 ## Tablas nuevas
 
-Maestros canÃ³nicos (no existÃ­an tablas equivalentes en 001â€“008):
+Maestros canónicos (no existían tablas equivalentes en 001–008):
 
 - `catalogo.monedas`
 - `catalogo.terceros`
 - `catalogo.roles_tercero`
 - `catalogo.productos`
 
-AdministraciÃ³n:
+Administración:
 
 - `administracion.condiciones_comerciales`
 - `administracion.descuentos_pronto_pago`
@@ -63,7 +65,7 @@ Se reutilizan tenants, empresas/sucursales, usuarios/pertenencias, permisos/over
 
 ## Reproducir y evidencia
 
-Requiere Docker existente y la imagen ya disponible public.ecr.aws/docker/library/postgres:17.9-alpine; el script no instala herramientas ni descarga imÃ¡genes. Desde la raÃ­z:
+Requiere Docker existente y la imagen ya disponible public.ecr.aws/docker/library/postgres:17.9-alpine; el script no instala herramientas ni descarga imágenes. Desde la raíz:
 
 ```powershell
 py scripts/validate_administration_disposable.py --output docs/administration-local-validation.json
@@ -71,19 +73,19 @@ py scripts/validate_structure.py
 git diff --check
 ```
 
-El contenedor propio usa --network none, sin puertos publicados ni volÃºmenes de datos del host. Se elimina al finalizar. Se aplican 001â€“013 y seeds dos veces, seis archivos de pruebas anteriores y tres de AdministraciÃ³n. Las fixtures identificables se crean solo dentro del contenedor; las tres suites de AdministraciÃ³n terminan con ROLLBACK. Las dos carreras concurrentes confirman transacciones de prueba dentro de ese contenedor, que finalmente se destruye.
+El contenedor propio usa --network none, sin puertos publicados ni volúmenes de datos del host. Se elimina al finalizar. Se aplican 001–013 y seeds dos veces, seis archivos de pruebas anteriores y tres de Administración. Las fixtures identificables se crean solo dentro del contenedor; las tres suites de Administración terminan con ROLLBACK. Las dos carreras concurrentes confirman transacciones de prueba dentro de ese contenedor, que finalmente se destruye.
 
-Las pruebas SET ROLE mastererp_app verifican current_user y lectura por tenant, denegaciÃ³n de escrituras, pertenencia/contexto ausentes, override, mÃ³dulo y actores/organizaciones inactivos. Las pruebas estructurales usan el rol de migraciÃ³n para insertar fixtures y comprobar FK, lÃ­mites, precisiÃ³n, reversos, condiciones selladas, vÃ­nculos de idempotencia y coherencia monetaria. No son evidencia de permisos de escritura para el backend.
+Las pruebas SET ROLE mastererp_app verifican current_user y lectura por tenant, denegación de escrituras, pertenencia/contexto ausentes, override, módulo y actores/organizaciones inactivos. Las pruebas estructurales usan el rol de migración para insertar fixtures y comprobar FK, límites, precisión, reversos, condiciones selladas, vínculos de idempotencia y coherencia monetaria. No son evidencia de permisos de escritura para el backend.
 
-El informe [administration-local-validation.json](administration-local-validation.json) contiene el resultado real de la Ãºltima ejecuciÃ³n. TambiÃ©n comprueba sobreaplicaciÃ³n concurrente, versiÃ³n obsoleta concurrente, ausencia de efectos parciales y reaplicaciÃ³n sin restablecer concesiones retiradas. No se realizaron pruebas HTTP ni verificaciones RDS.
+El informe [administration-local-validation.json](administration-local-validation.json) contiene el resultado real de la última ejecución. También comprueba sobreaplicación concurrente, versión obsoleta concurrente, ausencia de efectos parciales y reaplicación sin restablecer concesiones retiradas. No se realizaron pruebas HTTP ni verificaciones RDS.
 
-## Decisiones y lÃ­mites
+## Decisiones y límites
 
-Pendientes funcionales: fiscalidad/numeraciÃ³n legal, redondeo comercial y conversiÃ³n, aprobaciones, crÃ©dito y sobrepagos, integraciÃ³n de devoluciones con stock, permisos de comandos de escritura, ACL de empresa, propiedad definitiva del maestro de Clientes, retenciÃ³n de idempotencia y reglas de liquidaciÃ³n de anticipos. No se precargan tasas ni porcentajes.
+Pendientes funcionales: fiscalidad/numeración legal, redondeo comercial y conversión, aprobaciones, crédito y sobrepagos, integración de devoluciones con stock, permisos de comandos de escritura, ACL de empresa, propiedad definitiva del maestro de Clientes, retención de idempotencia y reglas de liquidación de anticipos. No se precargan tasas ni porcentajes.
 
-Bloqueo conservador por empresa serializa escrituras: protege agregados, pero requiere pruebas de carga y afinamiento antes de alto volumen. Los validadores diferidos recorren datos de la empresa; no se afirma rendimiento de producciÃ³n. Escribir requiere futuros comandos controlados con autorizaciÃ³n y comprobaciÃ³n de contenido de idempotencia. No debe concederse DML general para eludir esa dependencia.
+Bloqueo conservador por empresa serializa escrituras: protege agregados, pero requiere pruebas de carga y afinamiento antes de alto volumen. Los validadores diferidos recorren datos de la empresa; no se afirma rendimiento de producción. Escribir requiere futuros comandos controlados con autorización y comprobación de contenido de idempotencia. No debe concederse DML general para eludir esa dependencia.
 
-RecuperaciÃ³n local: descartar Ãºnicamente los archivos candidatos tras revisiÃ³n; no hay cambios remotos que revertir. Una futura migraciÃ³n DEV necesitarÃ¡ snapshot y plan especÃ­fico. No se ofrece DROP de tablas como recuperaciÃ³n porque podrÃ­a destruir datos una vez utilizadas.
+Recuperación local: descartar únicamente los archivos candidatos tras revisión; no hay cambios remotos que revertir. Una futura migración DEV necesitará snapshot y plan específico. No se ofrece DROP de tablas como recuperación porque podría destruir datos una vez utilizadas.
 
 ## Promoción DEV autorizada
 
