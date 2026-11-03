@@ -39,3 +39,7 @@ Se conserva la ruta y responsabilidad funcional. La composición Finanzas → Ad
 El [modelo y matriz de responsabilidades](MODEL.md) y el [inventario de tablas](tables.json) describen las migraciones candidatas 009–013. Se reutilizan los mecanismos compartidos; no existen aún comandos de negocio ni despliegue de estas tablas en DEV. Los maestros mínimos canónicos se proponen en catalogo porque 001–008 no contiene esas tablas; no se crean maestros separados de cliente/proveedor en Administración.
 
 Las [pruebas locales y límites](../../../docs/ADMINISTRATION_VALIDATION.md) distinguen integridad SQL y permisos de funcionamiento completo del backend. El migrador publicado y sus workflows no se modifican; no publicar este candidato sin revisar antes el circuito de aplicación automática.
+
+## Evidencia SQL DEV
+
+Migraciones 009–013 aplicadas y reaplicadas por el migrador oficial; no habilita operaciones del backend. Resultados y límites: [validación DEV](../../../docs/ADMINISTRATION_DEV.md).

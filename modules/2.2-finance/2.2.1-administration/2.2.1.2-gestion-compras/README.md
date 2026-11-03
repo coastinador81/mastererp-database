@@ -17,3 +17,7 @@ Dependencias: contexto autorizado de tenant y contratos del padre; reglas y crit
 ## Candidato de datos local
 
 Tablas y referencias propuestas: las mismas cabeceras/detalles canónicas para solicitudes, órdenes y facturas de proveedor; destinos_compra y detalle_destinos; proveedores referencia catalogo.terceros y roles_tercero. Véase el [modelo común](../MODEL.md). Soportes, reservas y controles compartidos pertenecen a Administración. Estado: migraciones locales en revisión; sin aplicación remota ni operaciones de negocio implementadas.
+
+## Evidencia SQL DEV
+
+Migraciones 009–013 aplicadas y reaplicadas por el migrador oficial; no habilita operaciones del backend. Resultados y límites: [validación DEV](../../../../docs/ADMINISTRATION_DEV.md).

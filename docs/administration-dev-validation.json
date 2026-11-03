@@ -1,9 +1,100 @@
 {
-  "status": "preparing",
+  "status": "SQL_validation_passed_with_documented_remote_coverage_limits",
   "snapshot": "mastererp-dev-before-administration-20261103010411",
   "region": "us-west-1",
   "baseline_source_commit": "2631c7a46292b15f0cfecd14ed54a2ff205fbddd",
   "deployed_sql_001_008": "matches_git_normalized_line_endings",
   "migration_ledger": "not_present; do not infer file registrations",
-  "snapshot_status": "available"
+  "snapshot_status": "available",
+  "migrator_code_sha256": "P3t+DyXmM5M4/9rxRvOGk6qSEsH5T8Bpj3F2cpso2TI=",
+  "validation_results": [
+    {
+      "mode": "rollback_suites",
+      "function_error": null,
+      "result": {
+        "status": "succeeded",
+        "run": "adm-qa-c888c4b382e3432788d9da40c3a17f82",
+        "tests": [
+          {
+            "case": "33_tables_rls_readonly_constraints_indexes",
+            "result": "passed"
+          },
+          {
+            "case": "access_test.sql",
+            "result": "passed"
+          },
+          {
+            "case": "integrity_test.sql",
+            "result": "passed"
+          },
+          {
+            "case": "positive_test.sql",
+            "result": "passed"
+          }
+        ],
+        "cleanup": "transaction_rolled_back",
+        "effective_role": "mastererp_app_asserted_by_access_suite",
+        "shared_balance_concurrency": "pending_remote; tested_in_disposable_postgresql",
+        "correlation_id": "3a234b21-7ca7-44fe-9f16-05cea9aae232"
+      }
+    },
+    {
+      "mode": "concurrency",
+      "function_error": null,
+      "result": {
+        "status": "succeeded",
+        "case": "concurrent_stale_version",
+        "outcomes": [
+          "committed",
+          "40001"
+        ],
+        "cleanup": "own_fixture_UUIDs_deleted",
+        "run": "adm-race-e3187f374a554bf3bcf538ee96a4dc22"
+      }
+    }
+  ],
+  "commit": "17159e0b687dedd7a4273de94ba97b6fc039ee67",
+  "workflow": "https://github.com/eticayservicios/mastererp-database/actions/runs/41557866728",
+  "workflow_jobs": {
+    "changes": "success",
+    "deploy-migrator": "success",
+    "apply": "success"
+  },
+  "applied_new_schemas": [
+    "009_shared_master_references.sql",
+    "010_administration_documents.sql",
+    "011_administration_treasury.sql",
+    "012_administration_portfolio_expenses.sql",
+    "013_administration_integrity_security.sql"
+  ],
+  "deployed_package_matches_reviewed_sql": {
+    "001_extensions_and_schemas.sql": true,
+    "002_platform_core.sql": true,
+    "003_tenant_onboarding.sql": true,
+    "004_tenant_security.sql": true,
+    "005_onboarding_authorization.sql": true,
+    "006_shared_identity_permissions.sql": true,
+    "007_foundation_boundaries.sql": true,
+    "008_active_session_context.sql": true,
+    "009_shared_master_references.sql": true,
+    "010_administration_documents.sql": true,
+    "011_administration_treasury.sql": true,
+    "012_administration_portfolio_expenses.sql": true,
+    "013_administration_integrity_security.sql": true
+  },
+  "existing_foundation_inspection_unchanged": true,
+  "total_tables_reported_by_workflow": 50,
+  "model_application": "applied_and_reapplied_by_official_handler",
+  "existing_six_SQL_suites": "passed_in_apply_job",
+  "http_before_after_identical": true,
+  "http_passed": 7,
+  "http_preexisting_failures": [
+    "uonify_admin_a",
+    "uonify_admin_b",
+    "uonify_context_return"
+  ],
+  "new_HTTP_failures": [],
+  "onboarding_write_flows": "not_exercised",
+  "remote_shared_balance_overapplication_concurrency": "pending; passed_disposable_local_only",
+  "recovery_restore_tested": false
 }

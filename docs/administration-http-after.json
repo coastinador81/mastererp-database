@@ -1,0 +1,66 @@
+{
+  "mode": "read_only_HTTP_no_existing_QA_state_changes",
+  "results": [
+    {
+      "case": "uonify_admin_a",
+      "http": 403,
+      "expected": 200,
+      "result": "failed"
+    },
+    {
+      "case": "spaces_admin_a",
+      "http": 200,
+      "expected": 200,
+      "result": "passed"
+    },
+    {
+      "case": "uonify_admin_b",
+      "http": 403,
+      "expected": 200,
+      "result": "failed"
+    },
+    {
+      "case": "spaces_admin_b",
+      "http": 200,
+      "expected": 200,
+      "result": "passed"
+    },
+    {
+      "case": "uonify_missing_token",
+      "http": 401,
+      "expected": 401,
+      "result": "passed"
+    },
+    {
+      "case": "uonify_member_denied",
+      "http": 403,
+      "expected": 403,
+      "result": "passed"
+    },
+    {
+      "case": "uonify_foreign_tenant",
+      "http": 403,
+      "expected": 403,
+      "result": "passed"
+    },
+    {
+      "case": "uonify_context_return",
+      "http": 403,
+      "expected": 200,
+      "result": "failed"
+    },
+    {
+      "case": "onboarding_missing_token",
+      "http": 401,
+      "expected": 401,
+      "result": "passed"
+    },
+    {
+      "case": "onboarding_authenticated_unknown_session",
+      "http": 404,
+      "expected": 404,
+      "result": "passed"
+    }
+  ],
+  "onboarding_write_flows": "not_exercised; no existing data modified"
+}
