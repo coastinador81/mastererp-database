@@ -3,7 +3,7 @@
 Objetivo específico: Mantener repartidores y su disponibilidad autorizada.
 
 Responsabilidad: Repartidores, dentro de Transporte.
-Estado: pendiente de implementación en esta capa. Sin código vacío.
+Estado: candidato SQL implementado, no aplicado en DEV.
 
 
 ## Contrato y estado de esta capa
@@ -12,7 +12,6 @@ Código: 2.10.1. Nombre/ruta: `2.10.1-drivers`. Objetivo y alcance: los descrito
 
 Capa: datos. Dependencias: contexto autenticado, tenant y contratos del padre cuando correspondan; contratos adicionales pendientes de definición. Exclusiones: lógica y recursos de otros módulos; conectores técnicos fuera de Digital Sales. APIs/eventos/MCP: no declarar disponibles por existir esta carpeta; revisar implementación y contrato antes de consumir. Propuestas sin contrato confirmado permanecen pendientes.
 
-Estado verificable: la reserva documental no acredita implementación; conservar cualquier código/plantilla existente y revisar evidencia específica antes de marcar implementado.
+Estado verificable: `020_transport_drivers.sql` posee perfiles multi-tenant, vínculo opcional a usuario interno, disponibilidad, estado de acceso, asignaciones a nodos, funciones autorizadas, auditoría e idempotencia. Rutas activas pertenecen a Rutas, no a Repartidores.
 
-Validaciones: estructura local mediante scripts/validate_structure.py. Pendientes: contratos específicos, responsable nominal y pruebas funcionales antes de habilitar esta capacidad.
-
+Validaciones: aplicación doble y fixture rollback-only como `mastererp_app`. Pendientes: promoción explícita a DEV y conciliación de datos heredados.

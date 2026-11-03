@@ -3,7 +3,8 @@
 Objetivo específico: Gestionar nodos de operación y su contexto.
 
 Responsabilidad: Nodos, dentro de Operaciones.
-Estado: pendiente de implementación en esta capa. Sin código vacío.
+Estado: candidato no aplicado en DEV. `018_operations_nodes.sql` modela el
+perfil operativo 1:1 sobre una sucursal existente.
 
 
 ## Contrato y estado de esta capa
@@ -12,7 +13,6 @@ Código: 2.3.4. Nombre/ruta: `2.3.4-nodes`. Objetivo y alcance: los descritos ar
 
 Capa: datos. Dependencias: contexto autenticado, tenant y contratos del padre cuando correspondan; contratos adicionales pendientes de definición. Exclusiones: lógica y recursos de otros módulos; conectores técnicos fuera de Digital Sales. APIs/eventos/MCP: no declarar disponibles por existir esta carpeta; revisar implementación y contrato antes de consumir. Propuestas sin contrato confirmado permanecen pendientes.
 
-Estado verificable: la reserva documental no acredita implementación; conservar cualquier código/plantilla existente y revisar evidencia específica antes de marcar implementado.
+Estado verificable: PostgreSQL 17.9 desechable, migración repetible y pruebas rollback-only.
 
 Validaciones: estructura local mediante scripts/validate_structure.py. Pendientes: contratos específicos, responsable nominal y pruebas funcionales antes de habilitar esta capacidad.
-

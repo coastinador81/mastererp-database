@@ -3,7 +3,9 @@
 Objetivo específico: Gestionar identidad y ficha maestra de productos.
 
 Responsabilidad: Productos, dentro de Catálogo.
-Estado: pendiente de implementación en esta capa. Sin código vacío.
+Estado: candidato funcional no aplicado en DEV. `017_catalog_products.sql`
+amplía el maestro existente e incorpora lectura, alta idempotente y edición
+optimista sin mezclar tablas de Inventario.
 
 
 ## Contrato y estado de esta capa
@@ -12,7 +14,9 @@ Código: 2.1.1. Nombre/ruta: `2.1.1-products`. Objetivo y alcance: los descritos
 
 Capa: datos. Dependencias: contexto autenticado, tenant y contratos del padre cuando correspondan; contratos adicionales pendientes de definición. Exclusiones: lógica y recursos de otros módulos; conectores técnicos fuera de Digital Sales. APIs/eventos/MCP: no declarar disponibles por existir esta carpeta; revisar implementación y contrato antes de consumir. Propuestas sin contrato confirmado permanecen pendientes.
 
-Estado verificable: la reserva documental no acredita implementación; conservar cualquier código/plantilla existente y revisar evidencia específica antes de marcar implementado.
+Estado verificable: `catalog_products_test.sql` cubre creación/replay, edición,
+versión obsoleta, filtros y ausencia de DML directo. El modelo completo pasó dos
+aplicaciones en PostgreSQL 17.9 desechable.
 
-Validaciones: estructura local mediante scripts/validate_structure.py. Pendientes: contratos específicos, responsable nominal y pruebas funcionales antes de habilitar esta capacidad.
-
+Validaciones: `validate_administration_disposable.py` y estructura local.
+Pendiente: aplicación explícita en DEV y reconciliación del futuro backfill.

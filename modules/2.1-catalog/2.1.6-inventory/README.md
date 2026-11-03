@@ -3,7 +3,8 @@
 Objetivo específico: Consultar y controlar existencias; reglas de movimientos pendientes de contrato.
 
 Responsabilidad: Inventario, dentro de Catálogo.
-Estado: pendiente de implementación en esta capa. Sin código vacío.
+Estado: candidato no aplicado en DEV. `019_catalog_inventory.sql` implementa
+stock por nodo, movimientos inmutables y reservas atómicas.
 
 
 ## Contrato y estado de esta capa
@@ -12,7 +13,6 @@ Código: 2.1.6. Nombre/ruta: `2.1.6-inventory`. Objetivo y alcance: los descrito
 
 Capa: datos. Dependencias: contexto autenticado, tenant y contratos del padre cuando correspondan; contratos adicionales pendientes de definición. Exclusiones: lógica y recursos de otros módulos; conectores técnicos fuera de Digital Sales. APIs/eventos/MCP: no declarar disponibles por existir esta carpeta; revisar implementación y contrato antes de consumir. Propuestas sin contrato confirmado permanecen pendientes.
 
-Estado verificable: la reserva documental no acredita implementación; conservar cualquier código/plantilla existente y revisar evidencia específica antes de marcar implementado.
+Estado verificable: PostgreSQL 17.9 desechable, migración repetible y pruebas rollback-only.
 
 Validaciones: estructura local mediante scripts/validate_structure.py. Pendientes: contratos específicos, responsable nominal y pruebas funcionales antes de habilitar esta capacidad.
-

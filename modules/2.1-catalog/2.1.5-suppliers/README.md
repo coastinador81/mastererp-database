@@ -3,7 +3,7 @@
 Objetivo específico: Mantener proveedores vinculados al suministro del catálogo.
 
 Responsabilidad: Proveedores, dentro de Catálogo.
-Estado: pendiente de implementación en esta capa. Sin código vacío.
+Estado: candidato SQL implementado en `024_catalog_suppliers.sql`, no aplicado en DEV.
 
 
 ## Contrato y estado de esta capa
@@ -15,4 +15,3 @@ Capa: datos. Dependencias: contexto autenticado, tenant y contratos del padre cu
 Estado verificable: la reserva documental no acredita implementación; conservar cualquier código/plantilla existente y revisar evidencia específica antes de marcar implementado.
 
 Validaciones: estructura local mediante scripts/validate_structure.py. Pendientes: contratos específicos, responsable nominal y pruebas funcionales antes de habilitar esta capacidad.
-

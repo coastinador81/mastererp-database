@@ -1,0 +1,38 @@
+BEGIN;
+INSERT INTO plataforma.roles(code,name) VALUES('qa-nodes-inventory','Nodes inventory fixture');
+INSERT INTO plataforma.role_permissions(role_id,permission_code)
+ SELECT r.id,p.code FROM plataforma.roles r CROSS JOIN plataforma.permissions p WHERE r.code='qa-nodes-inventory'
+ AND p.code IN ('operations.nodes.read','operations.nodes.write','catalog.inventory.read','catalog.inventory.write','catalog.inventory.reserve');
+INSERT INTO plataforma.users(id,email,display_name) VALUES('00007001-0000-0000-0000-000000000001','qa-nodes-inventory@example.invalid','Nodes Inventory');
+INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES('00007002-0000-0000-0000-000000000001','qa-nodes-inv','qa-nodes-inv','Nodes Inventory','active');
+INSERT INTO plataforma.user_tenants(tenant_id,user_id,role_id,status) SELECT '00007002-0000-0000-0000-000000000001','00007001-0000-0000-0000-000000000001',id,'active' FROM plataforma.roles WHERE code='qa-nodes-inventory';
+INSERT INTO plataforma.tenant_modules(tenant_id,module_id,status) SELECT '00007002-0000-0000-0000-000000000001',id,'active' FROM plataforma.modules WHERE code IN ('erp.operations','erp.catalog');
+INSERT INTO catalogo.monedas(codigo,nombre,decimales) VALUES('USD','US dollar',2) ON CONFLICT DO NOTHING;
+INSERT INTO organizacion.companies(id,tenant_id,legal_name,country_code,base_currency_code,timezone) VALUES('00007003-0000-0000-0000-000000000001','00007002-0000-0000-0000-000000000001','Fixture','US','USD','UTC');
+INSERT INTO organizacion.branches(id,tenant_id,company_id,code,name,branch_type,country_code,status) VALUES('00007004-0000-0000-0000-000000000001','00007002-0000-0000-0000-000000000001','00007003-0000-0000-0000-000000000001','MAIN','Main node','warehouse','US','active');
+INSERT INTO catalogo.productos(id,tenant_id,codigo,nombre,precio,estado) VALUES('00007005-0000-0000-0000-000000000001','00007002-0000-0000-0000-000000000001','PRD-ONE','Product',10,'ACTIVE');
+SELECT set_config('app.current_user_id','00007001-0000-0000-0000-000000000001',true),set_config('app.current_tenant_id','00007002-0000-0000-0000-000000000001',true),set_config('app.current_company_id','00007003-0000-0000-0000-000000000001',true),set_config('app.correlation_id','00007006-0000-0000-0000-000000000001',true),set_config('app.current_operation','operations.nodes.configure',true);
+SET LOCAL ROLE mastererp_app;
+DO $$ DECLARE item jsonb; reservation jsonb; caught boolean:=false; BEGIN
+ item:=operaciones.nodo_configurar('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','{"accepts_orders":true,"coverage_radius_km":5,"daily_capacity":100}');
+ IF item->>'status'<>'DRAFT' OR (item->>'version')::int<>2 THEN RAISE EXCEPTION 'Node configuration mismatch'; END IF;
+ PERFORM set_config('app.current_operation','operations.nodes.transition',true);
+ item:=operaciones.nodo_transicionar('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001',2,'ACTIVE','OPEN');
+ IF item->>'status'<>'ACTIVE' OR item->>'accepts_orders'<>'true' THEN RAISE EXCEPTION 'Node transition mismatch'; END IF;
+ PERFORM set_config('app.current_operation','catalog.inventory.set',true);
+ item:=catalogo.inventario_establecer('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','00007005-0000-0000-0000-000000000001',10,0,'INITIAL','inventory-set-key');
+ IF item->>'stock'<>'10' OR item->>'available'<>'10' THEN RAISE EXCEPTION 'Inventory set mismatch'; END IF;
+ PERFORM set_config('app.current_operation','catalog.inventory.reserve',true);
+ reservation:=catalogo.inventario_reservar('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','[{"product_id":"00007005-0000-0000-0000-000000000001","quantity":3}]','ORDER-1','inventory-reserve-key');
+ item:=catalogo.inventario_leer('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','00007005-0000-0000-0000-000000000001');
+ IF item->>'reserved'<>'3' OR item->>'available'<>'7' THEN RAISE EXCEPTION 'Inventory reserve mismatch'; END IF;
+ PERFORM set_config('app.current_operation','catalog.inventory.reservation.finalize',true);
+ PERFORM catalogo.inventario_reserva_finalizar('00007003-0000-0000-0000-000000000001',(reservation->>'reservation_ref')::uuid,'COMMIT','ORDER_CONFIRMED');
+ item:=catalogo.inventario_leer('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','00007005-0000-0000-0000-000000000001');
+ IF item->>'stock'<>'7' OR item->>'reserved'<>'0' OR item->>'available'<>'7' THEN RAISE EXCEPTION 'Inventory commit mismatch'; END IF;
+ PERFORM set_config('app.current_operation','catalog.inventory.reserve',true);
+ BEGIN PERFORM catalogo.inventario_reservar('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','[{"product_id":"00007005-0000-0000-0000-000000000001","quantity":99}]','ORDER-2','inventory-insufficient-key'); EXCEPTION WHEN check_violation THEN caught:=true; END;
+ IF NOT caught THEN RAISE EXCEPTION 'Insufficient inventory accepted'; END IF;
+ IF has_table_privilege('mastererp_app','catalogo.inventarios','INSERT,UPDATE,DELETE') OR has_table_privilege('mastererp_app','operaciones.nodos','INSERT,UPDATE,DELETE') THEN RAISE EXCEPTION 'Direct DML leaked'; END IF;
+END $$;
+ROLLBACK;

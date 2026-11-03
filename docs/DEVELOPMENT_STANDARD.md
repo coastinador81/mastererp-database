@@ -2,6 +2,10 @@
 
 ## Código y contratos
 
+Cada archivo de código fuente debe permanecer en 500 líneas o menos. Dividir
+por responsabilidad antes de superar ese límite; archivos generados de bloqueo
+de dependencias no cuentan como código fuente y no deben editarse manualmente.
+
 ## Definición progresiva y responsabilidades
 
 Los módulos comienzan con objetivos generales y límites de responsabilidad. No es obligatorio especificar todos los módulos, requisitos o contratos por adelantado: el detalle de cada tarea se define cuando se prioriza.

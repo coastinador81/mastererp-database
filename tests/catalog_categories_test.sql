@@ -1,0 +1,21 @@
+BEGIN;
+INSERT INTO plataforma.roles(code,name) VALUES('qa-categories','Categories fixture');
+INSERT INTO plataforma.role_permissions(role_id,permission_code) SELECT r.id,p.code FROM plataforma.roles r CROSS JOIN plataforma.permissions p WHERE r.code='qa-categories' AND p.code IN ('catalog.categories.read','catalog.categories.write');
+INSERT INTO plataforma.users(id,email,display_name) VALUES('00005001-0000-0000-0000-000000000001','qa-categories@example.invalid','Categories test');
+INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES('00005002-0000-0000-0000-000000000001','qa-categories','qa-categories','Categories','active');
+INSERT INTO plataforma.user_tenants(tenant_id,user_id,role_id,status) SELECT '00005002-0000-0000-0000-000000000001','00005001-0000-0000-0000-000000000001',id,'active' FROM plataforma.roles WHERE code='qa-categories';
+INSERT INTO plataforma.tenant_modules(tenant_id,module_id,status) SELECT '00005002-0000-0000-0000-000000000001',id,'active' FROM plataforma.modules WHERE code='erp.catalog';
+SELECT set_config('app.current_user_id','00005001-0000-0000-0000-000000000001',true),set_config('app.current_tenant_id','00005002-0000-0000-0000-000000000001',true),set_config('app.correlation_id','00005003-0000-0000-0000-000000000001',true),set_config('app.current_operation','catalog.categories.create',true);
+SET LOCAL ROLE mastererp_app;
+DO $$ DECLARE item jsonb; replay jsonb; caught boolean:=false; BEGIN
+ item:=catalogo.categoria_crear('alimentos','Alimentos','Productos alimenticios',NULL,'/images/alimentos.jpg',10,'category-key');
+ replay:=catalogo.categoria_crear('alimentos','Alimentos','Productos alimenticios',NULL,'/images/alimentos.jpg',10,'category-key');
+ IF item->>'slug'<>'alimentos' OR replay->>'slug'<>item->>'slug' THEN RAISE EXCEPTION 'Category create/replay mismatch'; END IF;
+ PERFORM set_config('app.current_operation','catalog.categories.update',true);
+ item:=catalogo.categoria_actualizar('alimentos',1,'{"name":"Alimentos y víveres","sort_order":20}');
+ IF item->>'name'<>'Alimentos y víveres' OR (item->>'version')::int<>2 THEN RAISE EXCEPTION 'Category update mismatch'; END IF;
+ BEGIN PERFORM catalogo.categoria_actualizar('alimentos',1,'{"status":"INACTIVE"}'); EXCEPTION WHEN serialization_failure THEN caught:=true; END;
+ IF NOT caught THEN RAISE EXCEPTION 'Stale category update accepted'; END IF;
+ IF has_table_privilege('mastererp_app','catalogo.categorias','INSERT,UPDATE,DELETE') THEN RAISE EXCEPTION 'Direct category DML leaked'; END IF;
+END $$;
+ROLLBACK;

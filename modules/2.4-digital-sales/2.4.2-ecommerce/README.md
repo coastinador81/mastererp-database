@@ -3,7 +3,7 @@
 Objetivo específico: Gestionar venta online; catálogo y finanzas conservan sus datos propietarios.
 
 Responsabilidad: eCommerce, dentro de Digital Sales.
-Estado: pendiente de implementación en esta capa. Sin código vacío.
+Estado: esquema y funciones implementados en `schema/027_digital_sales_ecommerce.sql`.
 
 
 ## Contrato y estado de esta capa
@@ -12,7 +12,6 @@ Código: 2.4.2. Nombre/ruta: `2.4.2-ecommerce`. Objetivo y alcance: los descrito
 
 Capa: datos. Dependencias: contexto autenticado, tenant y contratos del padre cuando correspondan; contratos adicionales pendientes de definición. Exclusiones: lógica y recursos de otros módulos; conectores técnicos fuera de Digital Sales. APIs/eventos/MCP: no declarar disponibles por existir esta carpeta; revisar implementación y contrato antes de consumir. Propuestas sin contrato confirmado permanecen pendientes.
 
-Estado verificable: la reserva documental no acredita implementación; conservar cualquier código/plantilla existente y revisar evidencia específica antes de marcar implementado.
+Estado verificable: configuración autorizada y catálogo público por tenant/dominio aprobados en PostgreSQL desechable. Aplicación DEV pendiente.
 
 Validaciones: estructura local mediante scripts/validate_structure.py. Pendientes: contratos específicos, responsable nominal y pruebas funcionales antes de habilitar esta capacidad.
-
