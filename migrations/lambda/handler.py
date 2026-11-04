@@ -24,6 +24,7 @@ SCHEMA_FILES = (
     "012_administration_portfolio_expenses.sql",
     "013_administration_integrity_security.sql",
     "014_administration_parties.sql",
+    "015_frontend_context.sql",
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
@@ -34,6 +35,7 @@ TEST_FILES = (
     "active_session_context_test.sql",
     "foundation_idempotency_test.sql",
     "administration_parties_test.sql",
+    "frontend_context_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 
@@ -85,11 +87,11 @@ def lambda_handler(event, context):
     phase = "lock"
     filename = "none"
     committed_passes = 0
-    # 001-013 already reconciled/applied in DEV. Never replay their GRANTs for this upgrade.
-    applied_schema = ("014_administration_parties.sql",)
+    # 001-014 already applied in DEV. Never replay their GRANTs for this upgrade.
+    applied_schema = ("015_frontend_context.sql",)
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero')")[0][0] is None:
         connection.close()
-        raise RuntimeError("Reconciled 001-013 baseline required; no automatic bootstrap")
+        raise RuntimeError("Reconciled 001-014 baseline required; no automatic bootstrap")
     try:
         connection.run("SELECT pg_advisory_lock(734561903)")
         # Commit the model independently of rollback-only fixtures. A second
