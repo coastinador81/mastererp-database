@@ -13,6 +13,13 @@ from pg8000.native import literal
 
 ISSUER = "https://cognito-idp.us-west-1.amazonaws.com/us-west-1_oCn3VipDO"
 ACTORS = ("admin_a", "member_a", "admin_b", "no_spaces")
+TUMANDAITO_BRANCHES = {
+    "NODE-LAV-001": "Nodo Santa Lucía",
+    "NODE-NVI-001": "Nodo Santa Teresa",
+    "NODE-OLI-001": "Nodo Cartanal",
+    "NODE-PAL-001": "Nodo Dos Lagunas",
+    "NODE-ROS-001": "Nodo Rosario",
+}
 
 
 def _dev_guard(context):
@@ -282,6 +289,59 @@ def inspect_business_tenant(connection, event, context):
         return {'status':'succeeded','read_only':True,'tenants':result}
     finally:
         connection.run('ROLLBACK')
+
+
+def bootstrap_tumandaito_branches(connection, event, context):
+    """Provision only the approved DEV branches required by the phase-6 migration."""
+    _dev_guard(context)
+    correlation=str(UUID(str(event.get('correlation_id',''))))
+    if event.get('name')!='Tumandaito' or event.get('nodes')!=TUMANDAITO_BRANCHES:
+        raise ValueError('Exact Tumandaito branch manifest required')
+    connection.run('BEGIN')
+    try:
+        connection.run("SELECT pg_advisory_xact_lock(hashtextextended('mastererp-dev:business:tumandaito:branches',0))")
+        rows=connection.run("""SELECT t.id,c.id,u.id FROM plataforma.tenants t
+          JOIN organizacion.companies c ON c.tenant_id=t.id
+          JOIN plataforma.user_tenants ut ON ut.tenant_id=t.id AND ut.status='active'
+          JOIN plataforma.roles r ON r.id=ut.role_id AND r.code='tenant.owner'
+          JOIN plataforma.users u ON u.id=ut.user_id AND u.status='active'
+          WHERE t.code='tumandaito' AND t.status='active' AND c.legal_name='Tumandaito'
+          AND c.status='active'""")
+        if len(rows)!=1:raise ValueError('Tumandaito tenant, company and owner must be unique and active')
+        tenant,company,actor=map(str,rows[0])
+        connection.run('SET LOCAL ROLE mastererp_app')
+        if connection.run('SELECT current_user')[0][0]!='mastererp_app':raise ValueError('Application role required')
+        connection.run("SELECT set_config('app.current_user_id',:actor,true),set_config('app.current_tenant_id',:tenant,true),set_config('app.correlation_id',:correlation,true)",actor=actor,tenant=tenant,correlation=correlation)
+        connection.run("""INSERT INTO plataforma.tenant_modules(tenant_id,module_id,status)
+          SELECT :tenant,id,'active' FROM plataforma.modules WHERE code IN
+          ('erp.catalog','erp.operations','erp.transport','digital_sales.ecommerce')
+          ON CONFLICT(tenant_id,module_id) DO UPDATE SET status='active'""",tenant=tenant)
+        branch_map={}
+        for code,name in TUMANDAITO_BRANCHES.items():
+            branch=str(uuid5(NAMESPACE_URL,'mastererp-dev:tumandaito:branch:'+code))
+            existing=connection.run("SELECT id,name,branch_type,country_code,status FROM organizacion.branches WHERE company_id=:company AND code=:code",company=company,code=code)
+            expected=[branch,name,'warehouse','VE','active']
+            if existing:
+                if len(existing)!=1 or [str(existing[0][0]),*existing[0][1:]]!=expected:
+                    raise ValueError('Existing branch differs: '+code)
+            else:
+                connection.run("""INSERT INTO organizacion.branches
+                  (id,tenant_id,company_id,code,name,branch_type,country_code,status)
+                  VALUES(:id,:tenant,:company,:code,:name,'warehouse','VE','active')""",
+                  id=branch,tenant=tenant,company=company,code=code,name=name)
+            branch_map[code]=branch
+        connection.run("""INSERT INTO auditoria.events
+          (tenant_id,actor_user_id,module_code,entity_type,entity_id,action,correlation_id,metadata)
+          VALUES(:tenant,:actor,'2.3.4-nodes','company',:company,'dev.branches.bootstrap',:correlation,
+          jsonb_build_object('resultado','succeeded','branch_count',:count))""",
+          tenant=tenant,actor=actor,company=company,correlation=correlation,count=len(branch_map))
+        connection.run('COMMIT')
+        return {'status':'succeeded','tenant_id':tenant,'company_id':company,
+                'actor_user_id':actor,'branches':branch_map,'application_role':'mastererp_app'}
+    except Exception as error:
+        connection.run('ROLLBACK')
+        detail=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
+        raise RuntimeError('Tumandaito branch bootstrap failed; sqlstate='+detail.get('C','unknown')) from None
 
 
 def bootstrap_tumandaito(connection, event, context):

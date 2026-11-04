@@ -83,6 +83,12 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
+    if event.get("action") == "bootstrap_tumandaito_branches":
+        from dev_validation import bootstrap_tumandaito_branches
+        try:
+            return bootstrap_tumandaito_branches(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action") == "bootstrap_tumandaito":
         from dev_validation import bootstrap_tumandaito
         try:
