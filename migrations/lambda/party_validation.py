@@ -39,12 +39,13 @@ def fixture(c, event, context):
                     raise ValueError('Own fixtures not uniquely identified')
             if action == 'inspect':
                 counts = {}
-                for table in ('catalogo.terceros','administracion.perfiles_tercero','plataforma.idempotency_keys','auditoria.events'):
+                for table in ('catalogo.terceros','administracion.perfiles_tercero','administracion.documentos','administracion.detalles_documento','plataforma.idempotency_keys','auditoria.events'):
                     column = 'request_tenant_id' if table.endswith('idempotency_keys') else 'tenant_id'
                     counts[table] = c.run('SELECT count(*) FROM '+table+' WHERE '+column+' IN (:a,:b)',a=ids['tenant_a'],b=ids['tenant_b'])[0][0]
                 audit = c.run("SELECT count(*) FROM auditoria.events WHERE tenant_id=:tenant AND entity_type='tercero' AND actor_user_id=:actor AND correlation_id IS NOT NULL AND metadata->>'empresa_id' IS NOT NULL AND metadata->>'resultado'='succeeded'",tenant=ids['tenant_a'],actor=actors['admin_a'])[0][0]
+                purchase_audit=c.run("SELECT count(*) FROM auditoria.events WHERE tenant_id=:tenant AND entity_type='documento' AND action LIKE 'administration.purchase.%' AND actor_user_id=:actor AND correlation_id IS NOT NULL AND metadata->>'empresa_id' IS NOT NULL AND metadata->>'resultado'='succeeded'",tenant=ids['tenant_a'],actor=actors['admin_a'])[0][0]
                 c.run('ROLLBACK')
-                return {'status':'succeeded','ids':ids,'counts':counts,'valid_party_audit_events':audit}
+                return {'status':'succeeded','ids':ids,'counts':counts,'valid_party_audit_events':audit,'valid_purchase_audit_events':purchase_audit}
             # Restore ONLY our fresh fixture rows, never an existing user's state.
             c.run("UPDATE plataforma.tenants SET status='active' WHERE id IN (:a,:b)",a=ids['tenant_a'],b=ids['tenant_b'])
             c.run("UPDATE plataforma.user_tenants SET status='active',permissions_override='{}'::jsonb WHERE tenant_id IN (:a,:b)",a=ids['tenant_a'],b=ids['tenant_b'])
@@ -61,6 +62,7 @@ def fixture(c, event, context):
                 for suffix in ('a','b'):
                     tenant=ids['tenant_'+suffix]
                     scope(actors['admin_'+suffix],tenant)
+                    c.run('SET CONSTRAINTS ALL DEFERRED')
                     c.run('DELETE FROM administracion.detalles_documento WHERE tenant_id=:tenant',tenant=tenant)
                     c.run('DELETE FROM administracion.documentos WHERE tenant_id=:tenant',tenant=tenant)
                     c.run('DELETE FROM administracion.perfiles_tercero WHERE tenant_id=:tenant',tenant=tenant)
