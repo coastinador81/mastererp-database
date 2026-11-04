@@ -333,7 +333,7 @@ def bootstrap_tumandaito_branches(connection, event, context):
         connection.run("""INSERT INTO auditoria.events
           (tenant_id,actor_user_id,module_code,entity_type,entity_id,action,correlation_id,metadata)
           VALUES(:tenant,:actor,'2.3.4-nodes','company',:company,'dev.branches.bootstrap',:correlation,
-          jsonb_build_object('resultado','succeeded','branch_count',:count))""",
+          jsonb_build_object('resultado','succeeded','branch_count',CAST(:count AS integer)))""",
           tenant=tenant,actor=actor,company=company,correlation=correlation,count=len(branch_map))
         connection.run('COMMIT')
         return {'status':'succeeded','tenant_id':tenant,'company_id':company,
