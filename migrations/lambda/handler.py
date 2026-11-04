@@ -49,6 +49,7 @@ SCHEMA_FILES = (
     "034_zero_inventory_initialization.sql",
     "035_ves_currency_reference.sql",
     "036_usd_currency_reference.sql",
+    "037_purchase_drafts.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -68,6 +69,11 @@ CONFIRMED_BASELINE_SCHEMAS = (
     '029_administration_migration_lookup.sql',
     '030_operations_migration_lookup.sql',
     '031_transport_migration_lookup.sql',
+    '032_party_details.sql',
+    '033_canonical_owner_permissions.sql',
+    '034_zero_inventory_initialization.sql',
+    '035_ves_currency_reference.sql',
+    '036_usd_currency_reference.sql',
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
@@ -91,6 +97,7 @@ TEST_FILES = (
     "canonical_owner_permissions_test.sql",
     "ves_currency_reference_test.sql",
     "usd_currency_reference_test.sql",
+    "purchase_drafts_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"
@@ -170,14 +177,15 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
-    if event.get("action") == "validate_party_details_candidate":
+    if event.get("action") in ("validate_party_details_candidate", "validate_purchase_drafts_candidate"):
         from dev_validation import _dev_guard
         _dev_guard(context)
         try:
             connection.run("BEGIN")
-            candidate=(sql_dir / "032_party_details.sql").read_text(encoding="utf-8")
+            purchase_candidate = event["action"] == "validate_purchase_drafts_candidate"
+            candidate=(sql_dir / ("037_purchase_drafts.sql" if purchase_candidate else "032_party_details.sql")).read_text(encoding="utf-8")
             connection.run(candidate)
-            connection.run((sql_dir / "party_details_test.sql").read_text(encoding="utf-8"))
+            connection.run((sql_dir / ("purchase_drafts_test.sql" if purchase_candidate else "party_details_test.sql")).read_text(encoding="utf-8"))
             return {"status":"succeeded","validation_only":True,"tests":"passed","committed":False}
         except Exception as error:
             details=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
@@ -252,15 +260,24 @@ def lambda_handler(event, context):
     phase = "lock"
     filename = "none"
     committed_passes = 0
-    # 001-031 confirmed by the successful DEV workflow; do not replay their grants for this upgrade.
-    applied_schema = ("032_party_details.sql", "033_canonical_owner_permissions.sql",
-                      "034_zero_inventory_initialization.sql", "035_ves_currency_reference.sql",
-                      "036_usd_currency_reference.sql")
+    # Confirmed 001-036 baseline: never replay existing grants for this upgrade.
+    applied_schema = ("037_purchase_drafts.sql",)
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL")[0][0] is not True:
         connection.close()
         raise RuntimeError("Reconciled 001-031 baseline required; no automatic bootstrap")
     try:
         connection.run("SELECT pg_advisory_lock(734561903)")
+        # Validate this candidate and effective-app tests in a transaction BEFORE committing DDL.
+        # The trusted test has a terminal ROLLBACK; it also undoes the candidate schema.
+        phase = "preflight"
+        connection.run("BEGIN")
+        try:
+            for filename in applied_schema:
+                connection.run((sql_dir / filename).read_text(encoding="utf-8"))
+            filename = "purchase_drafts_test.sql"
+            connection.run((sql_dir / filename).read_text(encoding="utf-8"))
+        finally:
+            connection.run("ROLLBACK")
         # Commit the model independently of rollback-only fixtures. A second
         # application exercises repeatability before checking effective ACLs.
         for _ in range(2):

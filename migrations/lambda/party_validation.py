@@ -24,7 +24,7 @@ def fixture(c, event, context):
             actors[key] = str(rows[0][0])
         if action == 'prepare':
             c.run("INSERT INTO plataforma.roles(id,code,name) VALUES(:id,:code,'Administration HTTP QA fixture')",id=ids['role'],code=run)
-            c.run("INSERT INTO plataforma.role_permissions(role_id,permission_code) SELECT :id,code FROM plataforma.permissions WHERE code IN ('administration.parties.read','administration.parties.write')",id=ids['role'])
+            c.run("INSERT INTO plataforma.role_permissions(role_id,permission_code) SELECT :id,code FROM plataforma.permissions WHERE code IN ('administration.parties.read','administration.parties.write','administration.purchases.read','administration.purchases.write')",id=ids['role'])
             for suffix in ('a','b'):
                 tenant=ids['tenant_'+suffix]
                 c.run("INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES(:id,:code,:code,'Administration HTTP QA','active')",id=tenant,code=run+'-'+suffix)
@@ -50,7 +50,7 @@ def fixture(c, event, context):
             c.run("UPDATE plataforma.user_tenants SET status='active',permissions_override='{}'::jsonb WHERE tenant_id IN (:a,:b)",a=ids['tenant_a'],b=ids['tenant_b'])
             c.run("UPDATE plataforma.tenant_modules SET status='active' WHERE tenant_id IN (:a,:b)",a=ids['tenant_a'],b=ids['tenant_b'])
             if action == 'deny':
-                c.run("UPDATE plataforma.user_tenants SET permissions_override=jsonb_build_object('administration.parties.write',false) WHERE tenant_id=:tenant AND user_id=:actor",tenant=ids['tenant_a'],actor=actors['admin_a'])
+                c.run("UPDATE plataforma.user_tenants SET permissions_override=jsonb_build_object('administration.parties.write',false,'administration.purchases.write',false) WHERE tenant_id=:tenant AND user_id=:actor",tenant=ids['tenant_a'],actor=actors['admin_a'])
             elif action == 'module_disabled':
                 c.run("UPDATE plataforma.tenant_modules SET status='suspended' WHERE tenant_id=:tenant",tenant=ids['tenant_a'])
             elif action == 'membership_inactive':
@@ -61,6 +61,8 @@ def fixture(c, event, context):
                 for suffix in ('a','b'):
                     tenant=ids['tenant_'+suffix]
                     scope(actors['admin_'+suffix],tenant)
+                    c.run('DELETE FROM administracion.detalles_documento WHERE tenant_id=:tenant',tenant=tenant)
+                    c.run('DELETE FROM administracion.documentos WHERE tenant_id=:tenant',tenant=tenant)
                     c.run('DELETE FROM administracion.perfiles_tercero WHERE tenant_id=:tenant',tenant=tenant)
                     # Only the fresh, guarded QA tenants; preserve real Tumandaito fixtures.
                     c.run('DELETE FROM administracion.descuentos_pronto_pago WHERE tenant_id=:tenant',tenant=tenant)
