@@ -110,6 +110,12 @@ def lambda_handler(event, context):
             return seed(connection, event, context)
         finally:
             connection.close()
+    if event.get("action") == "bootstrap_tumandaito_branches":
+        from dev_validation import bootstrap_tumandaito_branches
+        try:
+            return bootstrap_tumandaito_branches(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action") == "bootstrap_tumandaito":
         from dev_validation import bootstrap_tumandaito
         try:
