@@ -218,6 +218,12 @@ def lambda_handler(event, context):
             return inspect_business_tenant(connection, event, context)
         finally:
             connection.close()
+    if event.get("action") == "inspect_phase6":
+        from phase6_validation import inspect_phase6
+        try:
+            return inspect_phase6(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action") == "party_fixture":
         from party_validation import fixture
         try:
