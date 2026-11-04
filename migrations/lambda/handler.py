@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import ssl
 from pathlib import Path
 
@@ -135,8 +136,12 @@ def _apply_phase6(connection, event, correlation_id):
             reason = details.get("M", "unknown")
             if reason not in PHASE6_SAFE_FAILURES:
                 reason = "unknown"
+            constraint = str(details.get("n", "unknown"))
+            if not re.fullmatch(r"[a-z0-9_]{1,100}", constraint):
+                constraint = "unknown"
             raise RuntimeError("Phase 6 load failed; artifact=" + name + "; sqlstate="
-                               + details.get("C", "unknown") + "; reason=" + reason) from None
+                               + details.get("C", "unknown") + "; reason=" + reason
+                               + "; constraint=" + constraint) from None
     return {"status": "succeeded", "source_sha256": PHASE6_SOURCE_SHA256,
             "artifacts": applied, "correlation_id": correlation_id}
 
