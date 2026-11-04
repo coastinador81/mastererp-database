@@ -9,6 +9,7 @@ on:
       - 'seeds/**'
       - 'tests/**'
       - 'migrations/lambda/**'
+      - 'scripts/package_migrator.py'
       - '.github/workflows/apply-dev-database.yml'
       - '.github/workflows/deploy-migrator.yml'
 
