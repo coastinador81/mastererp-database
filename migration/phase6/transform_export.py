@@ -7,6 +7,8 @@ safe inputs for review/reconciliation before an explicitly authorized loader.
 import argparse
 import hashlib
 import json
+import re
+import unicodedata
 import uuid
 from collections import Counter, defaultdict
 from decimal import Decimal
@@ -19,6 +21,12 @@ TYPE_TO_KIND = {
     "CUSTOMER": "customers", "ORDER": "orders", "ORDER_ITEM": "order_items", "ROUTE": "routes",
 }
 NAMESPACE = uuid.UUID("21449f35-58fa-42ee-b9cd-c403b5998482")
+
+
+def category_slug(value):
+    raw = str(value or "otros").strip().lower()
+    ascii_value = unicodedata.normalize("NFKD", raw).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", ascii_value).strip("-") or "otros"
 
 
 def _decode(value):
@@ -82,7 +90,7 @@ def map_item(item, config):
     target = stable_id(config["target_tenant_id"], kind, external)
     common = {"source_id": external, "target_id": target, "source_updated_at": item.get("updatedAt")}
     if kind == "products":
-        category = str(item.get("categoryId") or "otros").strip().lower()
+        category = category_slug(item.get("categoryId"))
         payload = {"code": str(item.get("sku") or external), "name": item.get("name"), "description": item.get("description") or "", "price": _number(item.get("price")), "status": item.get("status") or "ACTIVE", "category_ref": category, "image_url": item.get("imageUrl"), "attributes": item.get("attributes") or {}, "external_reference": external}
         return kind, {**common, "payload": payload}, category
     if kind == "customers":
@@ -151,8 +159,13 @@ def validate_config(config):
 def write_bundle(source, config_path, output):
     config = json.loads(config_path.read_text(encoding="utf-8"))
     validate_config(config)
-    records, errors, source_counts, categories = defaultdict(list), [], Counter(), set()
+    records, errors, ignored, source_counts, categories = defaultdict(list), [], [], Counter(), set()
+    ignored_counts = Counter()
     decoded = [(number, decode_export(line)) for number, line in enumerate(source.read_text(encoding="utf-8").splitlines(), 1) if line.strip()]
+    scoped_inventory_products = {
+        str(item.get("productId") or "") for _, item in decoded
+        if normalized_type(item) == "INVENTORY" and item.get("nodeId")
+    }
     driver_nodes = defaultdict(list)
     for _, item in decoded:
         if normalized_type(item) == "NODE_DRIVER" and str(item.get("tenantId") or "") == config["source_tenant_id"]:
@@ -160,6 +173,20 @@ def write_bundle(source, config_path, output):
     for number, item in decoded:
         entity_type = normalized_type(item)
         try:
+            if (entity_type == "INVENTORY" and not item.get("nodeId")
+                    and str(item.get("productId") or "") in scoped_inventory_products):
+                ignored_counts["legacy_global_inventory_shadowed_by_node"] += 1
+                ignored.append({"line": number, "entity_type": entity_type,
+                                "source_id": source_id(item, entity_type),
+                                "reason": "legacy_global_inventory_shadowed_by_node"})
+                continue
+            if entity_type == "ROUTE" and not item.get("orderIds"):
+                ignored_counts["empty_route_without_orders"] += 1
+                ignored.append({"line": number, "entity_type": entity_type,
+                                "source_id": source_id(item, entity_type),
+                                "reason": "empty_route_without_orders",
+                                "status": item.get("status")})
+                continue
             if entity_type == "MERCHANT":
                 stores=map_stores(item,config);records["stores"].extend(stores);source_counts["stores"]+=len(stores);continue
             if entity_type == "DRIVER" and driver_nodes.get(str(item.get("driverId") or "")):
@@ -182,7 +209,8 @@ def write_bundle(source, config_path, output):
         hashes[path.name] = hashlib.sha256(body.encode()).hexdigest()
         output_counts[kind] = len(records[kind])
     (output / "errors.json").write_text(json.dumps(errors, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    report = {"mode": "offline-transform", "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(), "config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(), "source_counts": dict(sorted(source_counts.items())), "output_counts": output_counts, "errors": len(errors), "output_sha256": hashes, "remote_reads": False, "database_writes": False}
+    (output / "ignored.json").write_text(json.dumps(ignored, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    report = {"mode": "offline-transform", "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(), "config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(), "source_counts": dict(sorted(source_counts.items())), "output_counts": output_counts, "ignored_counts": dict(sorted(ignored_counts.items())), "errors": len(errors), "output_sha256": hashes, "remote_reads": False, "database_writes": False}
     (output / "manifest.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return report
 

@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from migration.phase6.transform_export import write_bundle
+from migration.phase6.transform_export import category_slug
 from migration.phase6.reconcile_bundle import reconcile
 from migration.phase6.catalog_loader import render_sql
 from migration.phase6.operations_inventory_loader import render_sql as render_operations
@@ -16,6 +17,9 @@ from migration.phase6.storefront_loader import render_sql as render_storefront
 
 
 class Phase6TransformTest(unittest.TestCase):
+    def test_category_slug_normalizes_unicode(self):
+        self.assertEqual(category_slug("Panadería y Café"), "panaderia-y-cafe")
+
     def test_bundle_is_deterministic_and_scoped(self):
         items = [
             {"PK":"TENANT#T001#CUSTOMER#C1","SK":"META","entityType":"CUSTOMER","tenantId":"T001","customerId":"C1","name":"Customer One","status":"ACTIVE"},

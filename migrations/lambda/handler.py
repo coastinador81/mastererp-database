@@ -1,5 +1,7 @@
 """Migration Lambda for the MasterERP DEV PostgreSQL database."""
 
+import base64
+import hashlib
 import json
 import os
 import ssl
@@ -83,6 +85,45 @@ TEST_FILES = (
     "party_details_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
+PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"
+PHASE6_ARTIFACTS = (
+    ("catalog", "5f71a6bc3b340d057cdda6dae45ec639d9ab28ff06fbfbcb95201593f1d7a2a2"),
+    ("customers", "2a6c2d3666f653a544b6fa8fb68389b8bdcc3dd99b0a2c502f2cbcfdb8a1dac0"),
+    ("operations", "fb2a134e379b8966e2244f5e247031cccf775d5b7a855a2ddc3b5434f29c49a1"),
+    ("storefront", "dfbbf3b5f11773dd24c3853569f8d6b6ad064defc7707db2d9f3a804097a239e"),
+)
+
+
+def _apply_phase6(connection, event, correlation_id):
+    """Apply only the reviewed phase-6 artifacts identified by exact hashes."""
+    if (os.environ.get("ENVIRONMENT") != "dev" or os.environ.get("DB_NAME") != "mastererp"
+            or event.get("source_sha256") != PHASE6_SOURCE_SHA256):
+        raise ValueError("Phase 6 DEV guard rejected")
+    supplied = event.get("artifacts")
+    if not isinstance(supplied, dict) or set(supplied) != {name for name, _ in PHASE6_ARTIFACTS}:
+        raise ValueError("Exact phase 6 artifact set required")
+    applied = []
+    for name, expected_hash in PHASE6_ARTIFACTS:
+        try:
+            body = base64.b64decode(supplied[name], validate=True)
+            if len(body) > 150_000 or hashlib.sha256(body).hexdigest() != expected_hash:
+                raise ValueError("Phase 6 artifact rejected: " + name)
+            sql = body.decode("utf-8")
+            sql = "\n".join(line for line in sql.splitlines() if not line.startswith("\\set"))
+            upper = sql.upper()
+            if any(token in upper for token in ("INSERT INTO", "UPDATE ", "DELETE FROM", "TRUNCATE ", "DROP ")):
+                raise ValueError("Direct DML/DDL rejected: " + name)
+            connection.run(sql)
+            applied.append({"name": name, "sha256": expected_hash})
+        except Exception as error:
+            try:
+                connection.run("ROLLBACK")
+            except Exception:
+                pass
+            details = error.args[0] if error.args and isinstance(error.args[0], dict) else {}
+            raise RuntimeError("Phase 6 load failed; artifact=" + name + "; sqlstate=" + details.get("C", "unknown")) from None
+    return {"status": "succeeded", "source_sha256": PHASE6_SOURCE_SHA256,
+            "artifacts": applied, "correlation_id": correlation_id}
 
 
 def _connection():
@@ -127,6 +168,11 @@ def lambda_handler(event, context):
         from business_samples import seed
         try:
             return seed(connection, event, context)
+        finally:
+            connection.close()
+    if event.get("action") == "apply_phase6":
+        try:
+            return _apply_phase6(connection, event, correlation_id)
         finally:
             connection.close()
     if event.get("action") == "bootstrap_tumandaito_branches":

@@ -1,11 +1,30 @@
 """Local fault injection: fail closed and report which schema commits survived."""
-import importlib.util,unittest
+import base64,hashlib,importlib.util,unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock,patch
 spec=importlib.util.spec_from_file_location('migrator',Path(__file__).resolve().parents[1]/'migrations/lambda/handler.py')
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 class FailureTests(unittest.TestCase):
+    def test_phase6_accepts_only_exact_reviewed_artifact(self):
+        body=b"\\set ON_ERROR_STOP on\nSELECT 1;\n"
+        digest=hashlib.sha256(body).hexdigest();connection=MagicMock()
+        event={'source_sha256':module.PHASE6_SOURCE_SHA256,
+               'artifacts':{'test':base64.b64encode(body).decode()}}
+        with patch.object(module,'PHASE6_ARTIFACTS',(('test',digest),)),patch.dict(module.os.environ,{'ENVIRONMENT':'dev','DB_NAME':'mastererp'}):
+            result=module._apply_phase6(connection,event,'correlation')
+        self.assertEqual(result['status'],'succeeded')
+        connection.run.assert_called_once_with('SELECT 1;')
+
+    def test_phase6_rejects_direct_dml_even_with_matching_hash(self):
+        body=b"INSERT INTO forbidden VALUES (1);"
+        digest=hashlib.sha256(body).hexdigest();connection=MagicMock()
+        event={'source_sha256':module.PHASE6_SOURCE_SHA256,
+               'artifacts':{'test':base64.b64encode(body).decode()}}
+        with patch.object(module,'PHASE6_ARTIFACTS',(('test',digest),)),patch.dict(module.os.environ,{'ENVIRONMENT':'dev','DB_NAME':'mastererp'}):
+            with self.assertRaises(RuntimeError):module._apply_phase6(connection,event,'correlation')
+        self.assertTrue(any(call.args[0]=='ROLLBACK' for call in connection.run.call_args_list))
+
     def test_failure_is_propagated_for_every_phase(self):
         size=1
         for threshold,phase,commits in ((1,'schema',0),(size+1,'reapply',1),(2*size+1,'tests',2)):
@@ -16,7 +35,7 @@ class FailureTests(unittest.TestCase):
                     if sql=='PACKAGED_SQL':
                         seen+=1
                         if seen==threshold:raise RuntimeError({'C':'42501','M':'sentinel_private_value'})
-                    if sql.startswith('SELECT to_regclass'):return [['administracion.perfiles_tercero']]
+                    if sql.startswith('SELECT to_regclass'):return [[True]]
                     return []
                 connection.run.side_effect=execute
                 with patch.object(module,'_connection',return_value=connection),patch.object(module,'Path') as source:
