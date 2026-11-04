@@ -46,6 +46,7 @@ SCHEMA_FILES = (
     "031_transport_migration_lookup.sql",
     "032_party_details.sql",
     "033_canonical_owner_permissions.sql",
+    "034_zero_inventory_initialization.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -242,7 +243,8 @@ def lambda_handler(event, context):
     filename = "none"
     committed_passes = 0
     # 001-031 confirmed by the successful DEV workflow; do not replay their grants for this upgrade.
-    applied_schema = ("032_party_details.sql", "033_canonical_owner_permissions.sql")
+    applied_schema = ("032_party_details.sql", "033_canonical_owner_permissions.sql",
+                      "034_zero_inventory_initialization.sql")
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL")[0][0] is not True:
         connection.close()
         raise RuntimeError("Reconciled 001-031 baseline required; no automatic bootstrap")

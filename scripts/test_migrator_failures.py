@@ -37,7 +37,7 @@ class FailureTests(unittest.TestCase):
         self.assertIn('constraint=safe_constraint',str(failed.exception))
 
     def test_failure_is_propagated_for_every_phase(self):
-        size=2
+        size=3
         for threshold,phase,commits in ((1,'schema',0),(size+1,'reapply',1),(2*size+1,'tests',2)):
             with self.subTest(phase=phase):
                 connection=MagicMock();seen=0
