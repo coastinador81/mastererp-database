@@ -41,6 +41,26 @@ SCHEMA_FILES = (
     "029_administration_migration_lookup.sql",
     "030_operations_migration_lookup.sql",
     "031_transport_migration_lookup.sql",
+    "032_party_details.sql",
+)
+CONFIRMED_BASELINE_SCHEMAS = (
+    '015_frontend_context.sql',
+    '016_operations_orders.sql',
+    '017_catalog_products.sql',
+    '018_operations_nodes.sql',
+    '019_catalog_inventory.sql',
+    '020_transport_drivers.sql',
+    '021_catalog_categories.sql',
+    '022_catalog_attributes.sql',
+    '023_catalog_brands.sql',
+    '024_catalog_suppliers.sql',
+    '025_operations_preparation.sql',
+    '026_operations_routes.sql',
+    '027_digital_sales_ecommerce.sql',
+    '028_catalog_migration_lookup.sql',
+    '029_administration_migration_lookup.sql',
+    '030_operations_migration_lookup.sql',
+    '031_transport_migration_lookup.sql',
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
@@ -60,6 +80,7 @@ TEST_FILES = (
     "catalog_attributes_test.sql",
     "catalog_brands_suppliers_test.sql",
     "operations_fulfillment_ecommerce_test.sql",
+    "party_details_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 
@@ -83,6 +104,12 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
+    if event.get("action") == "seed_tumandaito_suppliers":
+        from business_samples import seed
+        try:
+            return seed(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action") == "bootstrap_tumandaito":
         from dev_validation import bootstrap_tumandaito
         try:
@@ -123,11 +150,11 @@ def lambda_handler(event, context):
     phase = "lock"
     filename = "none"
     committed_passes = 0
-    # 001-014 already applied in DEV. Never replay their GRANTs for this upgrade.
-    applied_schema = ("015_frontend_context.sql", "016_operations_orders.sql", "017_catalog_products.sql", "018_operations_nodes.sql", "019_catalog_inventory.sql", "020_transport_drivers.sql", "021_catalog_categories.sql", "022_catalog_attributes.sql", "023_catalog_brands.sql", "024_catalog_suppliers.sql", "025_operations_preparation.sql", "026_operations_routes.sql", "027_digital_sales_ecommerce.sql", "028_catalog_migration_lookup.sql", "029_administration_migration_lookup.sql", "030_operations_migration_lookup.sql", "031_transport_migration_lookup.sql")
-    if connection.run("SELECT to_regclass('administracion.perfiles_tercero')")[0][0] is None:
+    # 001-031 confirmed by the successful DEV workflow; do not replay their grants for this upgrade.
+    applied_schema = ("032_party_details.sql",)
+    if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL")[0][0] is not True:
         connection.close()
-        raise RuntimeError("Reconciled 001-014 baseline required; no automatic bootstrap")
+        raise RuntimeError("Reconciled 001-031 baseline required; no automatic bootstrap")
     try:
         connection.run("SELECT pg_advisory_lock(734561903)")
         # Commit the model independently of rollback-only fixtures. A second

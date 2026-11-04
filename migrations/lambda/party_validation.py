@@ -62,6 +62,11 @@ def fixture(c, event, context):
                     tenant=ids['tenant_'+suffix]
                     scope(actors['admin_'+suffix],tenant)
                     c.run('DELETE FROM administracion.perfiles_tercero WHERE tenant_id=:tenant',tenant=tenant)
+                    # Only the fresh, guarded QA tenants; preserve real Tumandaito fixtures.
+                    c.run('DELETE FROM administracion.descuentos_pronto_pago WHERE tenant_id=:tenant',tenant=tenant)
+                    c.run('DELETE FROM administracion.condiciones_comerciales WHERE tenant_id=:tenant',tenant=tenant)
+                    c.run('DELETE FROM catalogo.producto_proveedores WHERE tenant_id=:tenant',tenant=tenant)
+                    c.run('DELETE FROM catalogo.proveedores_catalogo WHERE tenant_id=:tenant',tenant=tenant)
                     c.run('DELETE FROM catalogo.roles_tercero WHERE tenant_id=:tenant',tenant=tenant)
                     c.run('DELETE FROM catalogo.terceros WHERE tenant_id=:tenant',tenant=tenant)
                     c.run('DELETE FROM plataforma.idempotency_keys WHERE request_tenant_id=:tenant',tenant=tenant)
