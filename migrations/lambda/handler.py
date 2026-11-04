@@ -110,9 +110,6 @@ def lambda_handler(event, context):
         try:
             connection.run("BEGIN")
             candidate=(sql_dir / "032_party_details.sql").read_text(encoding="utf-8")
-            # Validate the precise parser fix inside a rollback-only transaction before publishing SQL.
-            candidate=candidate.replace('>CASE k','>(CASE k').replace('ELSE 30 END THEN','ELSE 30 END) THEN').replace('ELSE 40 END OR','ELSE 40 END) OR')
-            candidate=candidate.replace('p_catalog_version<>CASE WHEN supplier_existed THEN supplier.version ELSE 0 END)', 'p_catalog_version<>(CASE WHEN supplier_existed THEN supplier.version ELSE 0 END))')
             connection.run(candidate)
             connection.run((sql_dir / "party_details_test.sql").read_text(encoding="utf-8"))
             return {"status":"succeeded","validation_only":True,"tests":"passed","committed":False}

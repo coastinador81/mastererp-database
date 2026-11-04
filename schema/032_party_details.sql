@@ -13,7 +13,7 @@ BEGIN
    IF k NOT IN ('nombre_comercial','tipo_persona','pais_fiscal','tipo_identificacion','numero_identificacion','direccion','direccion_complementaria','ciudad','municipio','region','codigo_postal','pais','email','telefono','telefono_alterno','sitio_web','observaciones') THEN RETURN false; END IF;
    IF v='null'::jsonb THEN CONTINUE; END IF;
    IF jsonb_typeof(v)<>'string' THEN RETURN false; END IF; value:=v#>>'{}';
-   IF length(value)>CASE k WHEN 'observaciones' THEN 2000 WHEN 'sitio_web' THEN 300 WHEN 'email' THEN 254 WHEN 'direccion' THEN 250 WHEN 'direccion_complementaria' THEN 250 WHEN 'nombre_comercial' THEN 200 WHEN 'ciudad' THEN 100 WHEN 'municipio' THEN 100 WHEN 'region' THEN 100 WHEN 'numero_identificacion' THEN 50 WHEN 'telefono' THEN 40 WHEN 'telefono_alterno' THEN 40 WHEN 'tipo_identificacion' THEN 30 WHEN 'codigo_postal' THEN 20 ELSE 30 END THEN RETURN false; END IF;
+   IF length(value)>(CASE k WHEN 'observaciones' THEN 2000 WHEN 'sitio_web' THEN 300 WHEN 'email' THEN 254 WHEN 'direccion' THEN 250 WHEN 'direccion_complementaria' THEN 250 WHEN 'nombre_comercial' THEN 200 WHEN 'ciudad' THEN 100 WHEN 'municipio' THEN 100 WHEN 'region' THEN 100 WHEN 'numero_identificacion' THEN 50 WHEN 'telefono' THEN 40 WHEN 'telefono_alterno' THEN 40 WHEN 'tipo_identificacion' THEN 30 WHEN 'codigo_postal' THEN 20 ELSE 30 END) THEN RETURN false; END IF;
    IF k<>'observaciones' AND value ~ '[[:cntrl:]]' THEN RETURN false; END IF;
    IF value<>'' AND ((k IN ('pais','pais_fiscal') AND value !~ '^[A-Z]{2}$') OR (k='tipo_persona' AND value NOT IN ('natural','juridica')) OR (k='email' AND value !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$') OR (k='sitio_web' AND value !~ '^https?://[^[:space:]]+$')) THEN RETURN false; END IF;
   END LOOP;
@@ -30,7 +30,7 @@ BEGIN
      IF v='true'::jsonb THEN principal_count:=principal_count+1; END IF;
     ELSE
      IF jsonb_typeof(v) IS DISTINCT FROM 'string' THEN RETURN false; END IF; value:=v#>>'{}';
-     IF length(value)>CASE k WHEN 'nombre' THEN 150 WHEN 'cargo' THEN 100 WHEN 'email' THEN 254 ELSE 40 END OR value ~ '[[:cntrl:]]' THEN RETURN false; END IF;
+     IF length(value)>(CASE k WHEN 'nombre' THEN 150 WHEN 'cargo' THEN 100 WHEN 'email' THEN 254 ELSE 40 END) OR value ~ '[[:cntrl:]]' THEN RETURN false; END IF;
      IF k='email' AND value<>'' AND value !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$' THEN RETURN false; END IF;
     END IF;
    END LOOP;
@@ -176,7 +176,7 @@ BEGIN
   SELECT * INTO supplier FROM catalogo.proveedores_catalogo WHERE tenant_id=tenant AND tercero_id=third.id FOR UPDATE;
   supplier_existed:=FOUND;
   IF p_action='update' AND (p_details ? 'datos_generales' OR p_details ? 'contactos')
-   AND (p_catalog_version IS NULL OR p_catalog_version<>CASE WHEN supplier_existed THEN supplier.version ELSE 0 END) THEN
+   AND (p_catalog_version IS NULL OR p_catalog_version<>(CASE WHEN supplier_existed THEN supplier.version ELSE 0 END)) THEN
    RAISE EXCEPTION 'Stale catalog supplier version' USING ERRCODE='40001'; END IF;
   IF NOT supplier_existed THEN
    INSERT INTO catalogo.proveedores_catalogo(tenant_id,tercero_id,codigo,creado_por)
