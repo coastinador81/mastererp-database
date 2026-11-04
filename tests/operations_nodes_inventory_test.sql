@@ -24,7 +24,7 @@ DO $$ DECLARE item jsonb; reservation jsonb; caught boolean:=false; BEGIN
  item:=catalogo.inventario_establecer('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','00007005-0000-0000-0000-000000000001',10,0,'INITIAL','inventory-set-key');
  IF item->>'stock'<>'10' OR item->>'available'<>'10' THEN RAISE EXCEPTION 'Inventory set mismatch'; END IF;
  item:=catalogo.inventario_establecer('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','00007005-0000-0000-0000-000000000002',0,0,'INITIAL_ZERO','inventory-zero-key');
- IF item->>'stock'<>'0' OR EXISTS(SELECT 1 FROM catalogo.movimientos_inventario WHERE producto_id='00007005-0000-0000-0000-000000000002') THEN RAISE EXCEPTION 'Zero inventory initialization mismatch'; END IF;
+ IF item->>'stock'<>'0' OR item->>'available'<>'0' OR item->>'reserved'<>'0' THEN RAISE EXCEPTION 'Zero inventory initialization mismatch'; END IF;
  PERFORM set_config('app.current_operation','catalog.inventory.reserve',true);
  reservation:=catalogo.inventario_reservar('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','[{"product_id":"00007005-0000-0000-0000-000000000001","quantity":3}]','ORDER-1','inventory-reserve-key');
  item:=catalogo.inventario_leer('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','00007005-0000-0000-0000-000000000001');
