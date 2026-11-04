@@ -12,7 +12,8 @@ def package(destination, dependencies):
     manifest = {node.targets[0].id: ast.literal_eval(node.value) for node in tree.body
                 if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name)
                 and node.targets[0].id in ("SCHEMA_FILES", "SEED_FILES", "TEST_FILES")}
-    files = {"handler.py": handler, "dev_validation.py": handler.with_name("dev_validation.py")}
+    files = {"handler.py": handler, "dev_validation.py": handler.with_name("dev_validation.py"),
+             "phase6_validation.py": handler.with_name("phase6_validation.py")}
     for key, folder in (("SCHEMA_FILES", "schema"), ("SEED_FILES", "seeds"), ("TEST_FILES", "tests")):
         for name in manifest[key]:
             if "sql/" + name in files:
