@@ -96,6 +96,10 @@ PHASE6_ARTIFACTS = (
 )
 PHASE6_SAFE_FAILURES = {
     "Customer not found", "Driver not found", "Inventory not found", "Node not found",
+    "Driver unavailable", "Insufficient inventory", "Invalid node transition",
+    "Invalid order transition", "Invalid preparation state", "Invalid route transition",
+    "Invalid stop state", "Items pending", "Order not confirmed", "Order not preparing",
+    "Order not route-ready", "Payment not ready", "Stock below reservations", "Stops pending",
     "Order not found", "Preparation item not found", "Preparation not found",
     "Product not found", "Reservation not found", "Route not found", "Stop not found",
 }
