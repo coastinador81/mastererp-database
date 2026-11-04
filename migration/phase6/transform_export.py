@@ -166,6 +166,11 @@ def write_bundle(source, config_path, output):
         str(item.get("productId") or "") for _, item in decoded
         if normalized_type(item) == "INVENTORY" and item.get("nodeId")
     }
+    product_ids = {
+        source_id(item, "PRODUCT") for _, item in decoded
+        if normalized_type(item) == "PRODUCT"
+        and str(item.get("tenantId") or "") == config["source_tenant_id"]
+    }
     driver_nodes = defaultdict(list)
     for _, item in decoded:
         if normalized_type(item) == "NODE_DRIVER" and str(item.get("tenantId") or "") == config["source_tenant_id"]:
@@ -179,6 +184,15 @@ def write_bundle(source, config_path, output):
                 ignored.append({"line": number, "entity_type": entity_type,
                                 "source_id": source_id(item, entity_type),
                                 "reason": "legacy_global_inventory_shadowed_by_node"})
+                continue
+            if (entity_type == "INVENTORY"
+                    and source_id(item, entity_type) not in product_ids):
+                ignored_counts["orphan_inventory_product_missing"] += 1
+                ignored.append({"line": number, "entity_type": entity_type,
+                                "source_id": source_id(item, entity_type),
+                                "reason": "orphan_inventory_product_missing",
+                                "stock": _number(item.get("stock")),
+                                "reserved": _number(item.get("reserved", item.get("reservedStock", 0)))})
                 continue
             if entity_type == "ROUTE" and not item.get("orderIds"):
                 ignored_counts["empty_route_without_orders"] += 1

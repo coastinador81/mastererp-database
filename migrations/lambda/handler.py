@@ -91,7 +91,7 @@ PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589
 PHASE6_ARTIFACTS = (
     ("catalog", "5f71a6bc3b340d057cdda6dae45ec639d9ab28ff06fbfbcb95201593f1d7a2a2"),
     ("customers", "2a6c2d3666f653a544b6fa8fb68389b8bdcc3dd99b0a2c502f2cbcfdb8a1dac0"),
-    ("operations", "fb2a134e379b8966e2244f5e247031cccf775d5b7a855a2ddc3b5434f29c49a1"),
+    ("operations", "dce9404d080bfd4fa4d1bfef4bf158614ee7fff80c07ad4058c1c20e35f32ccb"),
     ("storefront", "dfbbf3b5f11773dd24c3853569f8d6b6ad064defc7707db2d9f3a804097a239e"),
 )
 PHASE6_SAFE_FAILURES = {
