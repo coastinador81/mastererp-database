@@ -104,6 +104,24 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
+    if event.get("action") == "validate_party_details_candidate":
+        from dev_validation import _dev_guard
+        _dev_guard(context)
+        try:
+            connection.run("BEGIN")
+            connection.run((sql_dir / "032_party_details.sql").read_text(encoding="utf-8"))
+            connection.run((sql_dir / "party_details_test.sql").read_text(encoding="utf-8"))
+            return {"status":"succeeded","validation_only":True,"tests":"passed","committed":False}
+        except Exception as error:
+            details=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
+            # This action only parses our bundled static SQL; never return row DETAIL or credentials.
+            return {"status":"failed","validation_only":True,"committed":False,
+                "sqlstate":details.get("C","unknown"),"position":details.get("P"),
+                "parser_message":str(details.get("M","candidate validation failed"))[:160],
+                "parser_context":str(details.get("W",""))[:160]}
+        finally:
+            connection.run("ROLLBACK")
+            connection.close()
     if event.get("action") == "seed_tumandaito_suppliers":
         from business_samples import seed
         try:
