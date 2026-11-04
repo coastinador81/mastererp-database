@@ -7,5 +7,8 @@
   "default_source_node_id": "NODE-001",
   "node_map": {
     "NODE-001": "00000000-0000-0000-0000-000000000004"
+  },
+  "store_map": {
+    "T001": [{"source_node_id":"NODE-001","domain":"dev.example.invalid","name":"Store DEV","status":"ACTIVE","modules":[]}]
   }
 }

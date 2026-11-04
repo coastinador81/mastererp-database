@@ -14,7 +14,7 @@ from migration.phase6.orders_preflight import HISTORICAL, inspect_bundle
 
 
 def historical_block(company, source_sha, row, lines):
-    payload=row["payload"];status=payload["status"]
+    payload=row["payload"];status="READY" if payload.get("route_external_id") else payload["status"]
     cancel="" if status!="CANCELLED" else f"""IF current->>'status'='PENDING' THEN
   PERFORM set_config('app.current_operation','operations.orders.transition',true);
   current:=operaciones.pedido_transicionar({sql_literal(company)},(current->>'id')::uuid,(current->>'version')::bigint,'CANCELLED','PHASE6_IMPORT');
@@ -68,7 +68,7 @@ def render_sql(bundle,expected_source_sha256,config_path,batch_size=100):
     orders=[row for row in read_jsonl(bundle/"orders.jsonl")if row["payload"]["status"]in HISTORICAL];groups=defaultdict(list);adjustments=defaultdict(Decimal)
     for row in read_jsonl(bundle/"order_items.jsonl"):groups[row["payload"]["order_external_id"]].append(row["payload"])
     for row in orders:
-        if row["payload"]["status"]!="CANCELLED":
+        if row["payload"]["status"]!="CANCELLED" or row["payload"].get("route_external_id"):
             for line in groups[row["source_id"]]:adjustments[(row["payload"]["node_id"],line["product_external_id"])]+=Decimal(line["quantity"])
     stocks={(row["payload"]["node_id"],row["source_id"]):Decimal(row["payload"]["stock"])+adjustments[(row["payload"]["node_id"],row["source_id"])]for row in read_jsonl(bundle/"inventories.jsonl")}
     active_sql,_=render_active(bundle,expected_source_sha256,config_path,batch_size,stock_overrides=stocks);correlation=str(uuid.uuid5(uuid.UUID("8a82fa91-5125-48ac-9ef4-f2ae40df09c5"),expected_source_sha256));statements=[active_sql.rstrip(),"\\set ON_ERROR_STOP on"]

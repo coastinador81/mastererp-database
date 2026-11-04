@@ -40,6 +40,7 @@ SCHEMA_FILES = (
     "028_catalog_migration_lookup.sql",
     "029_administration_migration_lookup.sql",
     "030_operations_migration_lookup.sql",
+    "031_transport_migration_lookup.sql",
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
@@ -123,7 +124,7 @@ def lambda_handler(event, context):
     filename = "none"
     committed_passes = 0
     # 001-014 already applied in DEV. Never replay their GRANTs for this upgrade.
-    applied_schema = ("015_frontend_context.sql", "016_operations_orders.sql", "017_catalog_products.sql", "018_operations_nodes.sql", "019_catalog_inventory.sql", "020_transport_drivers.sql", "021_catalog_categories.sql", "022_catalog_attributes.sql", "023_catalog_brands.sql", "024_catalog_suppliers.sql", "025_operations_preparation.sql", "026_operations_routes.sql", "027_digital_sales_ecommerce.sql", "028_catalog_migration_lookup.sql", "029_administration_migration_lookup.sql", "030_operations_migration_lookup.sql")
+    applied_schema = ("015_frontend_context.sql", "016_operations_orders.sql", "017_catalog_products.sql", "018_operations_nodes.sql", "019_catalog_inventory.sql", "020_transport_drivers.sql", "021_catalog_categories.sql", "022_catalog_attributes.sql", "023_catalog_brands.sql", "024_catalog_suppliers.sql", "025_operations_preparation.sql", "026_operations_routes.sql", "027_digital_sales_ecommerce.sql", "028_catalog_migration_lookup.sql", "029_administration_migration_lookup.sql", "030_operations_migration_lookup.sql", "031_transport_migration_lookup.sql")
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero')")[0][0] is None:
         connection.close()
         raise RuntimeError("Reconciled 001-014 baseline required; no automatic bootstrap")

@@ -11,6 +11,8 @@ from migration.phase6.customers_loader import render_sql as render_customers
 from migration.phase6.orders_preflight import inspect_bundle
 from migration.phase6.active_orders_loader import render_sql as render_active_orders
 from migration.phase6.historical_orders_loader import render_sql as render_historical_orders
+from migration.phase6.routes_loader import render_sql as render_routes
+from migration.phase6.storefront_loader import render_sql as render_storefront
 
 
 class Phase6TransformTest(unittest.TestCase):
@@ -59,6 +61,12 @@ class Phase6TransformTest(unittest.TestCase):
             historical_sql, historical_plan = render_historical_orders(root / "one", first["source_sha256"], settings)
             self.assertNotIn("INSERT INTO", historical_sql)
             self.assertEqual(historical_plan["loaded_historical"], 0)
+            routes_sql, routes_plan = render_routes(root / "one", first["source_sha256"], settings)
+            self.assertNotIn("INSERT INTO", routes_sql)
+            self.assertEqual(routes_plan["routes"], 0)
+            storefront_sql, storefront_plan = render_storefront(root / "one", first["source_sha256"], settings)
+            self.assertNotIn("INSERT INTO", storefront_sql)
+            self.assertEqual(storefront_plan["stores"], 0)
             customer_sql, customer_plan = render_customers(root / "one", first["source_sha256"], settings)
             self.assertNotIn("INSERT INTO", customer_sql)
             self.assertEqual(customer_plan["customers"], 1)

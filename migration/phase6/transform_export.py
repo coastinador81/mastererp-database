@@ -13,7 +13,7 @@ from decimal import Decimal
 from pathlib import Path
 
 
-KINDS = ("categories", "products", "customers", "nodes", "inventories", "drivers", "orders", "order_items", "routes")
+KINDS = ("categories", "products", "customers", "nodes", "inventories", "drivers", "orders", "order_items", "routes", "stores")
 TYPE_TO_KIND = {
     "PRODUCT": "products", "NODE": "nodes", "DRIVER": "drivers",
     "CUSTOMER": "customers", "ORDER": "orders", "ORDER_ITEM": "order_items", "ROUTE": "routes",
@@ -120,9 +120,24 @@ def map_item(item, config):
         return kind, {**common, "target_id": stable_id(config["target_tenant_id"], kind, f"{order}:{external}"), "payload": payload}, None
     if kind == "routes":
         node = config.get("node_map", {}).get(str(item.get("nodeId") or config.get("default_source_node_id") or ""))
-        payload = {"company_id": config["target_company_id"], "node_id": node, "driver_id": stable_id(config["target_tenant_id"], "drivers", str(item.get("driverId"))) if item.get("driverId") else None, "date": item.get("deliveryDate"), "status": item.get("status") or "PLANNED", "delivery_window_ref": item.get("deliveryWindowId"), "order_ids": [stable_id(config["target_tenant_id"], "orders", str(value)) for value in item.get("orderIds", [])], "external_reference": external}
+        payload = {"company_id": config["target_company_id"], "node_id": node, "driver_external_id": str(item.get("driverId")) if item.get("driverId") else None, "date": item.get("deliveryDate"), "status": item.get("status") or "PLANNED", "delivery_window_ref": item.get("deliveryWindowId"), "order_external_ids": [str(value) for value in item.get("orderIds", [])], "external_reference": external}
         return kind, {**common, "payload": payload}, None
     raise ValueError(f"unsupported kind: {kind}")
+
+
+def map_stores(item, config):
+    tenant=str(item.get("tenantId")or"")
+    if tenant!=config["source_tenant_id"]:raise ValueError("tenant mismatch")
+    merchant=str(item.get("merchantId")or"").strip()
+    mappings=config.get("store_map",{}).get(merchant)
+    if not merchant or not isinstance(mappings,list)or not mappings:raise ValueError(f"store mapping missing: {merchant}")
+    records=[]
+    for mapping in mappings:
+        source_node=str(mapping.get("source_node_id")or"");node=config.get("node_map",{}).get(source_node);domain=str(mapping.get("domain")or"").lower().strip()
+        if not node or not domain:raise ValueError(f"store node/domain mapping missing: {merchant}")
+        external=f"{merchant}:{source_node}:{domain}";configuration={name:item.get(name)for name in("phone","address","currency","deliveryFee","minOrder","route1Close","route1Window","route2Close","route2Window","payments","deliverySlots")if item.get(name)is not None}
+        records.append({"source_id":external,"target_id":stable_id(config["target_tenant_id"],"stores",external),"source_updated_at":item.get("updatedAt"),"payload":{"node_id":node,"domain":domain,"name":mapping.get("name")or item.get("name")or merchant,"status":mapping.get("status","ACTIVE"),"branding":{"logo":item.get("logo")or""},"configuration":configuration,"modules":mapping.get("modules",[]),"external_reference":external}})
+    return records
 
 
 def validate_config(config):
@@ -145,6 +160,8 @@ def write_bundle(source, config_path, output):
     for number, item in decoded:
         entity_type = normalized_type(item)
         try:
+            if entity_type == "MERCHANT":
+                stores=map_stores(item,config);records["stores"].extend(stores);source_counts["stores"]+=len(stores);continue
             if entity_type == "DRIVER" and driver_nodes.get(str(item.get("driverId") or "")):
                 item = {**item, "nodeIds": sorted(set(driver_nodes[str(item.get("driverId"))]))}
             mapped = map_item(item, config)

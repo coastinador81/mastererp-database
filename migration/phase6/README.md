@@ -98,3 +98,13 @@ la oleada histórica porque su stock ya fue consumido o liberado en origen.
 pedidos ya preparados, reproduce reserva, creación y Preparación, y vuelve a
 consumirlo mediante las funciones de dominio. Los cancelados reservan y liberan
 sin cambiar stock. La reejecución consulta el estado actual antes de avanzar.
+
+`routes_loader.py` compone Pedidos históricos, Repartidores y Rutas. Los Pedidos
+con `routeId` se detienen en `READY`; la Ruta asigna el Repartidor, inicia el
+recorrido y completa las paradas entregadas. Bloquea rutas vacías, propiedad
+inconsistente y pedidos cancelados en ruta hasta definir su contrato de fallo.
+
+`storefront_loader.py` migra únicamente configuración `MERCHANT` a Tiendas. El
+archivo de configuración debe mapear explícitamente cada comercio a Nodo y
+dominio; no se inventan dominios ni se copian Productos/Inventario. Cada Tienda
+continúa consumiendo el catálogo canónico mediante `catalogo_publico`.

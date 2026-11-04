@@ -19,3 +19,5 @@ referencia externa de Producto para loaders e integraciones; no concede DML.
 referencia externa y empresa autorizada; tampoco concede DML directo.
 `030_operations_migration_lookup.sql` resuelve Pedidos por referencia externa
 dentro de tenant y empresa para Rutas e integraciones de migración autorizadas.
+`031_transport_migration_lookup.sql` resuelve Repartidores por referencia
+externa bajo el permiso y alcance de Transporte.
