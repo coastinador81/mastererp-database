@@ -282,3 +282,59 @@ def inspect_business_tenant(connection, event, context):
         return {'status':'succeeded','read_only':True,'tenants':result}
     finally:
         connection.run('ROLLBACK')
+
+
+def bootstrap_tumandaito(connection, event, context):
+    """Explicit owner-approved DEV business bootstrap. No email auto-linking or Cognito changes."""
+    _dev_guard(context)
+    subject=str(UUID(str(event.get('owner_subject',''))))
+    if event.get('issuer')!=ISSUER or event.get('owner_email')!='miguel.estrano@gmail.com' or event.get('name')!='Tumandaito':
+        raise ValueError('Explicit Tumandaito bootstrap contract required')
+    actor=str(uuid5(NAMESPACE_URL,ISSUER+'|'+subject));correlation=str(UUID(str(event.get('correlation_id',''))))
+    connection.run('BEGIN')
+    try:
+        connection.run("SELECT pg_advisory_xact_lock(hashtextextended('mastererp-dev:business:tumandaito',0))")
+        identities=connection.run('SELECT e.user_id,e.status,u.status FROM plataforma.external_identities e JOIN plataforma.users u ON u.id=e.user_id WHERE e.issuer=:issuer AND e.subject=:subject',issuer=ISSUER,subject=subject)
+        if identities:
+            if len(identities)!=1 or list(identities[0][1:])!=['active','active']:
+                raise ValueError('Existing identity is not active; preserve it')
+            actor=str(identities[0][0])
+        else:
+            # Never associate an existing internal user merely because its email matches.
+            if connection.run('SELECT 1 FROM plataforma.users WHERE email=:email',email=event['owner_email']):
+                raise ValueError('Existing internal email requires explicit identity reconciliation')
+            connection.run("INSERT INTO plataforma.users(id,email,display_name,status,identity_provider,external_identity_id) VALUES(:actor,:email,'Tumandaito owner','active','cognito',:subject)",actor=actor,email=event['owner_email'],subject=subject)
+            connection.run('INSERT INTO plataforma.external_identities(issuer,subject,user_id) VALUES(:issuer,:subject,:actor)',issuer=ISSUER,subject=subject,actor=actor)
+        existing=connection.run("SELECT id FROM plataforma.tenants WHERE lower(code)='tumandaito' OR lower(slug)='tumandaito' OR lower(name)='tumandaito'")
+        if len(existing)>1:raise ValueError('Ambiguous existing business; preserve all records')
+        connection.run('SET LOCAL ROLE mastererp_app')
+        if connection.run('SELECT current_user')[0][0]!='mastererp_app':raise ValueError('Application role required')
+        connection.run("SELECT set_config('app.current_user_id',:actor,true),set_config('app.current_tenant_id','',true),set_config('app.correlation_id',:correlation,true)",actor=actor,correlation=correlation)
+        if existing:
+            tenant=str(existing[0][0])
+            connection.run("SELECT set_config('app.current_tenant_id',:tenant,true)",tenant=tenant)
+            if connection.run('SELECT plataforma.user_owns_current_tenant(:tenant)',tenant=tenant)[0][0] is not True:
+                raise ValueError('Existing tenant ownership must not be changed')
+        else:
+            tenant=str(connection.run("SELECT plataforma.create_tenant_with_owner('tumandaito','tumandaito','Tumandaito','business',:actor,'dev:tumandaito:tenant:v1')",actor=actor)[0][0])
+            connection.run("SELECT set_config('app.current_tenant_id',:tenant,true)",tenant=tenant)
+            changed=connection.run("UPDATE plataforma.tenants SET status='active',default_country_code='VE',default_timezone='America/Caracas' WHERE id=:tenant AND status='draft' RETURNING id",tenant=tenant)
+            if len(changed)!=1:raise ValueError('New tenant activation failed')
+        connection.run("INSERT INTO plataforma.tenant_modules(tenant_id,module_id,status) SELECT :tenant,id,'active' FROM plataforma.modules WHERE code='erp.finance' ON CONFLICT(tenant_id,module_id) DO NOTHING",tenant=tenant)
+        companies=connection.run("SELECT id,country_code,base_currency_code,timezone,status FROM organizacion.companies WHERE tenant_id=:tenant AND legal_name='Tumandaito'",tenant=tenant)
+        if companies:
+            if len(companies)!=1 or list(companies[0][1:])!=['VE','VES','America/Caracas','active']:
+                raise ValueError('Existing company differs; preserve configuration')
+            company=str(companies[0][0])
+        else:
+            company=str(connection.run("SELECT organizacion.register_company_once('dev:tumandaito:company:v1','Tumandaito','VE','VES','America/Caracas',NULL)")[0][0])
+        for permission in ('administration.parties.read','administration.parties.write'):
+            if connection.run("SELECT plataforma.has_current_tenant_capability('erp.finance',:permission,:company)",permission=permission,company=company)[0][0] is not True:
+                raise ValueError('Existing owner permission missing; no grants were expanded')
+        connection.run("INSERT INTO auditoria.events(tenant_id,actor_user_id,module_code,entity_type,entity_id,action,correlation_id,metadata) VALUES(:tenant,:actor,'1.1-tenant-onboarding','tenant',:tenant,'dev.business.bootstrap',:correlation,jsonb_build_object('empresa_id',:company,'resultado','succeeded','explicit_owner_binding',true))",tenant=tenant,actor=actor,company=company,correlation=correlation)
+        connection.run('COMMIT')
+        return {'status':'succeeded','tenant_id':tenant,'company_id':company,'application_role':'mastererp_app','created_business':not bool(existing),'correlation_id':correlation}
+    except Exception as error:
+        connection.run('ROLLBACK')
+        detail=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
+        raise RuntimeError('Tumandaito bootstrap failed; sqlstate='+detail.get('C','unknown')) from None
