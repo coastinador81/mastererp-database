@@ -94,6 +94,11 @@ PHASE6_ARTIFACTS = (
     ("operations", "fb2a134e379b8966e2244f5e247031cccf775d5b7a855a2ddc3b5434f29c49a1"),
     ("storefront", "dfbbf3b5f11773dd24c3853569f8d6b6ad064defc7707db2d9f3a804097a239e"),
 )
+PHASE6_SAFE_FAILURES = {
+    "Customer not found", "Driver not found", "Inventory not found", "Node not found",
+    "Order not found", "Preparation item not found", "Preparation not found",
+    "Product not found", "Reservation not found", "Route not found", "Stop not found",
+}
 
 
 def _apply_phase6(connection, event, correlation_id):
@@ -123,7 +128,11 @@ def _apply_phase6(connection, event, correlation_id):
             except Exception:
                 pass
             details = error.args[0] if error.args and isinstance(error.args[0], dict) else {}
-            raise RuntimeError("Phase 6 load failed; artifact=" + name + "; sqlstate=" + details.get("C", "unknown")) from None
+            reason = details.get("M", "unknown")
+            if reason not in PHASE6_SAFE_FAILURES:
+                reason = "unknown"
+            raise RuntimeError("Phase 6 load failed; artifact=" + name + "; sqlstate="
+                               + details.get("C", "unknown") + "; reason=" + reason) from None
     return {"status": "succeeded", "source_sha256": PHASE6_SOURCE_SHA256,
             "artifacts": applied, "correlation_id": correlation_id}
 

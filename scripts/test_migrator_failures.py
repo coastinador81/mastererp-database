@@ -25,6 +25,16 @@ class FailureTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):module._apply_phase6(connection,event,'correlation')
         self.assertTrue(any(call.args[0]=='ROLLBACK' for call in connection.run.call_args_list))
 
+    def test_phase6_reports_only_allowlisted_database_reason(self):
+        body=b"SELECT 1;";digest=hashlib.sha256(body).hexdigest();connection=MagicMock()
+        connection.run.side_effect=RuntimeError({'C':'P0002','M':'Product not found','D':'private'})
+        event={'source_sha256':module.PHASE6_SOURCE_SHA256,
+               'artifacts':{'test':base64.b64encode(body).decode()}}
+        with patch.object(module,'PHASE6_ARTIFACTS',(('test',digest),)),patch.dict(module.os.environ,{'ENVIRONMENT':'dev','DB_NAME':'mastererp'}):
+            with self.assertRaisesRegex(RuntimeError,'reason=Product not found') as failed:
+                module._apply_phase6(connection,event,'correlation')
+        self.assertNotIn('private',str(failed.exception))
+
     def test_failure_is_propagated_for_every_phase(self):
         size=2
         for threshold,phase,commits in ((1,'schema',0),(size+1,'reapply',1),(2*size+1,'tests',2)):
