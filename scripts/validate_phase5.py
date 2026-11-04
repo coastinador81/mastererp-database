@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMAS = tuple(f"{number:03d}_" for number in range(15, 35))
+SCHEMAS = tuple(f"{number:03d}_" for number in range(15, 36))
 TESTS = (
     "frontend_context_test.sql",
     "operations_orders_test.sql",

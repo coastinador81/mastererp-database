@@ -47,6 +47,7 @@ SCHEMA_FILES = (
     "032_party_details.sql",
     "033_canonical_owner_permissions.sql",
     "034_zero_inventory_initialization.sql",
+    "035_ves_currency_reference.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -87,6 +88,7 @@ TEST_FILES = (
     "operations_fulfillment_ecommerce_test.sql",
     "party_details_test.sql",
     "canonical_owner_permissions_test.sql",
+    "ves_currency_reference_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"
@@ -244,7 +246,7 @@ def lambda_handler(event, context):
     committed_passes = 0
     # 001-031 confirmed by the successful DEV workflow; do not replay their grants for this upgrade.
     applied_schema = ("032_party_details.sql", "033_canonical_owner_permissions.sql",
-                      "034_zero_inventory_initialization.sql")
+                      "034_zero_inventory_initialization.sql", "035_ves_currency_reference.sql")
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL")[0][0] is not True:
         connection.close()
         raise RuntimeError("Reconciled 001-031 baseline required; no automatic bootstrap")
