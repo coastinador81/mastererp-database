@@ -59,6 +59,12 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
+    if event.get("action") == "inspect_business_tenant":
+        from dev_validation import inspect_business_tenant
+        try:
+            return inspect_business_tenant(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action") == "party_fixture":
         from party_validation import fixture
         try:

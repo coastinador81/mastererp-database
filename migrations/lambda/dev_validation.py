@@ -260,3 +260,25 @@ def dual_tenant(connection,event,context):
         connection.run('ROLLBACK')
         details=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
         raise RuntimeError('Dual-tenant QA failed; sqlstate='+details.get('C','unknown')) from None
+
+
+def inspect_business_tenant(connection, event, context):
+    """Read-only lookup of the explicitly requested DEV business, without identities or secrets."""
+    _dev_guard(context)
+    if event.get('name') != 'Tumandaito':
+        raise ValueError('Only the requested business scope may be inspected')
+    connection.run('BEGIN READ ONLY')
+    try:
+        tenants=connection.run("""SELECT t.id,t.code,t.slug,t.name,t.status,
+          (SELECT count(*) FROM plataforma.user_tenants ut JOIN plataforma.roles r ON r.id=ut.role_id
+           JOIN plataforma.users u ON u.id=ut.user_id WHERE ut.tenant_id=t.id AND ut.status='active'
+           AND u.status='active' AND r.code='tenant.owner')
+          FROM plataforma.tenants t WHERE lower(t.name)='tumandaito' OR lower(t.code)='tumandaito' OR lower(t.slug)='tumandaito'""")
+        result=[]
+        for tenant,code,slug,name,status,owners in tenants:
+            companies=connection.run('SELECT id,legal_name,status,country_code,base_currency_code,timezone FROM organizacion.companies WHERE tenant_id=:tenant ORDER BY legal_name',tenant=str(tenant))
+            result.append({'id':str(tenant),'code':code,'slug':slug,'name':name,'status':status,'active_owner_count':owners,
+                'companies':[dict(zip(('id','name','status','country','currency','timezone'),[str(x[0]),*x[1:]])) for x in companies]})
+        return {'status':'succeeded','read_only':True,'tenants':result}
+    finally:
+        connection.run('ROLLBACK')
