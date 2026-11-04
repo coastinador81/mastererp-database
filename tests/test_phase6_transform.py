@@ -83,6 +83,22 @@ class Phase6TransformTest(unittest.TestCase):
             report = write_bundle(source, settings, root / "out")
             self.assertEqual(report["errors"], 1)
 
+    def test_orphan_inventory_is_audited_and_excluded(self):
+        items = [
+            {"entityType":"PRODUCT","tenantId":"T001","productId":"P1","name":"Rice","price":2},
+            {"entityType":"INVENTORY","tenantId":"T001","productId":"P1","nodeId":"N1","stock":3},
+            {"entityType":"INVENTORY","tenantId":"T001","productId":"ORPHAN","nodeId":"N1","stock":7},
+        ]
+        config={"source_tenant_id":"T001","target_tenant_id":"00000000-0000-0000-0000-000000000001","target_company_id":"00000000-0000-0000-0000-000000000002","actor_user_id":"00000000-0000-0000-0000-000000000003","node_map":{"N1":"00000000-0000-0000-0000-000000000004"}}
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);source=root/"source.jsonl";settings=root/"config.json"
+            source.write_text("".join(json.dumps(item)+"\n" for item in items));settings.write_text(json.dumps(config))
+            report=write_bundle(source,settings,root/"bundle")
+            self.assertEqual(report["output_counts"]["inventories"],1)
+            self.assertEqual(report["ignored_counts"]["orphan_inventory_product_missing"],1)
+            ignored=json.loads((root/"bundle/ignored.json").read_text())
+            self.assertEqual(ignored[0]["source_id"],"ORPHAN")
+
     def test_reservation_mismatch_is_rejected(self):
         items = [
             {"entityType":"CUSTOMER","tenantId":"T001","customerId":"C1","name":"Customer","status":"ACTIVE"},

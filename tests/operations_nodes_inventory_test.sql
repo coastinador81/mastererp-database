@@ -11,6 +11,7 @@ INSERT INTO catalogo.monedas(codigo,nombre,decimales) VALUES('USD','US dollar',2
 INSERT INTO organizacion.companies(id,tenant_id,legal_name,country_code,base_currency_code,timezone) VALUES('00007003-0000-0000-0000-000000000001','00007002-0000-0000-0000-000000000001','Fixture','US','USD','UTC');
 INSERT INTO organizacion.branches(id,tenant_id,company_id,code,name,branch_type,country_code,status) VALUES('00007004-0000-0000-0000-000000000001','00007002-0000-0000-0000-000000000001','00007003-0000-0000-0000-000000000001','MAIN','Main node','warehouse','US','active');
 INSERT INTO catalogo.productos(id,tenant_id,codigo,nombre,precio,estado) VALUES('00007005-0000-0000-0000-000000000001','00007002-0000-0000-0000-000000000001','PRD-ONE','Product',10,'ACTIVE');
+INSERT INTO catalogo.productos(id,tenant_id,codigo,nombre,precio,estado) VALUES('00007005-0000-0000-0000-000000000002','00007002-0000-0000-0000-000000000001','PRD-ZERO','Zero Product',10,'ACTIVE');
 SELECT set_config('app.current_user_id','00007001-0000-0000-0000-000000000001',true),set_config('app.current_tenant_id','00007002-0000-0000-0000-000000000001',true),set_config('app.current_company_id','00007003-0000-0000-0000-000000000001',true),set_config('app.correlation_id','00007006-0000-0000-0000-000000000001',true),set_config('app.current_operation','operations.nodes.configure',true);
 SET LOCAL ROLE mastererp_app;
 DO $$ DECLARE item jsonb; reservation jsonb; caught boolean:=false; BEGIN
@@ -22,6 +23,8 @@ DO $$ DECLARE item jsonb; reservation jsonb; caught boolean:=false; BEGIN
  PERFORM set_config('app.current_operation','catalog.inventory.set',true);
  item:=catalogo.inventario_establecer('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','00007005-0000-0000-0000-000000000001',10,0,'INITIAL','inventory-set-key');
  IF item->>'stock'<>'10' OR item->>'available'<>'10' THEN RAISE EXCEPTION 'Inventory set mismatch'; END IF;
+ item:=catalogo.inventario_establecer('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','00007005-0000-0000-0000-000000000002',0,0,'INITIAL_ZERO','inventory-zero-key');
+ IF item->>'stock'<>'0' OR item->>'available'<>'0' OR item->>'reserved'<>'0' THEN RAISE EXCEPTION 'Zero inventory initialization mismatch'; END IF;
  PERFORM set_config('app.current_operation','catalog.inventory.reserve',true);
  reservation:=catalogo.inventario_reservar('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','[{"product_id":"00007005-0000-0000-0000-000000000001","quantity":3}]','ORDER-1','inventory-reserve-key');
  item:=catalogo.inventario_leer('00007003-0000-0000-0000-000000000001','00007004-0000-0000-0000-000000000001','00007005-0000-0000-0000-000000000001');

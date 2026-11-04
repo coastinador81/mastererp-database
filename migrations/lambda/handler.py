@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import ssl
 from pathlib import Path
 
@@ -44,6 +45,10 @@ SCHEMA_FILES = (
     "030_operations_migration_lookup.sql",
     "031_transport_migration_lookup.sql",
     "032_party_details.sql",
+    "033_canonical_owner_permissions.sql",
+    "034_zero_inventory_initialization.sql",
+    "035_ves_currency_reference.sql",
+    "036_usd_currency_reference.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -83,15 +88,27 @@ TEST_FILES = (
     "catalog_brands_suppliers_test.sql",
     "operations_fulfillment_ecommerce_test.sql",
     "party_details_test.sql",
+    "canonical_owner_permissions_test.sql",
+    "ves_currency_reference_test.sql",
+    "usd_currency_reference_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"
 PHASE6_ARTIFACTS = (
     ("catalog", "5f71a6bc3b340d057cdda6dae45ec639d9ab28ff06fbfbcb95201593f1d7a2a2"),
     ("customers", "2a6c2d3666f653a544b6fa8fb68389b8bdcc3dd99b0a2c502f2cbcfdb8a1dac0"),
-    ("operations", "fb2a134e379b8966e2244f5e247031cccf775d5b7a855a2ddc3b5434f29c49a1"),
+    ("operations", "dce9404d080bfd4fa4d1bfef4bf158614ee7fff80c07ad4058c1c20e35f32ccb"),
     ("storefront", "dfbbf3b5f11773dd24c3853569f8d6b6ad064defc7707db2d9f3a804097a239e"),
 )
+PHASE6_SAFE_FAILURES = {
+    "Customer not found", "Driver not found", "Inventory not found", "Node not found",
+    "Driver unavailable", "Insufficient inventory", "Invalid node transition",
+    "Invalid order transition", "Invalid preparation state", "Invalid route transition",
+    "Invalid stop state", "Items pending", "Order not confirmed", "Order not preparing",
+    "Order not route-ready", "Payment not ready", "Stock below reservations", "Stops pending",
+    "Order not found", "Preparation item not found", "Preparation not found",
+    "Product not found", "Reservation not found", "Route not found", "Stop not found",
+}
 
 
 def _apply_phase6(connection, event, correlation_id):
@@ -121,7 +138,15 @@ def _apply_phase6(connection, event, correlation_id):
             except Exception:
                 pass
             details = error.args[0] if error.args and isinstance(error.args[0], dict) else {}
-            raise RuntimeError("Phase 6 load failed; artifact=" + name + "; sqlstate=" + details.get("C", "unknown")) from None
+            reason = details.get("M", "unknown")
+            if reason not in PHASE6_SAFE_FAILURES:
+                reason = "unknown"
+            constraint = str(details.get("n", "unknown"))
+            if not re.fullmatch(r"[a-z0-9_]{1,100}", constraint):
+                constraint = "unknown"
+            raise RuntimeError("Phase 6 load failed; artifact=" + name + "; sqlstate="
+                               + details.get("C", "unknown") + "; reason=" + reason
+                               + "; constraint=" + constraint) from None
     return {"status": "succeeded", "source_sha256": PHASE6_SOURCE_SHA256,
             "artifacts": applied, "correlation_id": correlation_id}
 
@@ -222,7 +247,9 @@ def lambda_handler(event, context):
     filename = "none"
     committed_passes = 0
     # 001-031 confirmed by the successful DEV workflow; do not replay their grants for this upgrade.
-    applied_schema = ("032_party_details.sql",)
+    applied_schema = ("032_party_details.sql", "033_canonical_owner_permissions.sql",
+                      "034_zero_inventory_initialization.sql", "035_ves_currency_reference.sql",
+                      "036_usd_currency_reference.sql")
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL")[0][0] is not True:
         connection.close()
         raise RuntimeError("Reconciled 001-031 baseline required; no automatic bootstrap")
