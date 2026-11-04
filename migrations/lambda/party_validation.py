@@ -43,7 +43,7 @@ def fixture(c, event, context):
                     column = 'request_tenant_id' if table.endswith('idempotency_keys') else 'tenant_id'
                     counts[table] = c.run('SELECT count(*) FROM '+table+' WHERE '+column+' IN (:a,:b)',a=ids['tenant_a'],b=ids['tenant_b'])[0][0]
                 audit = c.run("SELECT count(*) FROM auditoria.events WHERE tenant_id=:tenant AND entity_type='tercero' AND actor_user_id=:actor AND correlation_id IS NOT NULL AND metadata->>'empresa_id' IS NOT NULL AND metadata->>'resultado'='succeeded'",tenant=ids['tenant_a'],actor=actors['admin_a'])[0][0]
-                purchase_audit=c.run("SELECT count(*) FROM auditoria.events WHERE tenant_id=:tenant AND entity_type='documento' AND action LIKE 'administration.purchase.%' AND actor_user_id=:actor AND correlation_id IS NOT NULL AND metadata->>'empresa_id' IS NOT NULL AND metadata->>'resultado'='succeeded'",tenant=ids['tenant_a'],actor=actors['admin_a'])[0][0]
+                purchase_audit=c.run("SELECT count(*) FROM auditoria.events WHERE tenant_id=:tenant AND entity_type='documento' AND action LIKE 'administracion.documento.%' AND actor_user_id=:actor AND correlation_id IS NOT NULL AND metadata->>'empresa_id' IS NOT NULL AND metadata->>'resultado'='succeeded'",tenant=ids['tenant_a'],actor=actors['admin_a'])[0][0]
                 c.run('ROLLBACK')
                 return {'status':'succeeded','ids':ids,'counts':counts,'valid_party_audit_events':audit,'valid_purchase_audit_events':purchase_audit}
             # Restore ONLY our fresh fixture rows, never an existing user's state.

@@ -50,6 +50,7 @@ SCHEMA_FILES = (
     "035_ves_currency_reference.sql",
     "036_usd_currency_reference.sql",
     "037_purchase_drafts.sql",
+    "038_purchase_idempotency_binding.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -74,6 +75,7 @@ CONFIRMED_BASELINE_SCHEMAS = (
     '034_zero_inventory_initialization.sql',
     '035_ves_currency_reference.sql',
     '036_usd_currency_reference.sql',
+    '037_purchase_drafts.sql',
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
@@ -183,7 +185,7 @@ def lambda_handler(event, context):
         try:
             connection.run("BEGIN")
             purchase_candidate = event["action"] == "validate_purchase_drafts_candidate"
-            candidate=(sql_dir / ("037_purchase_drafts.sql" if purchase_candidate else "032_party_details.sql")).read_text(encoding="utf-8")
+            candidate=(sql_dir / ("038_purchase_idempotency_binding.sql" if purchase_candidate else "032_party_details.sql")).read_text(encoding="utf-8")
             connection.run(candidate)
             connection.run((sql_dir / ("purchase_drafts_test.sql" if purchase_candidate else "party_details_test.sql")).read_text(encoding="utf-8"))
             return {"status":"succeeded","validation_only":True,"tests":"passed","committed":False}
@@ -260,11 +262,11 @@ def lambda_handler(event, context):
     phase = "lock"
     filename = "none"
     committed_passes = 0
-    # Confirmed 001-036 baseline: never replay existing grants for this upgrade.
-    applied_schema = ("037_purchase_drafts.sql",)
+    # Confirmed 001-037 baseline: never replay existing grants for this upgrade.
+    applied_schema = ("038_purchase_idempotency_binding.sql",)
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL")[0][0] is not True:
         connection.close()
-        raise RuntimeError("Reconciled 001-031 baseline required; no automatic bootstrap")
+        raise RuntimeError("Reconciled 001-037 baseline required; no automatic bootstrap")
     try:
         connection.run("SELECT pg_advisory_lock(734561903)")
         # Validate this candidate and effective-app tests in a transaction BEFORE committing DDL.
