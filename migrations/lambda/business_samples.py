@@ -13,8 +13,10 @@ SAMPLES=(
 def seed(connection,event,context):
     _dev_guard(context)
     if event.get('name')!='Tumandaito':raise ValueError('Only the explicitly approved business may be seeded')
+    operation=event.get('operation','seed')
+    if operation not in ('seed','inspect'):raise ValueError('Unsupported sample operation')
     subject=str(UUID(str(event.get('owner_subject',''))));correlation=str(uuid4());phase='scope'
-    connection.run('BEGIN')
+    connection.run('BEGIN READ ONLY' if operation=='inspect' else 'BEGIN')
     try:
         connection.run("SELECT pg_advisory_xact_lock(hashtextextended('mastererp-dev:tumandaito:sample-suppliers',0))")
         scope=connection.run("""SELECT t.id,c.id,e.user_id FROM plataforma.tenants t
@@ -29,6 +31,17 @@ def seed(connection,event,context):
         if connection.run('SELECT current_user')[0][0]!='mastererp_app':raise ValueError('Application role required')
         connection.run("SELECT set_config('app.current_user_id',:actor,true),set_config('app.current_tenant_id',:tenant,true),set_config('app.current_company_id',:company,true),set_config('app.current_operation','administration.proveedor.create',true),set_config('app.correlation_id',:correlation,true)",actor=actor,tenant=tenant,company=company,correlation=correlation)
         if connection.run('SELECT plataforma.user_owns_current_tenant(:tenant)',tenant=tenant)[0][0] is not True:raise ValueError('Only the approved owner may seed this business')
+        if operation=='inspect':
+            count=0;demo=[];after=None
+            for _ in range(100):
+                batch=connection.run("SELECT administracion.parties_read_v2(:company,'proveedor',NULL,100,:after)",company=company,after=after)[0][0]
+                count+=len(batch)
+                demo.extend({'code':row['codigo'],'version':row['version'],'catalog_version':row['catalog_version'],'profile_version':row['profile_version']} for row in batch if row['codigo'] in {'DEMO-PROV-'+str(i).zfill(3) for i in range(1,9)})
+                if len(batch)<100:break
+                after=batch[-1]['id']
+            else:raise ValueError('Inspection page bound exceeded')
+            connection.run('ROLLBACK')
+            return {'status':'succeeded','inspection_only':True,'application_role':'mastererp_app','tenant_id':tenant,'company_id':company,'total_company_suppliers':count,'demo_supplier_count':len(demo),'demo':demo}
         phase='seed';created=replayed=0
         for index,(name,supply) in enumerate(SAMPLES,1):
             code='DEMO-PROV-'+str(index).zfill(3)
