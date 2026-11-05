@@ -244,6 +244,12 @@ def lambda_handler(event, context):
             return fixture(connection, event, context)
         finally:
             connection.close()
+    if event.get("action") == "provision_phase8_owner":
+        from phase8_access import provision
+        try:
+            return provision(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action") == "validate_administration":
         from administration_validation import validate, concurrency
         try:
