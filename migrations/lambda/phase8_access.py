@@ -33,7 +33,15 @@ def provision(connection, event, context):
         memberships = [] if not identity else connection.run("""SELECT r.code,ut.status
             FROM plataforma.user_tenants ut JOIN plataforma.roles r ON r.id=ut.role_id
             WHERE ut.tenant_id=:tenant AND ut.user_id=:actor""", tenant=tenant, actor=str(identity[0][0]))
+        links = [] if not identity else connection.run("""SELECT cliente_id,empresa_id FROM ventas_digitales.cliente_identidades
+            WHERE tenant_id=:tenant AND user_id=:actor""", tenant=tenant, actor=str(identity[0][0]))
+        invitations = connection.run("""SELECT id,cliente_id,estado,expira_en FROM ventas_digitales.cliente_invitaciones
+            WHERE tenant_id=:tenant AND cliente_id IN (SELECT t.id FROM catalogo.terceros t
+            WHERE t.tenant_id=:tenant AND lower(t.nombre) LIKE '%andrea%') ORDER BY creado_en DESC LIMIT 10""", tenant=tenant)
         return {"status":"succeeded","actor_found":bool(identity),"memberships":[list(x) for x in memberships],
+                "customer_links":[{"customer_id":str(x[0]),"company_id":str(x[1])} for x in links],
+                "invitations":[{"id":str(x[0]),"customer_id":str(x[1]),"status":x[2],
+                                "expires_at":x[3].isoformat()} for x in invitations],
                 "customers":[{"id":str(x[0]),"name":x[1],"company_id":str(x[2]),"code":x[3],
                               "details":x[4],"created_at":x[5].isoformat(),"orders":x[6]} for x in candidates]}
     if event.get("operation") == "invite":
