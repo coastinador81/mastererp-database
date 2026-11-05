@@ -51,6 +51,7 @@ SCHEMA_FILES = (
     "036_usd_currency_reference.sql",
     "037_purchase_drafts.sql",
     "038_purchase_idempotency_binding.sql",
+    "039_storefront_customer_identity.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -76,6 +77,7 @@ CONFIRMED_BASELINE_SCHEMAS = (
     '035_ves_currency_reference.sql',
     '036_usd_currency_reference.sql',
     '037_purchase_drafts.sql',
+    '038_purchase_idempotency_binding.sql',
 )
 SEED_FILES = ("001_module_catalog.sql",)
 TEST_FILES = (
@@ -100,6 +102,7 @@ TEST_FILES = (
     "ves_currency_reference_test.sql",
     "usd_currency_reference_test.sql",
     "purchase_drafts_test.sql",
+    "storefront_customer_identity_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"
@@ -264,11 +267,11 @@ def lambda_handler(event, context):
     phase = "lock"
     filename = "none"
     committed_passes = 0
-    # Confirmed 001-037 baseline: never replay existing grants for this upgrade.
-    applied_schema = ("038_purchase_idempotency_binding.sql",)
+    # Confirmed 001-038 baseline: never replay existing grants for this upgrade.
+    applied_schema = ("039_storefront_customer_identity.sql",)
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL")[0][0] is not True:
         connection.close()
-        raise RuntimeError("Reconciled 001-037 baseline required; no automatic bootstrap")
+        raise RuntimeError("Reconciled 001-038 baseline required; no automatic bootstrap")
     try:
         connection.run("SELECT pg_advisory_lock(734561903)")
         # Validate this candidate and effective-app tests in a transaction BEFORE committing DDL.
@@ -278,7 +281,7 @@ def lambda_handler(event, context):
         try:
             for filename in applied_schema:
                 connection.run((sql_dir / filename).read_text(encoding="utf-8"))
-            filename = "purchase_drafts_test.sql"
+            filename = "storefront_customer_identity_test.sql"
             connection.run((sql_dir / filename).read_text(encoding="utf-8"))
         finally:
             connection.run("ROLLBACK")
