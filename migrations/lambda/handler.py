@@ -248,11 +248,13 @@ def lambda_handler(event, context):
             return validate(connection, event, context)
         finally:
             connection.close()
-    if event.get("action") in ("configure_dev_validation", "verify_dev_identity", "qa_membership_state", "qa_foundation_state", "inspect_foundation", "qa_dual_tenant"):
-        from dev_validation import configure, verify, membership_state, foundation_state, inspect_foundation, dual_tenant
+    if event.get("action") in ("configure_dev_validation", "verify_dev_identity", "qa_membership_state", "qa_foundation_state", "inspect_foundation", "qa_dual_tenant", "qa_phase8_membership"):
+        from dev_validation import configure, verify, membership_state, foundation_state, inspect_foundation, dual_tenant, phase8_membership
         try:
             actions = {"configure_dev_validation": configure, "verify_dev_identity": verify,
-                       "qa_membership_state": membership_state, "qa_foundation_state": foundation_state, "inspect_foundation": inspect_foundation, "qa_dual_tenant": dual_tenant}
+                       "qa_membership_state": membership_state, "qa_foundation_state": foundation_state,
+                       "inspect_foundation": inspect_foundation, "qa_dual_tenant": dual_tenant,
+                       "qa_phase8_membership": phase8_membership}
             return actions[event["action"]](connection, event, context)
         finally:
             connection.close()

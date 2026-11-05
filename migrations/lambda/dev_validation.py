@@ -269,6 +269,61 @@ def dual_tenant(connection,event,context):
         raise RuntimeError('Dual-tenant QA failed; sqlstate='+details.get('C','unknown')) from None
 
 
+def phase8_membership(connection,event,context):
+    """Temporarily grant the synthetic admin-A access to Tumandaito for Phase 8.
+
+    The deterministic row is created only when no membership already exists and
+    cleanup removes only that exact row. Business data and owner membership are
+    never modified.
+    """
+    _dev_guard(context)
+    run=event.get('run','');operation=event.get('operation')
+    if (not re.fullmatch(r'qa-identity-[0-9a-f]{12}',run)
+            or operation not in ('prepare','inspect','cleanup')):
+        raise ValueError('Invalid Phase 8 QA request')
+    nonce=str(UUID(str(event.get('nonce',''))))
+    membership=str(uuid5(NAMESPACE_URL,run+':phase8-tumandaito:'+nonce))
+    connection.run('BEGIN')
+    try:
+        connection.run('SELECT pg_advisory_xact_lock(hashtextextended(:scope,0))',
+                       scope=run+':phase8-tumandaito')
+        rows=connection.run("""SELECT u.id,t.id,r.id FROM plataforma.users u
+          JOIN plataforma.external_identities e ON e.user_id=u.id
+          CROSS JOIN plataforma.tenants t CROSS JOIN plataforma.roles r
+          WHERE u.email=:email AND u.status='active' AND e.issuer=:issuer
+          AND e.status='active' AND t.code='tumandaito' AND t.slug='tumandaito'
+          AND t.status='active' AND r.code='tenant.owner'""",
+          email=run+'-admin-a@example.invalid',issuer=ISSUER)
+        if len(rows)!=1:raise ValueError('Phase 8 scope not uniquely identified')
+        actor,tenant,role=rows[0]
+        existing=connection.run('SELECT id FROM plataforma.user_tenants WHERE user_id=:actor AND tenant_id=:tenant',
+                                actor=actor,tenant=tenant)
+        if operation=='prepare':
+            if existing:raise ValueError('Existing Tumandaito membership must be preserved')
+            changed=connection.run("""INSERT INTO plataforma.user_tenants
+              (id,user_id,tenant_id,role_id,status,permissions_override,joined_at)
+              VALUES(:id,:actor,:tenant,:role,'active','{}'::jsonb,now()) RETURNING id""",
+              id=membership,actor=actor,tenant=tenant,role=role)
+        elif operation=='cleanup':
+            changed=connection.run("""DELETE FROM plataforma.user_tenants
+              WHERE id=:id AND user_id=:actor AND tenant_id=:tenant AND role_id=:role
+              AND status='active' AND permissions_override='{}'::jsonb RETURNING id""",
+              id=membership,actor=actor,tenant=tenant,role=role)
+        else:
+            changed=connection.run("""SELECT id FROM plataforma.user_tenants
+              WHERE id=:id AND user_id=:actor AND tenant_id=:tenant AND role_id=:role
+              AND status='active' AND permissions_override='{}'::jsonb""",
+              id=membership,actor=actor,tenant=tenant,role=role)
+        if len(changed)!=1:raise ValueError('Phase 8 membership state mismatch')
+        connection.run('COMMIT' if operation!='inspect' else 'ROLLBACK')
+        return {'status':'succeeded','operation':operation,'membership_id':membership,
+                'tenant_id':str(tenant)}
+    except Exception as error:
+        connection.run('ROLLBACK')
+        details=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
+        raise RuntimeError('Phase 8 QA membership failed; sqlstate='+details.get('C','unknown')) from None
+
+
 def inspect_business_tenant(connection, event, context):
     """Read-only lookup of the explicitly requested DEV business, without identities or secrets."""
     _dev_guard(context)
