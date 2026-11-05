@@ -35,11 +35,18 @@ def provision(connection, event, context):
             WHERE ut.tenant_id=:tenant AND ut.user_id=:actor""", tenant=tenant, actor=str(identity[0][0]))
         links = [] if not identity else connection.run("""SELECT cliente_id,empresa_id FROM ventas_digitales.cliente_identidades
             WHERE tenant_id=:tenant AND user_id=:actor""", tenant=tenant, actor=str(identity[0][0]))
+        orders = [] if not links else connection.run("""SELECT p.id,p.numero,p.estado,p.total,p.reserva_inventario_ref,
+            r.estado,(SELECT count(*) FROM operaciones.pedido_lineas l WHERE l.tenant_id=p.tenant_id AND l.pedido_id=p.id)
+            FROM operaciones.pedidos p JOIN catalogo.reservas_inventario r ON r.tenant_id=p.tenant_id
+             AND r.id=p.reserva_inventario_ref::uuid WHERE p.tenant_id=:tenant AND p.cliente_id=:customer
+            ORDER BY p.creado_en DESC LIMIT 3""", tenant=tenant, customer=str(links[0][0]))
         invitations = connection.run("""SELECT id,cliente_id,estado,expira_en FROM ventas_digitales.cliente_invitaciones
             WHERE tenant_id=:tenant AND cliente_id IN (SELECT t.id FROM catalogo.terceros t
             WHERE t.tenant_id=:tenant AND lower(t.nombre) LIKE '%andrea%') ORDER BY creado_en DESC LIMIT 10""", tenant=tenant)
         return {"status":"succeeded","actor_found":bool(identity),"memberships":[list(x) for x in memberships],
                 "customer_links":[{"customer_id":str(x[0]),"company_id":str(x[1])} for x in links],
+                "recent_orders":[{"id":str(x[0]),"number":x[1],"status":x[2],"total":str(x[3]),
+                                  "reservation_id":x[4],"reservation_status":x[5],"lines":x[6]} for x in orders],
                 "invitations":[{"id":str(x[0]),"customer_id":str(x[1]),"status":x[2],
                                 "expires_at":x[3].isoformat()} for x in invitations],
                 "customers":[{"id":str(x[0]),"name":x[1],"company_id":str(x[2]),"code":x[3],
