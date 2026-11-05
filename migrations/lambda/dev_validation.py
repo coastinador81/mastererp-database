@@ -296,27 +296,29 @@ def phase8_membership(connection,event,context):
           email=run+'-admin-a@example.invalid',issuer=ISSUER)
         if len(rows)!=1:raise ValueError('Phase 8 scope not uniquely identified')
         actor,tenant,role=rows[0]
-        existing=connection.run('SELECT id FROM plataforma.user_tenants WHERE user_id=:actor AND tenant_id=:tenant',
-                                actor=actor,tenant=tenant)
+        any_existing=connection.run("""SELECT id FROM plataforma.user_tenants
+          WHERE user_id=:actor AND tenant_id=:tenant""",actor=actor,tenant=tenant)
+        existing=connection.run("""SELECT id FROM plataforma.user_tenants
+          WHERE user_id=:actor AND tenant_id=:tenant AND role_id=:role
+          AND status='active' AND permissions_override='{}'::jsonb""",
+          actor=actor,tenant=tenant,role=role)
         if operation=='prepare':
-            if existing:raise ValueError('Existing Tumandaito membership must be preserved')
+            if any_existing:raise ValueError('Existing Tumandaito membership must be preserved')
             changed=connection.run("""INSERT INTO plataforma.user_tenants
               (id,user_id,tenant_id,role_id,status,permissions_override,joined_at)
               VALUES(:id,:actor,:tenant,:role,'active','{}'::jsonb,now()) RETURNING id""",
               id=membership,actor=actor,tenant=tenant,role=role)
         elif operation=='cleanup':
+            if len(existing)!=1:raise ValueError('Phase 8 membership state mismatch')
             changed=connection.run("""DELETE FROM plataforma.user_tenants
               WHERE id=:id AND user_id=:actor AND tenant_id=:tenant AND role_id=:role
               AND status='active' AND permissions_override='{}'::jsonb RETURNING id""",
-              id=membership,actor=actor,tenant=tenant,role=role)
+              id=existing[0][0],actor=actor,tenant=tenant,role=role)
         else:
-            changed=connection.run("""SELECT id FROM plataforma.user_tenants
-              WHERE id=:id AND user_id=:actor AND tenant_id=:tenant AND role_id=:role
-              AND status='active' AND permissions_override='{}'::jsonb""",
-              id=membership,actor=actor,tenant=tenant,role=role)
+            changed=existing
         if len(changed)!=1:raise ValueError('Phase 8 membership state mismatch')
         connection.run('COMMIT' if operation!='inspect' else 'ROLLBACK')
-        return {'status':'succeeded','operation':operation,'membership_id':membership,
+        return {'status':'succeeded','operation':operation,'membership_id':str(changed[0][0]),
                 'tenant_id':str(tenant)}
     except Exception as error:
         connection.run('ROLLBACK')
