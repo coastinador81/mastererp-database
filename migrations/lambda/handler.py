@@ -52,6 +52,7 @@ SCHEMA_FILES = (
     "037_purchase_drafts.sql",
     "038_purchase_idempotency_binding.sql",
     "039_storefront_customer_identity.sql",
+    "040_storefront_checkout.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -268,7 +269,7 @@ def lambda_handler(event, context):
     filename = "none"
     committed_passes = 0
     # Confirmed 001-038 baseline: never replay existing grants for this upgrade.
-    applied_schema = ("039_storefront_customer_identity.sql",)
+    applied_schema = ("039_storefront_customer_identity.sql", "040_storefront_checkout.sql")
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL")[0][0] is not True:
         connection.close()
         raise RuntimeError("Reconciled 001-038 baseline required; no automatic bootstrap")

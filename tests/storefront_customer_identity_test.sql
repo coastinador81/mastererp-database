@@ -21,8 +21,8 @@ INSERT INTO organizacion.companies(id,tenant_id,legal_name,country_code,base_cur
  VALUES('00003900-0000-0000-0000-000000000003','00003900-0000-0000-0000-000000000002','QA Storefront','VE','QZZ','UTC');
 INSERT INTO organizacion.branches(id,tenant_id,company_id,code,name,branch_type,country_code,status)
  VALUES('00003900-0000-0000-0000-000000000004','00003900-0000-0000-0000-000000000002','00003900-0000-0000-0000-000000000003','QA39','QA Node','warehouse','VE','active');
-INSERT INTO operaciones.nodos(tenant_id,empresa_id,id,creado_por,estado)
- VALUES('00003900-0000-0000-0000-000000000002','00003900-0000-0000-0000-000000000003','00003900-0000-0000-0000-000000000004','00003900-0000-0000-0000-000000000001','ACTIVE');
+INSERT INTO operaciones.nodos(tenant_id,empresa_id,id,creado_por,estado,acepta_pedidos,tarifa_entrega)
+ VALUES('00003900-0000-0000-0000-000000000002','00003900-0000-0000-0000-000000000003','00003900-0000-0000-0000-000000000004','00003900-0000-0000-0000-000000000001','ACTIVE',true,2);
 INSERT INTO catalogo.terceros(id,tenant_id,codigo,nombre) VALUES
  ('00003900-0000-0000-0000-000000000005','00003900-0000-0000-0000-000000000002','C39','Cliente 39');
 INSERT INTO catalogo.roles_tercero VALUES('00003900-0000-0000-0000-000000000002','00003900-0000-0000-0000-000000000005','cliente');
@@ -30,6 +30,12 @@ INSERT INTO administracion.perfiles_tercero(tenant_id,empresa_id,tercero_id,rol,
  VALUES('00003900-0000-0000-0000-000000000002','00003900-0000-0000-0000-000000000003','00003900-0000-0000-0000-000000000005','cliente','00003900-0000-0000-0000-000000000001');
 INSERT INTO ventas_digitales.tiendas(id,tenant_id,empresa_id,nodo_id,dominio,nombre,estado,creado_por)
  VALUES('00003900-0000-0000-0000-000000000006','00003900-0000-0000-0000-000000000002','00003900-0000-0000-0000-000000000003','00003900-0000-0000-0000-000000000004','qa39.example.invalid','QA Store','ACTIVE','00003900-0000-0000-0000-000000000001');
+INSERT INTO catalogo.productos(id,tenant_id,codigo,nombre,precio,estado)
+ VALUES('00003900-0000-0000-0000-000000000008','00003900-0000-0000-0000-000000000002','P39','Producto 39',5,'ACTIVE');
+INSERT INTO catalogo.inventarios(tenant_id,empresa_id,nodo_id,producto_id,existencia,actualizado_por)
+ VALUES('00003900-0000-0000-0000-000000000002','00003900-0000-0000-0000-000000000003',
+  '00003900-0000-0000-0000-000000000004','00003900-0000-0000-0000-000000000008',3,
+  '00003900-0000-0000-0000-000000000001');
 
 SELECT set_config('app.current_user_id','00003900-0000-0000-0000-000000000001',true),
  set_config('app.current_tenant_id','00003900-0000-0000-0000-000000000002',true),
@@ -53,10 +59,26 @@ BEGIN
   'customer39@example.invalid','Customer 39',raw_token);
  IF (replayed->>'replayed')::boolean IS NOT TRUE THEN RAISE EXCEPTION 'Claim replay mismatch';END IF;
 END $$;
+DO $$
+DECLARE created jsonb;replayed jsonb;
+BEGIN
+ PERFORM set_config('app.current_operation','digital_sales.storefront.checkout',true);
+ created:=ventas_digitales.checkout_crear('https://issuer.example.invalid','customer-sub-39','qa39.example.invalid',
+  '[{"product_id":"00003900-0000-0000-0000-000000000008","quantity":2}]','{"address":"QA address"}',
+  'realtime','cash','qa-storefront-checkout-39');
+ replayed:=ventas_digitales.checkout_crear('https://issuer.example.invalid','customer-sub-39','qa39.example.invalid',
+  '[{"product_id":"00003900-0000-0000-0000-000000000008","quantity":2}]','{"address":"QA address"}',
+  'realtime','cash','qa-storefront-checkout-39');
+ IF created->>'id' IS NULL OR created<>replayed OR created->>'total'<>'12' THEN
+  RAISE EXCEPTION 'Checkout response mismatch';END IF;
+END $$;
 RESET ROLE;
 DO $$
 DECLARE raw_token text:='0123456789abcdef0123456789abcdef';
 BEGIN
+ IF (SELECT reservado FROM catalogo.inventarios WHERE producto_id='00003900-0000-0000-0000-000000000008')<>2
+ OR (SELECT count(*) FROM operaciones.pedidos WHERE cliente_id='00003900-0000-0000-0000-000000000005')<>1 THEN
+  RAISE EXCEPTION 'Checkout was not atomic or idempotent';END IF;
  IF EXISTS(SELECT 1 FROM plataforma.user_tenants WHERE user_id=(SELECT user_id FROM plataforma.external_identities
   WHERE issuer='https://issuer.example.invalid' AND subject='customer-sub-39')) THEN
   RAISE EXCEPTION 'Storefront customer received tenant membership';END IF;
