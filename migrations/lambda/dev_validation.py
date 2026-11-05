@@ -309,13 +309,12 @@ def phase8_membership(connection,event,context):
               VALUES(:id,:actor,:tenant,:role,'active','{}'::jsonb,now()) RETURNING id""",
               id=membership,actor=actor,tenant=tenant,role=role)
         elif operation=='cleanup':
-            if len(existing)!=1:raise ValueError('Phase 8 membership state mismatch')
+            if len(any_existing)!=1:raise ValueError('Phase 8 membership state mismatch')
             changed=connection.run("""DELETE FROM plataforma.user_tenants
-              WHERE id=:id AND user_id=:actor AND tenant_id=:tenant AND role_id=:role
-              AND status='active' AND permissions_override='{}'::jsonb RETURNING id""",
-              id=existing[0][0],actor=actor,tenant=tenant,role=role)
+              WHERE id=:id AND user_id=:actor AND tenant_id=:tenant RETURNING id""",
+              id=any_existing[0][0],actor=actor,tenant=tenant)
         else:
-            changed=existing
+            changed=any_existing
         if len(changed)!=1:raise ValueError('Phase 8 membership state mismatch')
         connection.run('COMMIT' if operation!='inspect' else 'ROLLBACK')
         return {'status':'succeeded','operation':operation,'membership_id':str(changed[0][0]),
