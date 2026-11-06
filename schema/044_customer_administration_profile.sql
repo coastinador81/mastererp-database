@@ -31,7 +31,7 @@ BEGIN
     'plazo_pago_dias',COALESCE((SELECT c.dias_plazo::text FROM administracion.condiciones_comerciales c WHERE c.id=p.condicion_id AND c.tenant_id=p.tenant_id AND c.empresa_id=p.empresa_id),''),
     'descuento_pronto_pago',COALESCE((SELECT d.porcentaje::text FROM administracion.descuentos_pronto_pago d WHERE d.condicion_id=p.condicion_id AND d.tenant_id=p.tenant_id AND d.empresa_id=p.empresa_id LIMIT 1),''),
     'plazo_pronto_pago_dias',COALESCE((SELECT d.hasta_dias::text FROM administracion.descuentos_pronto_pago d WHERE d.condicion_id=p.condicion_id AND d.tenant_id=p.tenant_id AND d.empresa_id=p.empresa_id LIMIT 1),'')),
-  'origen',CASE WHEN EXISTS(SELECT 1 FROM ventas_digitales.cliente_identidades ci WHERE ci.tenant_id=p.tenant_id AND ci.empresa_id=p.empresa_id AND ci.cliente_id=t.id) THEN 'ecommerce' ELSE 'administracion' END,
+  'origen',CASE WHEN EXISTS(SELECT 1 FROM ventas_digitales.cliente_identidades ci WHERE ci.tenant_id=p.tenant_id AND ci.empresa_id=p.empresa_id AND ci.cliente_id=t.id) THEN 'ecommerce' ELSE 'sin_canal_identificado' END,
   'contacto_ecommerce',CASE WHEN p_role='cliente' THEN (SELECT jsonb_build_object('telefono',ec.telefono,'email',u.email) FROM ventas_digitales.cliente_identidades ci JOIN plataforma.users u ON u.id=ci.user_id LEFT JOIN ventas_digitales.cliente_perfiles ec ON (ec.tenant_id,ec.empresa_id,ec.cliente_id)=(ci.tenant_id,ci.empresa_id,ci.cliente_id) WHERE (ci.tenant_id,ci.empresa_id,ci.cliente_id)=(p.tenant_id,p.empresa_id,t.id)) ELSE NULL END,
   'roles',(SELECT jsonb_agg(x.rol ORDER BY x.rol) FROM administracion.perfiles_tercero x
    WHERE x.tenant_id=p.tenant_id AND x.empresa_id=p.empresa_id AND x.tercero_id=t.id)) item
@@ -64,6 +64,7 @@ BEGIN
  OR plataforma.has_current_tenant_capability('erp.finance','administration.parties.read',p_company) IS NOT TRUE THEN
   RAISE EXCEPTION 'Party access denied' USING ERRCODE='42501'; END IF;
  IF administracion.valid_party_extension(p_details) IS NOT TRUE THEN RAISE EXCEPTION 'Invalid party details' USING ERRCODE='22023'; END IF;
+ IF p_role='cliente' AND NULLIF(p_details->'condiciones'->>'moneda','') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM catalogo.monedas WHERE codigo=p_details->'condiciones'->>'moneda') THEN RAISE EXCEPTION 'Unknown preferred currency' USING ERRCODE='22023'; END IF;
  IF p_action='create' AND p_id IS NOT NULL AND (p_details ? 'datos_generales' OR p_details ? 'contactos') THEN RAISE EXCEPTION 'Existing master details require update' USING ERRCODE='22023'; END IF;
  correlation:=NULLIF(current_setting('app.correlation_id',true),'')::uuid;
  IF correlation IS NULL THEN RAISE EXCEPTION 'Correlation required' USING ERRCODE='22023'; END IF;
