@@ -1,4 +1,14 @@
 -- Customer self-service projection. Identity and store scope are always server-derived.
+CREATE TABLE IF NOT EXISTS ventas_digitales.cliente_perfiles (
+ tenant_id uuid NOT NULL REFERENCES plataforma.tenants(id), empresa_id uuid NOT NULL,
+ cliente_id uuid NOT NULL, telefono text, fecha_nacimiento date, foto_url text,
+ actualizado_en timestamptz NOT NULL DEFAULT transaction_timestamp(),
+ PRIMARY KEY(tenant_id,empresa_id,cliente_id),
+ FOREIGN KEY(tenant_id,cliente_id) REFERENCES catalogo.terceros(tenant_id,id),
+ CHECK(telefono IS NULL OR telefono~'^\+58(412|414|416|424|426)[0-9]{7}$'),
+ CHECK(fecha_nacimiento IS NULL OR fecha_nacimiento<=current_date-interval '13 years'),
+ CHECK(foto_url IS NULL OR (foto_url~'^https://' AND length(foto_url)<=1000))
+);
 CREATE TABLE IF NOT EXISTS ventas_digitales.cliente_direcciones (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  tenant_id uuid NOT NULL REFERENCES plataforma.tenants(id),
@@ -6,7 +16,11 @@ CREATE TABLE IF NOT EXISTS ventas_digitales.cliente_direcciones (
  cliente_id uuid NOT NULL,
  etiqueta text NOT NULL CHECK(length(btrim(etiqueta)) BETWEEN 1 AND 60),
  direccion text NOT NULL CHECK(length(btrim(direccion)) BETWEEN 5 AND 500),
+ zona text NOT NULL CHECK(length(btrim(zona)) BETWEEN 2 AND 120),
+ unidad text CHECK(length(unidad)<=120),
  referencia text CHECK(length(referencia)<=300),
+ latitud numeric(9,6) NOT NULL CHECK(latitud BETWEEN -90 AND 90),
+ longitud numeric(9,6) NOT NULL CHECK(longitud BETWEEN -180 AND 180),
  predeterminada boolean NOT NULL DEFAULT false,
  version bigint NOT NULL DEFAULT 1 CHECK(version>0),
  creado_en timestamptz NOT NULL DEFAULT transaction_timestamp(),
@@ -18,7 +32,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS cliente_direccion_predeterminada_uidx
  ON ventas_digitales.cliente_direcciones(tenant_id,empresa_id,cliente_id)
  WHERE predeterminada;
 ALTER TABLE ventas_digitales.cliente_direcciones ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON ventas_digitales.cliente_direcciones FROM PUBLIC,mastererp_app;
+ALTER TABLE ventas_digitales.cliente_perfiles ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON ventas_digitales.cliente_perfiles,ventas_digitales.cliente_direcciones FROM PUBLIC,mastererp_app;
 
 CREATE OR REPLACE FUNCTION ventas_digitales.cliente_identidad_registrar(
  p_issuer text,p_subject text,p_email text,p_name text,p_domain text)
@@ -49,6 +64,8 @@ BEGIN
  VALUES(store.tenant_id,store.empresa_id,customer,'cliente',actor);
  INSERT INTO ventas_digitales.cliente_identidades(tenant_id,empresa_id,cliente_id,user_id)
  VALUES(store.tenant_id,store.empresa_id,customer,actor);
+ INSERT INTO ventas_digitales.cliente_perfiles(tenant_id,empresa_id,cliente_id)
+ VALUES(store.tenant_id,store.empresa_id,customer);
  RETURN jsonb_build_object('customer_id',customer,'created',true);
 END $$;
 
@@ -81,11 +98,14 @@ BEGIN
  SELECT * INTO scope FROM ventas_digitales.cliente_contexto(p_issuer,p_subject,p_domain);
  IF scope IS NULL THEN RAISE EXCEPTION 'Customer not found' USING ERRCODE='P0002'; END IF;
  IF p_section='profile' THEN
-  SELECT jsonb_build_object('id',t.id,'name',t.nombre,'code',t.codigo) INTO result
-  FROM catalogo.terceros t WHERE (t.tenant_id,t.id)=(scope.tenant_id,scope.cliente_id);
+  SELECT jsonb_build_object('id',t.id,'name',t.nombre,'code',t.codigo,'phone',p.telefono,
+   'birthDate',p.fecha_nacimiento,'photoUrl',p.foto_url) INTO result FROM catalogo.terceros t
+  LEFT JOIN ventas_digitales.cliente_perfiles p ON (p.tenant_id,p.empresa_id,p.cliente_id)=(scope.tenant_id,scope.empresa_id,t.id)
+  WHERE (t.tenant_id,t.id)=(scope.tenant_id,scope.cliente_id);
  ELSIF p_section='addresses' THEN
   SELECT COALESCE(jsonb_agg(jsonb_build_object('id',d.id,'label',d.etiqueta,'address',d.direccion,
-   'reference',d.referencia,'default',d.predeterminada,'version',d.version) ORDER BY d.predeterminada DESC,d.creado_en),'[]')
+   'zone',d.zona,'unit',d.unidad,'reference',d.referencia,'latitude',d.latitud,'longitude',d.longitud,
+   'default',d.predeterminada,'version',d.version) ORDER BY d.predeterminada DESC,d.creado_en),'[]')
   INTO result FROM ventas_digitales.cliente_direcciones d
   WHERE (d.tenant_id,d.empresa_id,d.cliente_id)=(scope.tenant_id,scope.empresa_id,scope.cliente_id);
  ELSE
@@ -108,29 +128,38 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION ventas_digitales.cliente_perfil_actualizar(
- p_issuer text,p_subject text,p_domain text,p_name text)
+ p_issuer text,p_subject text,p_domain text,p_name text,p_phone text,p_birth_date date,p_photo_url text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,ventas_digitales,catalogo,plataforma,pg_temp AS $$
 DECLARE scope record;
 BEGIN
- IF length(btrim(p_name)) NOT BETWEEN 1 AND 200 THEN RAISE EXCEPTION 'Invalid profile' USING ERRCODE='22023'; END IF;
+ IF length(btrim(p_name)) NOT BETWEEN 1 AND 200 OR p_phone!~'^\+58(412|414|416|424|426)[0-9]{7}$'
+  OR p_birth_date>current_date-interval '13 years' OR (p_photo_url IS NOT NULL AND p_photo_url!~'^https://')
+  THEN RAISE EXCEPTION 'Invalid profile' USING ERRCODE='22023'; END IF;
  IF NULLIF(current_setting('app.current_operation',true),'') IS DISTINCT FROM 'digital_sales.storefront.customer.write' THEN
   RAISE EXCEPTION 'Profile update denied' USING ERRCODE='42501'; END IF;
  SELECT * INTO scope FROM ventas_digitales.cliente_contexto(p_issuer,p_subject,p_domain);
  IF scope IS NULL THEN RAISE EXCEPTION 'Customer not found' USING ERRCODE='P0002'; END IF;
  UPDATE catalogo.terceros SET nombre=btrim(p_name),version=version+1
  WHERE (tenant_id,id)=(scope.tenant_id,scope.cliente_id);
+ INSERT INTO ventas_digitales.cliente_perfiles(tenant_id,empresa_id,cliente_id,telefono,fecha_nacimiento,foto_url)
+ VALUES(scope.tenant_id,scope.empresa_id,scope.cliente_id,p_phone,p_birth_date,NULLIF(btrim(p_photo_url),''))
+ ON CONFLICT(tenant_id,empresa_id,cliente_id) DO UPDATE SET telefono=excluded.telefono,
+  fecha_nacimiento=excluded.fecha_nacimiento,foto_url=excluded.foto_url,actualizado_en=transaction_timestamp();
  RETURN ventas_digitales.cliente_portal_leer(p_issuer,p_subject,p_domain,'profile');
 END $$;
 
 CREATE OR REPLACE FUNCTION ventas_digitales.cliente_direccion_guardar(
- p_issuer text,p_subject text,p_domain text,p_id uuid,p_label text,p_address text,p_reference text,p_default boolean,p_version bigint)
+ p_issuer text,p_subject text,p_domain text,p_id uuid,p_label text,p_address text,p_zone text,p_unit text,
+ p_reference text,p_latitude numeric,p_longitude numeric,p_default boolean,p_version bigint)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,ventas_digitales,plataforma,pg_temp AS $$
 DECLARE scope record; address_id uuid:=COALESCE(p_id,gen_random_uuid()); next_version bigint;
 BEGIN
  IF length(btrim(p_label)) NOT BETWEEN 1 AND 60 OR length(btrim(p_address)) NOT BETWEEN 5 AND 500
-  OR length(COALESCE(p_reference,''))>300 THEN RAISE EXCEPTION 'Invalid address' USING ERRCODE='22023'; END IF;
+  OR length(btrim(p_zone)) NOT BETWEEN 2 AND 120 OR length(COALESCE(p_unit,''))>120
+  OR length(COALESCE(p_reference,''))>300 OR p_latitude NOT BETWEEN -90 AND 90
+  OR p_longitude NOT BETWEEN -180 AND 180 THEN RAISE EXCEPTION 'Invalid address' USING ERRCODE='22023'; END IF;
  IF NULLIF(current_setting('app.current_operation',true),'') IS DISTINCT FROM 'digital_sales.storefront.customer.write' THEN
   RAISE EXCEPTION 'Address update denied' USING ERRCODE='42501'; END IF;
  SELECT * INTO scope FROM ventas_digitales.cliente_contexto(p_issuer,p_subject,p_domain);
@@ -138,11 +167,13 @@ BEGIN
  IF COALESCE(p_default,false) THEN UPDATE ventas_digitales.cliente_direcciones SET predeterminada=false
   WHERE (tenant_id,empresa_id,cliente_id)=(scope.tenant_id,scope.empresa_id,scope.cliente_id); END IF;
  IF p_id IS NULL THEN
-  INSERT INTO ventas_digitales.cliente_direcciones(id,tenant_id,empresa_id,cliente_id,etiqueta,direccion,referencia,predeterminada)
-  VALUES(address_id,scope.tenant_id,scope.empresa_id,scope.cliente_id,btrim(p_label),btrim(p_address),NULLIF(btrim(p_reference),''),COALESCE(p_default,false)) RETURNING version INTO next_version;
+  INSERT INTO ventas_digitales.cliente_direcciones(id,tenant_id,empresa_id,cliente_id,etiqueta,direccion,zona,unidad,referencia,latitud,longitud,predeterminada)
+  VALUES(address_id,scope.tenant_id,scope.empresa_id,scope.cliente_id,btrim(p_label),btrim(p_address),btrim(p_zone),NULLIF(btrim(p_unit),''),
+   NULLIF(btrim(p_reference),''),p_latitude,p_longitude,COALESCE(p_default,false)) RETURNING version INTO next_version;
  ELSE
-  UPDATE ventas_digitales.cliente_direcciones SET etiqueta=btrim(p_label),direccion=btrim(p_address),
-   referencia=NULLIF(btrim(p_reference),''),predeterminada=COALESCE(p_default,false),version=version+1,actualizado_en=transaction_timestamp()
+  UPDATE ventas_digitales.cliente_direcciones SET etiqueta=btrim(p_label),direccion=btrim(p_address),zona=btrim(p_zone),
+   unidad=NULLIF(btrim(p_unit),''),referencia=NULLIF(btrim(p_reference),''),latitud=p_latitude,longitud=p_longitude,
+   predeterminada=COALESCE(p_default,false),version=version+1,actualizado_en=transaction_timestamp()
   WHERE (tenant_id,empresa_id,cliente_id,id,version)=(scope.tenant_id,scope.empresa_id,scope.cliente_id,p_id,p_version)
   RETURNING version INTO next_version;
   IF next_version IS NULL THEN RAISE EXCEPTION 'Address changed' USING ERRCODE='40001'; END IF;
@@ -153,9 +184,9 @@ END $$;
 REVOKE ALL ON FUNCTION ventas_digitales.cliente_contexto(text,text,text),
  ventas_digitales.cliente_identidad_registrar(text,text,text,text,text),
  ventas_digitales.cliente_portal_leer(text,text,text,text,uuid,integer),
- ventas_digitales.cliente_perfil_actualizar(text,text,text,text),
- ventas_digitales.cliente_direccion_guardar(text,text,text,uuid,text,text,text,boolean,bigint) FROM PUBLIC;
+ ventas_digitales.cliente_perfil_actualizar(text,text,text,text,text,date,text),
+ ventas_digitales.cliente_direccion_guardar(text,text,text,uuid,text,text,text,text,text,numeric,numeric,boolean,bigint) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ventas_digitales.cliente_portal_leer(text,text,text,text,uuid,integer),
  ventas_digitales.cliente_identidad_registrar(text,text,text,text,text),
- ventas_digitales.cliente_perfil_actualizar(text,text,text,text),
- ventas_digitales.cliente_direccion_guardar(text,text,text,uuid,text,text,text,boolean,bigint) TO mastererp_app;
+ ventas_digitales.cliente_perfil_actualizar(text,text,text,text,text,date,text),
+ ventas_digitales.cliente_direccion_guardar(text,text,text,uuid,text,text,text,text,text,numeric,numeric,boolean,bigint) TO mastererp_app;
