@@ -36,7 +36,7 @@ def configure_payments(connection, event, context):
         connection.run("""INSERT INTO auditoria.events
           (tenant_id,actor_user_id,module_code,entity_type,entity_id,action,metadata)
           VALUES(CAST(:tenant AS uuid),:actor,'2.4.2-ecommerce','tienda',:store,
-          'dev.storefront.payment_configuration',jsonb_build_object('domain',:domain,'source','legacy-customer-app'))""",
+          'dev.storefront.payment_configuration',jsonb_build_object('domain',CAST(:domain AS text),'source','legacy-customer-app'))""",
           tenant=tenant, actor=actor, store=store, domain=domain)
         connection.run("COMMIT")
         return {"status": "succeeded", "tenant_id": tenant, "domain": domain,
