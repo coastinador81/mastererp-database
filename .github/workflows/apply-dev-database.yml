@@ -7,6 +7,11 @@ on:
         description: Apply the reviewed customer administration batch after successful preflight
         type: boolean
         default: false
+      batch:
+        description: Explicit reviewed migration batch
+        type: choice
+        options: [customer, sales]
+        default: customer
   push:
     branches: [dev]
     paths:
@@ -30,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       required: ${{ steps.classify.outputs.required }}
+      batch: ${{ steps.classify.outputs.batch }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,6 +47,7 @@ jobs:
         id: classify
         env:
           BEFORE_SHA: ${{ github.event.before }}
+          REQUESTED_BATCH: ${{ inputs.batch }}
         run: python scripts/database_apply_required.py
   deploy-migrator:
     needs: changes
@@ -62,10 +69,15 @@ jobs:
         shell: bash
         env:
           APPLY_MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_model }}
+          BATCH: ${{ needs.changes.outputs.batch }}
         run: |
           set -euo pipefail
           payload='{"action":"validate_customer_admin_candidate"}'
           if [ "$APPLY_MODEL" = 'true' ]; then payload='{"action":"apply_model"}'; fi
+          if [ "$BATCH" = 'sales' ]; then
+            payload='{"action":"validate_sales_candidate"}'
+            if [ "$APPLY_MODEL" = 'true' ]; then payload='{"action":"apply_sales_model"}'; fi
+          fi
           aws lambda invoke \
             --function-name mastererp-dev-database-migrator \
             --cli-binary-format raw-in-base64-out \

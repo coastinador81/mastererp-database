@@ -67,6 +67,7 @@ SCHEMA_FILES = (
     "043_storefront_tenant_payments.sql",
     "044_customer_administration_profile.sql",
     "045_customer_legacy_contact_projection.sql",
+    "046_sales_order_command.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -121,6 +122,7 @@ TEST_FILES = (
     "common_party_code_test.sql",
     "customer_administration_test.sql",
     "customer_legacy_contact_test.sql",
+    "sales_order_command_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"
@@ -200,6 +202,12 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
+    if event.get("action") in ("inspect_sales_candidate", "validate_sales_candidate", "apply_sales_model", "concurrency_sales"):
+        from sales_validation import execute
+        try:
+            return execute(connection, event, context, _connection)
+        finally:
+            connection.close()
     if event.get("action") == "inspect_common_party_code":
         from dev_validation import _dev_guard
         _dev_guard(context)

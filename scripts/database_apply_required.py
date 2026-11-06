@@ -11,5 +11,13 @@ def required(event,before,after):
 
 if __name__=='__main__':
     value='true' if required(os.environ['GITHUB_EVENT_NAME'],os.environ.get('BEFORE_SHA',''),os.environ['GITHUB_SHA']) else 'false'
-    with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:out.write('required='+value+'\n')
+    batch=os.environ.get('REQUESTED_BATCH') or 'customer'
+    if os.environ['GITHUB_EVENT_NAME']=='push':
+        before=os.environ['BEFORE_SHA']
+        if before=='0'*40:raise ValueError('Initial push requires explicit reviewed batch')
+        paths=subprocess.check_output(['git','diff','--name-only',before,os.environ['GITHUB_SHA']],text=True).splitlines()
+        if any(p in ('schema/046_sales_order_command.sql','tests/sales_order_command_test.sql') for p in paths):batch='sales'
+    if batch not in ('customer','sales'):raise ValueError('Unknown migration batch')
+    with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
+        out.write('required='+value+'\n'+'batch='+batch+'\n')
     print('Database apply required: '+value)

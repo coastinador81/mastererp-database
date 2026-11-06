@@ -23,6 +23,8 @@ def package(destination, dependencies):
     files["business_samples.py"] = handler.with_name("business_samples.py")
     files["party_validation.py"] = handler.with_name("party_validation.py")
     files["administration_validation.py"] = handler.with_name("administration_validation.py")
+    files["sales_validation.py"] = handler.with_name("sales_validation.py")
+    files["sales_concurrency.py"] = handler.with_name("sales_concurrency.py")
     for source in (root / "tests/administration").glob("*.sql"):
         files["administration_tests/" + source.name] = source
     allowed = {"pg8000", "scramp", "asn1crypto", "dateutil", "six.py"}
