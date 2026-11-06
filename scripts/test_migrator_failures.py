@@ -37,20 +37,19 @@ class FailureTests(unittest.TestCase):
         self.assertIn('constraint=safe_constraint',str(failed.exception))
 
     def test_failure_is_propagated_for_every_phase(self):
-        size=5
-        for threshold,phase,commits in ((1,'schema',0),(size+1,'reapply',1),(2*size+1,'tests',2)):
+        for threshold,phase,commits in ((1,'preflight',0),(3,'schema',0),(4,'reapply',1),(5,'tests',2)):
             with self.subTest(phase=phase):
                 connection=MagicMock();seen=0
                 def execute(sql):
                     nonlocal seen
-                    if sql=='PACKAGED_SQL':
+                    if 'PACKAGED_SQL' in sql:
                         seen+=1
                         if seen==threshold:raise RuntimeError({'C':'42501','M':'sentinel_private_value'})
                     if sql.startswith('SELECT to_regclass'):return [[True]]
                     return []
                 connection.run.side_effect=execute
                 with patch.object(module,'_connection',return_value=connection),patch.object(module,'Path') as source:
-                    directory=MagicMock();directory.__truediv__.return_value.read_text.return_value='PACKAGED_SQL'
+                    directory=MagicMock();directory.__truediv__.return_value.read_text.return_value='BEGIN;PACKAGED_SQLROLLBACK;'
                     source.return_value.parent.__truediv__.return_value=directory
                     with self.assertRaises(RuntimeError) as failed:
                         module.lambda_handler({},SimpleNamespace(aws_request_id='synthetic-correlation'))

@@ -2,6 +2,11 @@ name: Apply DEV database model
 
 on:
   workflow_dispatch:
+    inputs:
+      apply_model:
+        description: Apply the reviewed 041 batch after successful preflight
+        type: boolean
+        default: false
   push:
     branches: [dev]
     paths:
@@ -55,12 +60,16 @@ jobs:
           aws-region: us-west-1
       - name: Invoke DEV database migrator
         shell: bash
+        env:
+          APPLY_MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_model }}
         run: |
           set -euo pipefail
+          payload='{"action":"validate_common_party_code_candidate"}'
+          if [ "$APPLY_MODEL" = 'true' ]; then payload='{"action":"apply_model"}'; fi
           aws lambda invoke \
             --function-name mastererp-dev-database-migrator \
             --cli-binary-format raw-in-base64-out \
-            --payload '{}' \
+            --payload "$payload" \
             --cli-read-timeout 310 \
             response.json > metadata.json
           test "$(jq -r '.FunctionError // empty' metadata.json)" = ''

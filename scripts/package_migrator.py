@@ -19,6 +19,7 @@ def package(destination, dependencies):
             if "sql/" + name in files:
                 raise ValueError("SQL basename collision")
             files["sql/" + name] = root / folder / name
+    files["common_code_validation.py"] = handler.with_name("common_code_validation.py")
     files["business_samples.py"] = handler.with_name("business_samples.py")
     files["party_validation.py"] = handler.with_name("party_validation.py")
     files["administration_validation.py"] = handler.with_name("administration_validation.py")

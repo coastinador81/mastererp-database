@@ -12,6 +12,15 @@ import boto3
 import pg8000.native
 
 
+def run_rollback_fixture(connection, path):
+    """Keep rollback-only tests inside the caller transaction; check deferred FKs."""
+    text = path.read_text(encoding="utf-8").strip()
+    if not text.startswith("BEGIN;") or not text.endswith("ROLLBACK;"):
+        raise ValueError("Rollback fixture boundaries required")
+    connection.run(text[len("BEGIN;"):-len("ROLLBACK;")])
+    connection.run("SET CONSTRAINTS ALL IMMEDIATE")
+
+
 SCHEMA_FILES = (
     "001_extensions_and_schemas.sql",
     "002_platform_core.sql",
@@ -53,6 +62,7 @@ SCHEMA_FILES = (
     "038_purchase_idempotency_binding.sql",
     "039_storefront_customer_identity.sql",
     "040_storefront_checkout.sql",
+    "041_common_party_code.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -104,6 +114,7 @@ TEST_FILES = (
     "usd_currency_reference_test.sql",
     "purchase_drafts_test.sql",
     "storefront_customer_identity_test.sql",
+    "common_party_code_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"
@@ -183,6 +194,24 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
+    if event.get("action") == "inspect_common_party_code":
+        from dev_validation import _dev_guard
+        _dev_guard(context)
+        try:
+            connection.run("BEGIN READ ONLY")
+            rows = connection.run("SELECT t.tenant_id::text,t.id::text,t.codigo,s.codigo,o.tercero_id::text FROM catalogo.terceros t JOIN catalogo.proveedores_catalogo s ON (s.tenant_id,s.tercero_id)=(t.tenant_id,t.id) LEFT JOIN catalogo.proveedores_catalogo o ON o.tenant_id=t.tenant_id AND o.codigo=t.codigo AND o.tercero_id<>t.id WHERE s.codigo IS DISTINCT FROM t.codigo ORDER BY t.tenant_id,t.id")
+            definitions = connection.run("SELECT p.proname,md5(pg_get_functiondef(p.oid)) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE (n.nspname='administracion' AND p.proname IN ('party_write','party_write_v2')) OR (n.nspname='catalogo' AND p.proname='proveedor_actualizar') ORDER BY 1")
+            return {"status":"succeeded","read_only":True,"discrepancies":rows,"routine_hashes":definitions}
+        finally:
+            connection.run("ROLLBACK")
+            connection.close()
+    if event.get("action") == "concurrency_common_party_code":
+        from common_code_validation import concurrency
+        try:
+            return concurrency(connection, context, _connection)
+        finally:
+            connection.close()
+
     if event.get("action") in ("validate_party_details_candidate", "validate_purchase_drafts_candidate"):
         from dev_validation import _dev_guard
         _dev_guard(context)
@@ -268,17 +297,19 @@ def lambda_handler(event, context):
             return actions[event["action"]](connection, event, context)
         finally:
             connection.close()
-    if event.get("action", "apply_model") != "apply_model":
+    if event.get("action", "apply_model") not in ("apply_model", "validate_common_party_code_candidate"):
         connection.close()
         raise ValueError("Unsupported migration action")
     phase = "lock"
     filename = "none"
     committed_passes = 0
-    # Confirmed 001-038 baseline: never replay existing grants for this upgrade.
-    applied_schema = ("039_storefront_customer_identity.sql", "040_storefront_checkout.sql")
-    if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL")[0][0] is not True:
+    # Forward-only common-code batch: no replay of 039/040 or historical grants.
+    applied_schema = ("041_common_party_code.sql",)
+    selected_tests = ("common_party_code_test.sql", "administration_parties_test.sql",
+                      "party_details_test.sql", "catalog_brands_suppliers_test.sql")
+    if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL AND EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='ventas_digitales' AND p.proname='checkout_crear') AND to_regprocedure('administracion.party_write_v2(uuid,text,text,uuid,text,text,bigint,text,jsonb,bigint,bigint)') IS NOT NULL AND NOT has_table_privilege('mastererp_app','catalogo.terceros','UPDATE')")[0][0] is not True:
         connection.close()
-        raise RuntimeError("Reconciled 001-038 baseline required; no automatic bootstrap")
+        raise RuntimeError("Compatible 001-040 baseline required; no automatic bootstrap")
     try:
         connection.run("SELECT pg_advisory_lock(734561903)")
         # Validate this candidate and effective-app tests in a transaction BEFORE committing DDL.
@@ -288,10 +319,14 @@ def lambda_handler(event, context):
         try:
             for filename in applied_schema:
                 connection.run((sql_dir / filename).read_text(encoding="utf-8"))
-            filename = "storefront_customer_identity_test.sql"
-            connection.run((sql_dir / filename).read_text(encoding="utf-8"))
+            filename = "common_party_code_test.sql"
+            run_rollback_fixture(connection, sql_dir / filename)
         finally:
             connection.run("ROLLBACK")
+        if event.get("action") == "validate_common_party_code_candidate":
+            return {"status":"succeeded","tests":"passed","validation_only":True,
+                    "committed_passes":0,"files_applied":list(applied_schema),
+                    "schemas":[],"table_count":None,"correlation_id":correlation_id}
         # Commit the model independently of rollback-only fixtures. A second
         # application exercises repeatability before checking effective ACLs.
         for _ in range(2):
@@ -305,10 +340,11 @@ def lambda_handler(event, context):
             except Exception:
                 connection.run("ROLLBACK")
                 raise
-        for filename in TEST_FILES:
+        for filename in selected_tests:
             phase = "tests"
+            connection.run("BEGIN")
             try:
-                connection.run((sql_dir / filename).read_text(encoding="utf-8"))
+                run_rollback_fixture(connection, sql_dir / filename)
             finally:
                 connection.run("ROLLBACK")
         schemas = [row[0] for row in connection.run(
@@ -322,7 +358,7 @@ def lambda_handler(event, context):
         )[0][0]
         return {
             "status": "succeeded",
-            "files_applied": list(applied_schema + TEST_FILES),
+            "files_applied": list(applied_schema + selected_tests),
             "schemas": schemas,
             "table_count": table_count,
             "tests": "passed",
