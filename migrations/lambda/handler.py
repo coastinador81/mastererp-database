@@ -392,7 +392,7 @@ def lambda_handler(event, context):
         sqlstate = details.get("C", "unknown")
         raise RuntimeError(
             f"phase={phase}; file={filename}; sqlstate={sqlstate}; "
-            f"committed_passes={committed_passes}; correlation_id={correlation_id}"
+            f"constraint={re.sub(r'[^A-Za-z0-9_]','',str(details.get('n','unknown')))}; committed_passes={committed_passes}; correlation_id={correlation_id}"
         ) from None
     finally:
         try:
