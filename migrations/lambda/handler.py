@@ -325,7 +325,7 @@ def lambda_handler(event, context):
     phase = "lock"
     filename = "none"
     committed_passes = 0
-    # Forward-only batch: replay 040 to replace its signature, then remove the cash-only overload.
+    # Customer administration batch: apply/reapply only 044; preserve prior Storefront migrations.
     applied_schema = ("044_customer_administration_profile.sql",)
     selected_tests = ("customer_administration_test.sql", "common_party_code_test.sql", "administration_parties_test.sql",
                       "party_details_test.sql", "catalog_brands_suppliers_test.sql")

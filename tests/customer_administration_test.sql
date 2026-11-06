@@ -67,12 +67,12 @@ RESET ROLE;
 INSERT INTO ventas_digitales.cliente_identidades(tenant_id,empresa_id,cliente_id,user_id)
  SELECT tenant_id,'00008003-0000-0000-0000-000000000001',id,'00008001-0000-0000-0000-000000000001' FROM catalogo.terceros WHERE tenant_id='00008002-0000-0000-0000-000000000001' AND codigo='QA-CUSTOMER-ADMIN-2';
 INSERT INTO ventas_digitales.cliente_perfiles(tenant_id,empresa_id,cliente_id,telefono)
- SELECT tenant_id,'00008003-0000-0000-0000-000000000001',id,'EC-123' FROM catalogo.terceros WHERE tenant_id='00008002-0000-0000-0000-000000000001' AND codigo='QA-CUSTOMER-ADMIN-2';
+ SELECT tenant_id,'00008003-0000-0000-0000-000000000001',id,'000-123-4567' FROM catalogo.terceros WHERE tenant_id='00008002-0000-0000-0000-000000000001' AND codigo='QA-CUSTOMER-ADMIN-2';
 SET LOCAL ROLE mastererp_app;
 DO $$ DECLARE a jsonb;BEGIN
  IF current_user<>'mastererp_app' THEN RAISE EXCEPTION 'Wrong role';END IF;
  SELECT item INTO a FROM jsonb_array_elements(administracion.parties_read_v2('00008003-0000-0000-0000-000000000001','cliente',NULL,100)) item WHERE item->>'codigo'='QA-CUSTOMER-ADMIN-2';
- IF a->>'origen'<>'ecommerce' OR a->'contacto_ecommerce'->>'telefono'<>'EC-123' OR a->'datos_generales'->>'telefono'<>'789' THEN RAISE EXCEPTION 'Channel data must stay separate';END IF;
+ IF a->>'origen'<>'ecommerce' OR a->'contacto_ecommerce'->>'telefono'<>'000-123-4567' OR a->'datos_generales'->>'telefono'<>'789' THEN RAISE EXCEPTION 'Channel data must stay separate';END IF;
 END $$;
 SET CONSTRAINTS ALL IMMEDIATE;
 ROLLBACK;
