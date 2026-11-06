@@ -1,0 +1,108 @@
+{
+  "run": "qa-parties-843d259ee3c2",
+  "environment": "AWS DEV us-west-1",
+  "scope": "customer administrative profile 044",
+  "results": [
+    {
+      "case": "customer_without_supplier_create",
+      "status": "passed",
+      "http": 201
+    },
+    {
+      "case": "customer_details_persisted_and_no_supplier_created",
+      "status": "passed"
+    },
+    {
+      "case": "independent_customer_read",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "customer_idempotent_replay",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "customer_idempotency_content_conflict",
+      "status": "passed",
+      "http": 409
+    },
+    {
+      "case": "dual_role_same_master_common_data",
+      "status": "passed",
+      "http": 201
+    },
+    {
+      "case": "customer_edit_fiscal_contact_terms_and_code",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "single_catalog_version_increment",
+      "status": "passed"
+    },
+    {
+      "case": "supplier_reads_common_contact_but_separate_terms",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "catalog_reads_common_code_and_contact",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "catalog_patch_preserves_fiscal_attributes",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "customer_reads_catalog_contact_update",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "stale_customer_update_denied",
+      "status": "passed",
+      "http": 409
+    },
+    {
+      "case": "concurrent_customer_create_idempotent",
+      "status": "passed",
+      "http": [
+        200,
+        201
+      ]
+    },
+    {
+      "case": "concurrent_dual_role_contact_update",
+      "status": "passed",
+      "http": [
+        200,
+        409
+      ]
+    },
+    {
+      "case": "customer_without_token",
+      "status": "passed",
+      "http": 401
+    },
+    {
+      "case": "customer_foreign_company",
+      "status": "passed",
+      "http": 403
+    },
+    {
+      "case": "customer_write_override",
+      "status": "passed",
+      "http": 403
+    },
+    {
+      "case": "customer_module_disabled",
+      "status": "passed",
+      "http": 403
+    }
+  ],
+  "status": "passed",
+  "cleanup": "completed"
+}

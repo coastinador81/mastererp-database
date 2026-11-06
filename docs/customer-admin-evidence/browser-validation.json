@@ -1,0 +1,36 @@
+{
+  "run": "qa-parties-90896540c7fd",
+  "environment": "AWS DEV us-west-1",
+  "results": [
+    {
+      "case": "real_login_and_authorized_customer_list",
+      "status": "passed"
+    },
+    {
+      "case": "real_customer_creation_persisted_and_displayed",
+      "status": "passed"
+    },
+    {
+      "case": "independent_api_read_matches_browser_creation",
+      "status": "passed"
+    },
+    {
+      "case": "real_customer_edit_and_contact_display",
+      "status": "passed"
+    },
+    {
+      "case": "customer_panels_do_not_inherit_empty_module_height",
+      "status": "passed"
+    },
+    {
+      "case": "customer_deep_link_reload",
+      "status": "passed"
+    },
+    {
+      "case": "customer_mobile_no_horizontal_overflow",
+      "status": "passed"
+    }
+  ],
+  "status": "passed",
+  "cleanup": "completed"
+}
