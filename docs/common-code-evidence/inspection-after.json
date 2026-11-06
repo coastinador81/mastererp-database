@@ -1,0 +1,20 @@
+{
+  "status": "succeeded",
+  "read_only": true,
+  "discrepancies": [],
+  "routine_hashes": [
+    [
+      "party_write",
+      "720411b189ee6fcbb61a7017b9dfcdc7"
+    ],
+    [
+      "party_write_v2",
+      "dfc5bd94c712233bb580ac4053eb61f8"
+    ],
+    [
+      "proveedor_actualizar",
+      "a85c4e147efa361ca5044066be05a25c"
+    ]
+  ],
+  "fixture_runs": []
+}

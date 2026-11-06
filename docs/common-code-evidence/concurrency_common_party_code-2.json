@@ -1,0 +1,45 @@
+{
+  "status": "succeeded",
+  "tests": [
+    {
+      "roles": [
+        "proveedor",
+        "catalog"
+      ],
+      "outcomes": [
+        "stale",
+        "committed"
+      ],
+      "codes_equal": true,
+      "single_version_increment": true
+    },
+    {
+      "roles": [
+        "cliente",
+        "proveedor"
+      ],
+      "outcomes": [
+        "stale",
+        "committed"
+      ],
+      "codes_equal": true,
+      "single_version_increment": true
+    },
+    {
+      "roles": [
+        "proveedor",
+        "proveedor"
+      ],
+      "outcomes": [
+        "committed",
+        "stale"
+      ],
+      "codes_equal": true,
+      "single_version_increment": true
+    }
+  ],
+  "candidate_isolated_schema": true,
+  "production_functions_changed": false,
+  "run": "qa_code_9724dcec601e4edaad52a0737a5dd617",
+  "cleanup": "completed_if_returned"
+}

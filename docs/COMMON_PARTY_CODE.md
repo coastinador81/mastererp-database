@@ -115,3 +115,33 @@ Administración/Catálogo, Cliente/Proveedor, código+contactos; un commit y una
 versión obsoleta por par, sin incremento redundante. Inspección DEV sin discrepancias.
 Preflight oficial 42238777525 aprobado, sin commits de esquema. Aplicación definitiva
 solo después de snapshot disponible y revisión del resultado de pruebas.
+
+## Cierre verificado en AWS DEV — 6 de noviembre de 2026
+
+Commits propios: 5e5e794, d608c8d y 5d62e86. Preflight sin commit de esquema:
+https://github.com/eticayservicios/mastererp-database/actions/runs/42238777525
+Aplicación y reaplicación exclusiva de 041, cuatro suites SQL aprobadas:
+https://github.com/eticayservicios/mastererp-database/actions/runs/42239632363
+Snapshot mastererp-dev-before-common-code-041-20261106 disponible antes de aplicar.
+Huella del paquete usado para aplicar: n80oikjbs5WMFe8nIMMdrP6Sw43EP8NzMdYiXvdFgNg=.
+Las suites ejecutan permisos efectivos como mastererp_app y constraints inmediatos.
+
+Carreras candidatas en schema QA separado: tres pares, un commit y un rechazo
+por versión obsoleta cada uno. Limpieza confirmada, sin cambiar funciones productivas
+antes de aplicar. HTTP posterior: 13 casos aprobados, fixtures qa-parties-85b461dee905
+limpias; creación 201, replay 200, conflicto de contenido 409, doble rol 201,
+cambio desde Cliente 200, Catálogo sincronizado 200, código+contactos 200,
+versión obsoleta 409, edición Catálogo 200, lectura Cliente 200,
+sin token 401 en ambas APIs y override de escritura 403. La prueba usa versiones
+reales leídas, no un valor inicial fijo. No acredita cambios de frontend.
+Inspección final: cero discrepancias y cero ejecuciones qa_code pendientes.
+No hubo conciliación de alias ni backfill de datos existentes.
+
+Durante la validación Andrea publicó 410eeb2 y 9fd4b7e (Storefront/042).
+Se conservaron e incorporaron por fast-forward; 041 no fue modificada.
+El selector remoto posterior incluye 041/042: el workflow arriba enlazado es la
+prueba específica de que NUESTRA aplicación ejecutó solo 041. No se sobrescribió
+el despliegue posterior del equipo. Huella observada después de sus publicaciones:
+kjowkLTWP7GDKRpTXvRo/+pnEqEeDjcbQ6xTwwkPOEM=, Active/Successful.
+Cualquier futura aplicación debe revisar el selector vigente, no asumir que solo
+041 sigue seleccionada. Evidencia sanitizada adjunta en common-code-evidence/.

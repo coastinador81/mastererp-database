@@ -1,0 +1,89 @@
+{
+  "run": "qa-parties-85b461dee905",
+  "environment": "AWS DEV us-west-1",
+  "results": [
+    {
+      "case": "supplier_create",
+      "status": "passed",
+      "http": 201
+    },
+    {
+      "case": "create_replay",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "idempotency_conflict",
+      "status": "passed",
+      "http": 409
+    },
+    {
+      "case": "same_third_double_role",
+      "status": "passed",
+      "http": 201
+    },
+    {
+      "case": "client_changes_common_code",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "catalog_reads_synced_code",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "supplier_code_and_contacts",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "stale_supplier_version",
+      "status": "passed",
+      "http": 409
+    },
+    {
+      "case": "catalog_update_compatible",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "client_reads_catalog_name_same_code",
+      "status": "passed",
+      "http": 200
+    },
+    {
+      "case": "admin_without_token",
+      "status": "passed",
+      "http": 401
+    },
+    {
+      "case": "catalog_without_token",
+      "status": "passed",
+      "http": 401
+    },
+    {
+      "case": "override_denial",
+      "status": "passed",
+      "http": 403
+    }
+  ],
+  "catalog_diagnostic": {
+    "http": 200,
+    "keys": [
+      "id",
+      "code",
+      "name",
+      "terms",
+      "status",
+      "contact",
+      "version",
+      "updated_at"
+    ],
+    "error": null,
+    "version": 3,
+    "code_matches": true
+  },
+  "status": "passed",
+  "cleanup": "completed"
+}
