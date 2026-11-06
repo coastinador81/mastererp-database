@@ -311,6 +311,12 @@ def lambda_handler(event, context):
             return actions[event["action"]](connection, event, context)
         finally:
             connection.close()
+    if event.get("action") == "configure_dev_storefront_payments":
+        from storefront_validation import configure_payments
+        try:
+            return configure_payments(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action", "apply_model") not in ("apply_model", "validate_common_party_code_candidate"):
         connection.close()
         raise ValueError("Unsupported migration action")
