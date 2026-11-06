@@ -74,14 +74,30 @@ def concurrency(c, context, factory):
     finally:
         c.run('ROLLBACK')
         if prepared:
-            c.run('BEGIN')
-            # Only generated tenant UUIDs belonging to this invocation are touched.
-            assert c.run('SELECT count(*) FROM plataforma.tenants WHERE id=:id AND code=:code',id=tenant,code=run)[0][0]==1
-            for table,column in [('auditoria.events','tenant_id'),('plataforma.idempotency_keys','request_tenant_id'),('administracion.perfiles_tercero','tenant_id'),('catalogo.proveedores_catalogo','tenant_id'),('catalogo.roles_tercero','tenant_id'),('catalogo.terceros','tenant_id'),('organizacion.companies','tenant_id'),('plataforma.tenant_modules','tenant_id'),('plataforma.user_tenants','tenant_id')]:
-                c.run('DELETE FROM '+table+' WHERE '+column+' IN (:a,:b)',a=tenant,b=other)
-            c.run('DELETE FROM plataforma.tenants WHERE id IN (:a,:b)',a=tenant,b=other)
-            c.run('DELETE FROM plataforma.users WHERE id=:id',id=actor)
-            c.run('DELETE FROM plataforma.role_permissions WHERE role_id IN (SELECT id FROM plataforma.roles WHERE code=:code)',code=run)
-            c.run('DELETE FROM plataforma.roles WHERE code=:code',code=run)
-            c.run('DROP SCHEMA '+schema+' CASCADE')
-            c.run('SET CONSTRAINTS ALL IMMEDIATE');c.run('COMMIT')
+            cleanup(c,context,run)
+
+
+def cleanup(c,context,run):
+    _dev_guard(context)
+    if not re.fullmatch('qa_code_[0-9a-f]{32}',run): raise ValueError('Own QA run required')
+    def ident(value): return str(uuid5(NAMESPACE_URL,run+value))
+    tenant=ident('00008002-0000-0000-0000-000000000001')
+    other=ident('00008002-0000-0000-0000-000000000002')
+    actor=ident('00008001-0000-0000-0000-000000000001')
+    c.run('BEGIN')
+    try:
+        assert c.run('SELECT count(*) FROM plataforma.tenants WHERE id=:id AND code=:code',id=tenant,code=run)[0][0]==1
+        c.run('SET CONSTRAINTS ALL DEFERRED')
+        for key,value in {'app.current_user_id':actor,'app.current_tenant_id':tenant,'app.correlation_id':str(uuid4())}.items():
+            c.run('SELECT set_config(:key,:value,true)',key=key,value=value)
+        for table,column in [('administracion.perfiles_tercero','tenant_id'),('catalogo.proveedores_catalogo','tenant_id'),('catalogo.roles_tercero','tenant_id'),('catalogo.terceros','tenant_id'),('plataforma.idempotency_keys','request_tenant_id'),('auditoria.events','tenant_id'),('organizacion.companies','tenant_id'),('plataforma.tenant_modules','tenant_id'),('plataforma.user_tenants','tenant_id')]:
+            c.run('DELETE FROM '+table+' WHERE '+column+' IN (:a,:b)',a=tenant,b=other)
+        c.run('DELETE FROM plataforma.tenants WHERE id IN (:a,:b)',a=tenant,b=other)
+        c.run('DELETE FROM plataforma.users WHERE id=:id',id=actor)
+        c.run('DELETE FROM plataforma.role_permissions WHERE role_id IN (SELECT id FROM plataforma.roles WHERE code=:code)',code=run)
+        c.run('DELETE FROM plataforma.roles WHERE code=:code',code=run)
+        c.run('DROP SCHEMA '+run+' CASCADE')
+        c.run('SET CONSTRAINTS ALL IMMEDIATE');c.run('COMMIT')
+        return {'status':'succeeded','cleanup':run}
+    except Exception:
+        c.run('ROLLBACK');raise

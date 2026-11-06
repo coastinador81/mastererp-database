@@ -201,9 +201,15 @@ def lambda_handler(event, context):
             connection.run("BEGIN READ ONLY")
             rows = connection.run("SELECT t.tenant_id::text,t.id::text,t.codigo,s.codigo,o.tercero_id::text FROM catalogo.terceros t JOIN catalogo.proveedores_catalogo s ON (s.tenant_id,s.tercero_id)=(t.tenant_id,t.id) LEFT JOIN catalogo.proveedores_catalogo o ON o.tenant_id=t.tenant_id AND o.codigo=t.codigo AND o.tercero_id<>t.id WHERE s.codigo IS DISTINCT FROM t.codigo ORDER BY t.tenant_id,t.id")
             definitions = connection.run("SELECT p.proname,md5(pg_get_functiondef(p.oid)) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE (n.nspname='administracion' AND p.proname IN ('party_write','party_write_v2')) OR (n.nspname='catalogo' AND p.proname='proveedor_actualizar') ORDER BY 1")
-            return {"status":"succeeded","read_only":True,"discrepancies":rows,"routine_hashes":definitions}
+            return {"status":"succeeded","read_only":True,"discrepancies":rows,"routine_hashes":definitions,"fixture_runs":[r[0] for r in connection.run("SELECT code FROM plataforma.tenants WHERE code ~ '^qa_code_[0-9a-f]{32}$'")]}
         finally:
             connection.run("ROLLBACK")
+            connection.close()
+    if event.get("action") == "cleanup_common_party_code":
+        from common_code_validation import cleanup
+        try:
+            return cleanup(connection,context,event.get("run",""))
+        finally:
             connection.close()
     if event.get("action") == "concurrency_common_party_code":
         from common_code_validation import concurrency
