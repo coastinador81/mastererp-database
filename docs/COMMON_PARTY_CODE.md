@@ -101,3 +101,17 @@ La configuración anterior de 039/040 se conserva en Git para revisión históri
 las instrucciones previas de este documento que decían que el selector no estaba
 adaptado quedan sustituidas por esta sección. Recuperación: migración correctiva
 nueva, nunca backfill de alias ni edición de migraciones aplicadas.
+
+## Validación AWS DEV autorizada
+
+El push prepara preflight; la aplicación requiere workflow_dispatch con apply_model=true.
+Se usa el migrador oficial y no se necesita PostgreSQL/Docker local. Las carreras
+previas a aplicar usan funciones candidatas en un schema QA generado; las funciones
+productivas permanecen iguales. Fixtures con UUID por ejecución se confirman para
+visibilidad entre conexiones y se limpian al terminar, sin tocar tenants existentes.
+El primer intento detectó falta de contexto en limpieza; se corrigió y se limpió
+su ejecución identificada antes de repetir. Tres carreras reales aprobadas:
+Administración/Catálogo, Cliente/Proveedor, código+contactos; un commit y una
+versión obsoleta por par, sin incremento redundante. Inspección DEV sin discrepancias.
+Preflight oficial 42238777525 aprobado, sin commits de esquema. Aplicación definitiva
+solo después de snapshot disponible y revisión del resultado de pruebas.

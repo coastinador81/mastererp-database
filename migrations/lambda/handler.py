@@ -205,6 +205,12 @@ def lambda_handler(event, context):
         finally:
             connection.run("ROLLBACK")
             connection.close()
+    if event.get("action") == "common_code_http_fixture":
+        from common_code_validation import http_fixture
+        try:
+            return http_fixture(connection,event,context)
+        finally:
+            connection.close()
     if event.get("action") == "cleanup_common_party_code":
         from common_code_validation import cleanup
         try:

@@ -101,3 +101,21 @@ def cleanup(c,context,run):
         return {'status':'succeeded','cleanup':run}
     except Exception:
         c.run('ROLLBACK');raise
+
+
+def http_fixture(c,event,context):
+    """Extend only the fresh guarded HTTP QA role, never a real membership."""
+    _dev_guard(context)
+    from party_validation import fixture
+    result=fixture(c,event,context)
+    if event.get('operation')=='prepare':
+        c.run('BEGIN')
+        try:
+            role=result['ids']['role'];tenant=result['ids']['tenant_a']
+            assert c.run('SELECT count(*) FROM plataforma.roles WHERE id=:id AND code=:code',id=role,code=event['run'])[0][0]==1
+            c.run("INSERT INTO plataforma.role_permissions(role_id,permission_code) SELECT :role,code FROM plataforma.permissions WHERE code IN ('catalog.suppliers.read','catalog.suppliers.write') ON CONFLICT DO NOTHING",role=role)
+            c.run("INSERT INTO plataforma.tenant_modules(tenant_id,module_id,status) SELECT :tenant,id,'active' FROM plataforma.modules WHERE code='erp.catalog' ON CONFLICT DO NOTHING",tenant=tenant)
+            c.run('COMMIT')
+        except Exception:
+            c.run('ROLLBACK');raise
+    return result
