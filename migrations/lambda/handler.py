@@ -64,6 +64,7 @@ SCHEMA_FILES = (
     "040_storefront_checkout.sql",
     "041_common_party_code.sql",
     "042_storefront_customer_portal.sql",
+    "043_storefront_tenant_payments.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -316,8 +317,8 @@ def lambda_handler(event, context):
     phase = "lock"
     filename = "none"
     committed_passes = 0
-    # Forward-only batch: no replay of 039/040 or historical grants.
-    applied_schema = ("041_common_party_code.sql", "042_storefront_customer_portal.sql")
+    # Forward-only batch: replay 040 to replace its signature, then remove the cash-only overload.
+    applied_schema = ("040_storefront_checkout.sql", "043_storefront_tenant_payments.sql")
     selected_tests = ("common_party_code_test.sql", "administration_parties_test.sql",
                       "party_details_test.sql", "catalog_brands_suppliers_test.sql")
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL AND EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='ventas_digitales' AND p.proname='checkout_crear') AND to_regprocedure('administracion.party_write_v2(uuid,text,text,uuid,text,text,bigint,text,jsonb,bigint,bigint)') IS NOT NULL AND NOT has_table_privilege('mastererp_app','catalogo.terceros','UPDATE')")[0][0] is not True:

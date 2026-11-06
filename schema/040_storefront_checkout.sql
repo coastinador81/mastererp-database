@@ -1,7 +1,7 @@
 -- Transactional Storefront checkout. Identity, scope and prices are resolved server-side.
 CREATE OR REPLACE FUNCTION ventas_digitales.checkout_crear(
  p_issuer text,p_subject text,p_dominio text,p_items jsonb,p_entrega jsonb,
- p_metodo_entrega text,p_metodo_pago text,p_idempotency_key varchar)
+ p_metodo_entrega text,p_pago jsonb,p_idempotency_key varchar)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,ventas_digitales,catalogo,operaciones,plataforma,auditoria,pg_temp AS $$
 DECLARE
@@ -10,13 +10,16 @@ DECLARE
  cached plataforma.idempotency_keys%ROWTYPE; fingerprint text; correlation uuid;
  reservation_id uuid:=gen_random_uuid(); order_id uuid:=gen_random_uuid(); line record;
  inventory catalogo.inventarios%ROWTYPE; order_items jsonb; subtotal_value administracion.importe;
- currency_code char(3); response jsonb;
+ currency_code char(3); response jsonb; payment_method text:=p_pago->>'method';
+ payment_reference text:=p_pago->>'reference'; payment_recipient jsonb; payment_snapshot jsonb;
 BEGIN
  IF NULLIF(current_setting('app.current_operation',true),'') IS DISTINCT FROM 'digital_sales.storefront.checkout'
  OR p_issuer!~'^https://' OR length(p_subject) NOT BETWEEN 1 AND 255
  OR p_dominio IS NULL OR jsonb_typeof(p_items)<>'array' OR jsonb_array_length(p_items)=0
  OR jsonb_typeof(p_entrega)<>'object' OR length(COALESCE(btrim(p_entrega->>'address'),'')) NOT BETWEEN 1 AND 300
- OR p_metodo_entrega<>'realtime' OR p_metodo_pago<>'cash'
+ OR p_metodo_entrega<>'realtime' OR jsonb_typeof(p_pago)<>'object'
+ OR payment_method IS NULL OR payment_method NOT IN ('cash','mobile','transfer')
+ OR (payment_method<>'cash' AND COALESCE(payment_reference,'')!~'^[0-9]{4,40}$')
  OR length(p_idempotency_key) NOT BETWEEN 1 AND 100 THEN
   RAISE EXCEPTION 'Invalid checkout' USING ERRCODE='22023';END IF;
  correlation:=NULLIF(current_setting('app.correlation_id',true),'')::uuid;
@@ -29,11 +32,29 @@ BEGIN
  WHERE tenant_id=tenant AND empresa_id=(SELECT empresa_id FROM ventas_digitales.cliente_identidades
   WHERE tenant_id=tenant AND user_id=actor) AND dominio=lower(p_dominio) AND estado='ACTIVE';
  IF NOT FOUND THEN RAISE EXCEPTION 'Store not found' USING ERRCODE='P0002';END IF;
+ IF payment_method='cash' THEN
+  IF COALESCE((store.configuracion->'payments'->>'efectivo')::boolean,true)=false
+   AND COALESCE((store.configuracion->'payments'->>'al-recibir')::boolean,true)=false
+  THEN RAISE EXCEPTION 'Payment method unavailable' USING ERRCODE='22023';END IF;
+  payment_snapshot:=jsonb_build_object('method','cash','status','PENDING_COLLECTION');
+ ELSE
+  payment_recipient:=CASE payment_method WHEN 'mobile' THEN store.configuracion->'paymentDetails'->'mobilePayment'
+   ELSE store.configuracion->'paymentDetails'->'bankTransfer' END;
+  IF COALESCE((store.configuracion->'payments'->>(CASE payment_method WHEN 'mobile' THEN 'pago-movil' ELSE 'transferencia' END))::boolean,false)=false
+   OR jsonb_typeof(payment_recipient)<>'object'
+   OR length(COALESCE(payment_recipient->>'document',''))<4
+   OR length(COALESCE(payment_recipient->>'bankCode',''))<3
+   OR (payment_method='mobile' AND length(COALESCE(payment_recipient->>'phone',''))<7)
+   OR (payment_method='transfer' AND length(COALESCE(payment_recipient->>'accountNumber',''))<8)
+  THEN RAISE EXCEPTION 'Payment method unavailable' USING ERRCODE='22023';END IF;
+  payment_snapshot:=jsonb_build_object('method',payment_method,'status','PENDING_VERIFICATION',
+   'reference',payment_reference,'recipient',payment_recipient);
+ END IF;
  SELECT * INTO node FROM operaciones.nodos WHERE tenant_id=tenant AND empresa_id=store.empresa_id
   AND id=store.nodo_id AND estado='ACTIVE' AND acepta_pedidos FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Store node unavailable' USING ERRCODE='42501';END IF;
  fingerprint:=encode(public.digest(jsonb_build_object('domain',lower(p_dominio),'items',p_items,
-  'delivery',p_entrega,'delivery_method',p_metodo_entrega,'payment_method',p_metodo_pago)::text,'sha256'),'hex');
+  'delivery',p_entrega,'delivery_method',p_metodo_entrega,'payment',p_pago)::text,'sha256'),'hex');
  PERFORM pg_advisory_xact_lock(hashtextextended(p_idempotency_key,0));
  SELECT * INTO cached FROM plataforma.idempotency_keys WHERE idempotency_key=p_idempotency_key;
  IF FOUND THEN
@@ -81,7 +102,7 @@ BEGIN
  SELECT order_id,tenant,store.empresa_id,store.nodo_id,customer,
   'ORD-'||upper(substr(replace(order_id::text,'-',''),1,12)),'PENDING',currency_code,subtotal_value,
   node.tarifa_entrega,jsonb_build_object('customer_id',customer,'name',t.nombre),p_entrega,
-  jsonb_build_object('method','cash','status','PENDING_COLLECTION'),'immediate',p_metodo_entrega,
+  payment_snapshot,'immediate',p_metodo_entrega,
   reservation_id::text,p_idempotency_key,actor FROM catalogo.terceros t WHERE t.tenant_id=tenant AND t.id=customer;
  INSERT INTO operaciones.pedido_lineas(tenant_id,empresa_id,pedido_id,posicion,producto_id,producto_nombre,cantidad,precio_unitario)
  SELECT tenant,store.empresa_id,order_id,ordinality,(item->>'product_id')::uuid,item->>'product_name',
@@ -99,5 +120,5 @@ BEGIN
  RETURN response;
 END $$;
 
-REVOKE ALL ON FUNCTION ventas_digitales.checkout_crear(text,text,text,jsonb,jsonb,text,text,varchar) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION ventas_digitales.checkout_crear(text,text,text,jsonb,jsonb,text,text,varchar) TO mastererp_app;
+REVOKE ALL ON FUNCTION ventas_digitales.checkout_crear(text,text,text,jsonb,jsonb,text,jsonb,varchar) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ventas_digitales.checkout_crear(text,text,text,jsonb,jsonb,text,jsonb,varchar) TO mastererp_app;
