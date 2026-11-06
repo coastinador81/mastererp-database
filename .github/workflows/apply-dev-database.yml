@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       apply_model:
-        description: Apply the reviewed 041 batch after successful preflight
+        description: Apply the reviewed customer administration batch after successful preflight
         type: boolean
         default: false
   push:
@@ -64,7 +64,7 @@ jobs:
           APPLY_MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_model }}
         run: |
           set -euo pipefail
-          payload='{"action":"validate_common_party_code_candidate"}'
+          payload='{"action":"validate_customer_admin_candidate"}'
           if [ "$APPLY_MODEL" = 'true' ]; then payload='{"action":"apply_model"}'; fi
           aws lambda invoke \
             --function-name mastererp-dev-database-migrator \

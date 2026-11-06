@@ -65,6 +65,7 @@ SCHEMA_FILES = (
     "041_common_party_code.sql",
     "042_storefront_customer_portal.sql",
     "043_storefront_tenant_payments.sql",
+    "044_customer_administration_profile.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -117,6 +118,7 @@ TEST_FILES = (
     "purchase_drafts_test.sql",
     "storefront_customer_identity_test.sql",
     "common_party_code_test.sql",
+    "customer_administration_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"
@@ -317,15 +319,15 @@ def lambda_handler(event, context):
             return configure_payments(connection, event, context)
         finally:
             connection.close()
-    if event.get("action", "apply_model") not in ("apply_model", "validate_common_party_code_candidate"):
+    if event.get("action", "apply_model") not in ("apply_model", "validate_common_party_code_candidate", "validate_customer_admin_candidate"):
         connection.close()
         raise ValueError("Unsupported migration action")
     phase = "lock"
     filename = "none"
     committed_passes = 0
     # Forward-only batch: replay 040 to replace its signature, then remove the cash-only overload.
-    applied_schema = ("040_storefront_checkout.sql", "043_storefront_tenant_payments.sql")
-    selected_tests = ("common_party_code_test.sql", "administration_parties_test.sql",
+    applied_schema = ("044_customer_administration_profile.sql",)
+    selected_tests = ("customer_administration_test.sql", "common_party_code_test.sql", "administration_parties_test.sql",
                       "party_details_test.sql", "catalog_brands_suppliers_test.sql")
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL AND EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='ventas_digitales' AND p.proname='checkout_crear') AND to_regprocedure('administracion.party_write_v2(uuid,text,text,uuid,text,text,bigint,text,jsonb,bigint,bigint)') IS NOT NULL AND NOT has_table_privilege('mastererp_app','catalogo.terceros','UPDATE')")[0][0] is not True:
         connection.close()
@@ -339,11 +341,11 @@ def lambda_handler(event, context):
         try:
             for filename in applied_schema:
                 connection.run((sql_dir / filename).read_text(encoding="utf-8"))
-            filename = "common_party_code_test.sql"
+            filename = "customer_administration_test.sql"
             run_rollback_fixture(connection, sql_dir / filename)
         finally:
             connection.run("ROLLBACK")
-        if event.get("action") == "validate_common_party_code_candidate":
+        if event.get("action") in ("validate_common_party_code_candidate", "validate_customer_admin_candidate"):
             return {"status":"succeeded","tests":"passed","validation_only":True,
                     "committed_passes":0,"files_applied":list(applied_schema),
                     "schemas":[],"table_count":None,"correlation_id":correlation_id}
