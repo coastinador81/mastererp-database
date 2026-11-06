@@ -85,6 +85,7 @@ jobs:
             --cli-read-timeout 310 \
             response.json > metadata.json
           test "$(jq -r '.FunctionError // empty' metadata.json)" = ''
+          jq '{status,tests,phase,file,sqlstate,constraint,candidate_message,committed_passes,validation_only,schema_sha256,effective_role}' response.json
           jq -e '.status == "succeeded" and .tests == "passed"' response.json >/dev/null
           jq '{status,files_applied,schemas,table_count,tests,correlation_id}' response.json
           echo 'Schemas:'

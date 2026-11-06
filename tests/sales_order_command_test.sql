@@ -103,6 +103,37 @@ END $$;
 RESET ROLE;
 UPDATE plataforma.user_tenants SET permissions_override='{}'
  WHERE tenant_id='00014602-0000-0000-0000-000000000001' AND user_id='00014601-0000-0000-0000-000000000001';
+-- Inactive identity and disabled module must deny even an idempotent replay.
+RESET ROLE;
+UPDATE plataforma.users SET status='inactive' WHERE id='00014601-0000-0000-0000-000000000001';
+SET LOCAL ROLE mastererp_app;
+DO $$ BEGIN
+ IF current_user<>'mastererp_app' THEN RAISE EXCEPTION 'Wrong effective role'; END IF;
+ PERFORM set_config('app.current_operation','administracion.documento.venta.crear',true);
+ BEGIN
+  PERFORM administracion.venta_desde_pedido('00014603-0000-0000-0000-000000000001','00014608-0000-0000-0000-000000000001',1,'qa-sales-046-create','2026-11-06');
+  RAISE EXCEPTION 'Inactive user accepted';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
+UPDATE plataforma.users SET status='active' WHERE id='00014601-0000-0000-0000-000000000001';
+UPDATE plataforma.tenant_modules SET status='inactive' WHERE tenant_id='00014602-0000-0000-0000-000000000001'
+ AND module_id IN(SELECT id FROM plataforma.modules WHERE code='erp.finance');
+SET LOCAL ROLE mastererp_app;
+DO $$ BEGIN
+ IF current_user<>'mastererp_app' THEN RAISE EXCEPTION 'Wrong effective role'; END IF;
+ BEGIN
+  PERFORM administracion.venta_desde_pedido('00014603-0000-0000-0000-000000000001','00014608-0000-0000-0000-000000000001',1,'qa-sales-046-create','2026-11-06');
+  RAISE EXCEPTION 'Disabled finance module accepted';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+  PERFORM administracion.venta_desde_pedido('00014603-0000-0000-0000-000000000099','00014608-0000-0000-0000-000000000001',1,'qa-sales-046-foreign','2026-11-06');
+  RAISE EXCEPTION 'Foreign company accepted';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
+UPDATE plataforma.tenant_modules SET status='active' WHERE tenant_id='00014602-0000-0000-0000-000000000001'
+ AND module_id IN(SELECT id FROM plataforma.modules WHERE code='erp.finance');
 -- Precision failure must roll back both confirmation and sale, including its key.
 -- Foreign/missing tenant context must deny even a previously cached response.
 SET LOCAL ROLE mastererp_app;
