@@ -90,3 +90,14 @@ Preflight definitivo de c32ca4b: 42315864514 aprobado. Aplicación oficial 42316
 Concurrencia real (correlation dc911fa8-e6a0-4cdd-a373-af7ea8c46c2f): igual clave y distinta clave sobre el mismo pedido, segundo escritor esperó 0.725/0.727 s y completó tras rollback de A; ambos revirtieron su venta. Fixtures base limpiadas. Esto no certifica replay concurrente tras commit ni funcionamiento HTTP. Evidencia sanitizada en sales-046-evidence/.
 
 La función de resolución de origen para el adapter de Pedidos se incluyó antes de aplicar 046. La fecha comercial puede omitirse y se calcula en la zona horaria de la empresa. El backend está preparado como candidato, todavía sin desplegar: falta decidir asignación de administration.sales.write y conservar reason/detail de la confirmación antes de publicar esa integración. No se modificaron APIs, otras Lambdas ni permisos de roles reales.
+
+
+## Extensión 047 — autorización aprobada y contrato de confirmación
+
+El propietario aprobó asignar el permiso a Administradores de Finanzas. La inspección AWS de roles mostró que aún no existe un rol con nombre/código de Finanzas. 047 crea tenant.finance_admin y le asigna únicamente administration.sales.write, administration.read y operations.orders.read. No modifica pertenencias ni asigna usuarios a ese rol; no otorga operations.orders.write ni todos los permisos de Administración.
+
+047 reemplaza mediante migración nueva las funciones de Ventas, sin editar 046 ya aplicada. El helper de confirmación de pedido es privado (sin EXECUTE de mastererp_app), acotado a PENDING→CONFIRMED dentro del comando comercial autorizado y sin bypass RLS. Comprueba pago: efectivo pendiente de cobro, o mobile/transfer y alias legacy con estado VALIDATED; rechaza valores ausentes/desconocidos y pagos pendientes de verificación.
+
+El adapter establece app.sale_confirmation_reason/detail desde el contrato HTTP existente. El comando conserva esos datos en el evento de confirmación y los incluye en la huella idempotente cuando están presentes. Las llamadas anteriores sin esos campos mantienen su huella compatible. La anulación comercial requiere ahora lectura de Operaciones (pedido cancelado previamente y reserva liberada), sin conceder escritura operativa general.
+
+El lote sales del workflow pasa a aplicar/reaplicar solo 047 sobre la base 046 existente. Preflight y comprobación posterior ejecutan suite 047 y suite 046, cada fixture en su savepoint con rollback para no colisionar identificadores. No se reaplica 046 ni Storefront. Snapshot previo: mastererp-dev-before-sales-contract-047-20261107, comprobar available antes de aplicación explícita.

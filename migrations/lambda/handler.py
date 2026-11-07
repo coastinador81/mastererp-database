@@ -68,6 +68,7 @@ SCHEMA_FILES = (
     "044_customer_administration_profile.sql",
     "045_customer_legacy_contact_projection.sql",
     "046_sales_order_command.sql",
+    "047_sales_confirmation_contract.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -123,6 +124,7 @@ TEST_FILES = (
     "customer_administration_test.sql",
     "customer_legacy_contact_test.sql",
     "sales_order_command_test.sql",
+    "sales_confirmation_contract_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"

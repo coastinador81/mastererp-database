@@ -4,8 +4,8 @@ import hashlib
 from dev_validation import _dev_guard
 
 
-SCHEMA = "046_sales_order_command.sql"
-TEST = "sales_order_command_test.sql"
+SCHEMA = "047_sales_confirmation_contract.sql"
+TEST = "sales_confirmation_contract_test.sql"
 
 
 def inspect(c):
@@ -31,8 +31,13 @@ def fixture(c, text):
     text = text.strip()
     if not text.startswith("BEGIN;") or not text.endswith("ROLLBACK;"):
         raise ValueError("Rollback fixture boundaries required")
-    c.run(text[len("BEGIN;"):-len("ROLLBACK;")])
-    c.run("SET CONSTRAINTS ALL IMMEDIATE")
+    c.run("SAVEPOINT sales_case")
+    try:
+        c.run(text[len("BEGIN;"):-len("ROLLBACK;")])
+        c.run("SET CONSTRAINTS ALL IMMEDIATE")
+    finally:
+        c.run("ROLLBACK TO SAVEPOINT sales_case")
+        c.run("RELEASE SAVEPOINT sales_case")
 
 
 def execute(c, event, context, factory):
@@ -70,7 +75,7 @@ def execute(c, event, context, factory):
     try:
         c.run("SELECT pg_advisory_lock(734561903)")
         baseline = inspect(c)
-        if not baseline["order_transition"] or not baseline["customer_command"]:
+        if not baseline["order_transition"] or not baseline["customer_command"] or not baseline["sales_relation"]:
             raise ValueError("Compatible DEV baseline required")
         phase = "preflight"
         c.run("BEGIN")
@@ -78,6 +83,8 @@ def execute(c, event, context, factory):
             c.run(candidate)
             filename = TEST
             fixture(c, test)
+            filename = "sales_order_command_test.sql"
+            fixture(c, (folder / filename).read_text(encoding="utf-8"))
         finally:
             c.run("ROLLBACK")
         if action == "apply_sales_model":
@@ -96,6 +103,8 @@ def execute(c, event, context, factory):
             c.run("BEGIN")
             try:
                 fixture(c, test)
+                filename = "sales_order_command_test.sql"
+                fixture(c, (folder / filename).read_text(encoding="utf-8"))
             finally:
                 c.run("ROLLBACK")
         return dict(result, status="succeeded", tests="passed", schemas=["administracion"],
