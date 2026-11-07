@@ -10,7 +10,7 @@ def execute(c, event, context):
     run, identity, operation = event.get("run", ""), event.get("identity_run", ""), event.get("operation")
     if not re.fullmatch(r"qa-sales-http-[0-9a-f]{12}", run) or not re.fullmatch(r"qa-identity-[0-9a-f]{12}", identity):
         raise ValueError("Identified synthetic fixture required")
-    if operation not in ("prepare", "inspect", "deny", "module_disabled", "membership_inactive", "restore", "archive"):
+    if operation not in ("prepare", "prepare_read", "read_denied", "inspect", "deny", "module_disabled", "membership_inactive", "restore", "archive"):
         raise ValueError("Unknown fixture operation")
     actor_rows = c.run("SELECT id::text FROM plataforma.users WHERE email=:email AND status='active'",
                        email=identity + "-admin-a@example.invalid")
@@ -25,6 +25,9 @@ def execute(c, event, context):
     company = ids["00014603-0000-0000-0000-000000000001"]
     order = ids["00014608-0000-0000-0000-000000000001"]
     orders = [order, str(uuid5(NAMESPACE_URL, run + "order2")), str(uuid5(NAMESPACE_URL, run + "order3"))]
+    other_company = str(uuid5(NAMESPACE_URL, run + ":read-other-company"))
+    foreign_tenant = str(uuid5(NAMESPACE_URL, run + ":read-foreign-tenant"))
+    foreign_company = str(uuid5(NAMESPACE_URL, run + ":read-foreign-company"))
     c.run("BEGIN")
     try:
         if operation == "prepare":
@@ -56,6 +59,16 @@ def execute(c, event, context):
                     tenant=tenant, company=company, id=target, actor=actor, correlation=str(uuid4()))
         else:
             assert c.run("SELECT count(*) FROM plataforma.tenants WHERE id=:id AND code=:code", id=tenant, code=run)[0][0] == 1
+            if operation == "prepare_read":
+                assert c.run("SELECT count(*) FROM administracion.ventas_origen WHERE tenant_id=:tenant", tenant=tenant)[0][0] == 3
+                c.run("UPDATE plataforma.tenants SET status='active' WHERE id=:tenant", tenant=tenant)
+                c.run("UPDATE plataforma.user_tenants SET status='active',permissions_override='{}' WHERE tenant_id=:tenant AND user_id=:actor", tenant=tenant, actor=actor)
+                c.run("INSERT INTO organizacion.companies(id,tenant_id,legal_name,country_code,base_currency_code,timezone) VALUES(:id,:tenant,'Sales read QA empty company','US','USD','UTC') ON CONFLICT(id) DO NOTHING", id=other_company, tenant=tenant)
+                c.run("INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES(:id,:code,:code,'Sales read QA foreign','active') ON CONFLICT(id) DO NOTHING", id=foreign_tenant, code=run + "-read-foreign")
+                c.run("INSERT INTO organizacion.companies(id,tenant_id,legal_name,country_code,base_currency_code,timezone) VALUES(:id,:tenant,'Sales read QA foreign company','US','USD','UTC') ON CONFLICT(id) DO NOTHING", id=foreign_company, tenant=foreign_tenant)
+            if operation == "read_denied":
+                c.run("UPDATE plataforma.user_tenants SET permissions_override=CAST(:value AS jsonb) WHERE tenant_id=:tenant AND user_id=:actor",
+                      value='{"administration.read":false}', tenant=tenant, actor=actor)
             if operation in ("deny", "restore"):
                 c.run("UPDATE plataforma.user_tenants SET permissions_override=CAST(:value AS jsonb) WHERE tenant_id=:tenant AND user_id=:actor",
                       value='{"administration.sales.write":false}' if operation == "deny" else '{}', tenant=tenant, actor=actor)
@@ -67,6 +80,7 @@ def execute(c, event, context):
                       status="active" if operation == "restore" else "inactive", tenant=tenant, actor=actor)
             if operation == "archive":
                 c.run("UPDATE plataforma.tenants SET status='suspended' WHERE id=:id AND code=:code", id=tenant, code=run)
+                c.run("UPDATE plataforma.tenants SET status='suspended' WHERE id=:id AND code=:code", id=foreign_tenant, code=run + "-read-foreign")
         rows = c.run("""SELECT v.pedido_id::text,v.venta_id::text,v.estado,d.total::text,d.cerrado FROM administracion.ventas_origen v
             JOIN administracion.documentos d ON d.id=v.venta_id WHERE v.tenant_id=:tenant ORDER BY v.pedido_id""", tenant=tenant)
         order_states = c.run("SELECT id::text,estado,version FROM operaciones.pedidos WHERE tenant_id=:tenant ORDER BY id", tenant=tenant)
@@ -76,6 +90,7 @@ def execute(c, event, context):
         c.run("SET CONSTRAINTS ALL IMMEDIATE")
         c.run("COMMIT")
         return {"status": "succeeded", "tenant": tenant, "company": company, "orders": orders,
+                "other_company": other_company, "foreign_tenant": foreign_tenant, "foreign_company": foreign_company,
                 "sales": rows, "order_states": order_states, "audit_sales": audit_sales,
                 "audit_orders": audit_orders, "tenant_status": tenant_status, "operation": operation,
                 "archive_note": "Immutable QA sale history retained in inactive DEV fixture tenant" if operation == "archive" else None}
