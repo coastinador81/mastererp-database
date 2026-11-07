@@ -21,6 +21,7 @@ def inspect(c):
         return {"status": "succeeded", "read_only": True, "sales_relation": objects[0],
                 "sales_command": objects[1], "order_transition": objects[2],
                 "customer_command": objects[3], "migration_ledgers": [r[0] for r in ledgers],
+                "finance_roles": c.run("SELECT id::text,code,name FROM plataforma.roles WHERE code ILIKE '%financ%' OR name ILIKE '%finanz%' ORDER BY code"),
                 "concurrency_fixture_tenants_remaining": c.run("SELECT count(*) FROM plataforma.tenants WHERE code ~ '^qa_sales_[0-9a-f]{32}$'")[0][0]}
     finally:
         c.run("ROLLBACK")
