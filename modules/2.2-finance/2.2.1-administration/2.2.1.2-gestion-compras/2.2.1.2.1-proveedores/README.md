@@ -7,7 +7,7 @@ Estado: primera capacidad de terceros implementada en DEV; ver evidencia y lími
 Propietario funcional: Finanzas → Administración; responsable nominal pendiente de asignación.
 Dependencias: contexto autorizado de tenant y contratos del padre; reglas y criterios de aceptación se definirán con el Product Owner al priorizar la tarea.
 
-Maestro de referencia: [Proveedores de Catálogo](../../../../2.1-catalog/2.1.5-suppliers/README.md). Esta dependencia documental no acredita que el maestro esté implementado; consumir su contrato cuando exista, sin copiar sus datos.
+Maestro de referencia: [Proveedores de Catálogo](../../../../2.3-ecommerce/2.3.4-catalog/2.3.4.5-suppliers/README.md). Esta dependencia documental no acredita que el maestro esté implementado; consumir su contrato cuando exista, sin copiar sus datos.
 
 ## Cierre funcional de esta entrega
 

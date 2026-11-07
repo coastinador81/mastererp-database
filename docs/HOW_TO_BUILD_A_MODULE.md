@@ -1,6 +1,8 @@
 # Cómo desarrollar un módulo
 
 Leer [contexto](../PROJECT.md), [carpetas](FOLDER_STANDARD.md) y [estándar](DEVELOPMENT_STANDARD.md).
+Aplicar además el [patrón verificable](IMPLEMENTATION_PATTERN.md), incluida la
+regla de máximo 500 líneas de código fuente por archivo.
 
 1. Identificar módulo, submódulo o pantalla y su dominio propietario.
 2. Leer su README y los padres pertinentes.
@@ -19,19 +21,19 @@ No especificar todo el producto de antemano. El Product Owner amplía prioridade
 
 | Elemento ilustrativo | Platform frontend | Platform backend | Database | Infrastructure |
 | --- | --- | --- | --- | --- |
-| Módulo | `frontend/modules/2.1-catalog/` | `backend/modules/2.1-catalog/` | `modules/2.1-catalog/` | `modules/2.1-catalog/` |
-| Submódulo | `frontend/modules/2.1-catalog/2.1.1-products/` | `backend/modules/2.1-catalog/2.1.1-products/` | `modules/2.1-catalog/2.1.1-products/` | `modules/2.1-catalog/2.1.1-products/` |
-| Pantalla listado | `frontend/modules/2.1-catalog/2.1.1-products/screens/list/` | `backend/modules/2.1-catalog/2.1.1-products/screens/list/` | `modules/2.1-catalog/2.1.1-products/screens/list/` | `modules/2.1-catalog/2.1.1-products/screens/list/` |
-| Pantalla detalle | `frontend/modules/2.1-catalog/2.1.1-products/screens/detail/` | `backend/modules/2.1-catalog/2.1.1-products/screens/detail/` | `modules/2.1-catalog/2.1.1-products/screens/detail/` | `modules/2.1-catalog/2.1.1-products/screens/detail/` |
-| Subpantalla historial | `frontend/modules/2.1-catalog/2.1.1-products/screens/detail/screens/history/` | `backend/modules/2.1-catalog/2.1.1-products/screens/detail/screens/history/` | `modules/2.1-catalog/2.1.1-products/screens/detail/screens/history/` | `modules/2.1-catalog/2.1.1-products/screens/detail/screens/history/` |
+| Módulo | `frontend/modules/2.3-ecommerce/2.3.4-catalog/` | `backend/modules/2.3-ecommerce/2.3.4-catalog/` | `modules/2.3-ecommerce/2.3.4-catalog/` | `modules/2.3-ecommerce/2.3.4-catalog/` |
+| Submódulo | `frontend/modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/` | `backend/modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/` | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/` | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/` |
+| Pantalla listado | `frontend/modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/list/` | `backend/modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/list/` | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/list/` | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/list/` |
+| Pantalla detalle | `frontend/modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/detail/` | `backend/modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/detail/` | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/detail/` | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/detail/` |
+| Subpantalla historial | `frontend/modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/detail/screens/history/` | `backend/modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/detail/screens/history/` | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/detail/screens/history/` | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/detail/screens/history/` |
 
 | Alcance ilustrativo | Declaración en Infrastructure |
 | --- | --- |
 | General compartido | Raíz funcional `modules/`; API ya declaradas en `modules/api-gateways.yml`, sin duplicarlas |
-| Común del módulo | `modules/2.1-catalog/resources.yml` |
-| Común del submódulo | `modules/2.1-catalog/2.1.1-products/resources.yml` |
-| Pantalla sin recursos propios | `modules/2.1-catalog/2.1.1-products/screens/list/resources.yml` vacío y excluido del despliegue |
-| Subpantalla con recurso exclusivo | `modules/2.1-catalog/2.1.1-products/screens/detail/screens/history/resources.yml`, cuando se implemente |
+| Común del módulo | `modules/2.3-ecommerce/2.3.4-catalog/resources.yml` |
+| Común del submódulo | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/resources.yml` |
+| Pantalla sin recursos propios | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/list/resources.yml` vacío y excluido del despliegue |
+| Subpantalla con recurso exclusivo | `modules/2.3-ecommerce/2.3.4-catalog/2.3.4.1-products/screens/detail/screens/history/resources.yml`, cuando se implemente |
 
 Todo el ejemplo es ilustrativo: no acredita carpetas o recursos implementados ni es una plantilla desplegable. Cada carpeta funcional tiene README; solo Infrastructure añade resources.yml. Los consumidores reciben referencias explícitas mediante parámetros/salidas documentados. Cada recurso se declara una sola vez y, si es compartido, en el padre común más cercano. Se pueden consumir recursos de distintos niveles. Las carpetas no conectan stacks automáticamente; un stack puede abarcar varias carpetas. Una pantalla no exige Lambda, API ni stack.
 

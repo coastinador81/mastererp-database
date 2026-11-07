@@ -11,3 +11,7 @@ Para una tarea: [PROJECT](PROJECT.md) → [AGENTS](AGENTS.md) → [guía de mód
 Validar con `python scripts/validate_structure.py` (o `py` en Windows) y `git diff --check`. No instalar herramientas solo para leer documentación.
 
 Estado: hosting independiente de Finanzas DEV publicado, Clientes/Proveedores integrados y probados en Uonify; backend onboarding parcial; autorización SQL validada en RDS DEV en 454fec7, sin acreditar backend completo. Infrastructure sigue en transición de stacks. Leer [registro](docs/MODULE_REGISTRY.md) y [hallazgos](docs/DOCUMENTATION_FINDINGS.md). Push a rutas observadas de Database puede ejecutar despliegue/SQL.
+
+## Decisión vigente de aplicaciones
+
+Antes de reutilizar rutas de ejemplos anteriores, consultar [la numeración autorizada](docs/MODULE_RENUMBERING.md) y [la arquitectura por subdominios](docs/FRONTEND_ARCHITECTURE.md). Las referencias históricas a pantallas dentro de Uonify no definen la nueva experiencia objetivo. No se trasladó ownership de AWS ni se cambió SQL.

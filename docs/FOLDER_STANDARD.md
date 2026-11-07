@@ -24,3 +24,7 @@ Regla vigente: en Infrastructure, cada módulo, submódulo, pantalla o subpantal
 Los recursos compartidos se declaran una sola vez en el `resources.yml` del padre funcional común más cercano. Los API Gateway compartidos conservan `modules/api-gateways.yml` y su stack propietario vigente durante la transición. Los consumidores reciben referencias explícitas mediante parámetros/salidas documentados. No duplicar declaraciones en padre e hijo. Un YAML vacío es una reserva excluida del despliegue; no implica crear una Lambda.
 
 Las plantillas preexistentes bajo `lambdas/<nombre>/resources.yml` son excepciones heredadas pendientes de revisión y transición, no ejemplos para nuevas funciones. No moverlas, copiarlas, vaciarlas ni desplegarlas por aplicar esta regla documental: primero identificar el stack propietario, preservar sus recursos y preparar una transición explícita autorizada. Documentar su ubicación real hasta completar esa transición.
+
+## Renumeración autorizada de aplicaciones
+
+La reorganización aprobada en esta entrega sustituye la numeración anterior conforme a [MODULE_RENUMBERING.md](MODULE_RENUMBERING.md). Es una transición explícita: conservar contenido, referencias y contratos. Tras completarla, los desarrolladores vuelven a añadir submódulos correlativamente sin renumerar por su cuenta. Mover archivos no cambia propiedad de stacks, nombres de Lambdas, permisos de módulo ni contratos SQL/API. No desplegar una plantilla en otro stack por su nueva ubicación.

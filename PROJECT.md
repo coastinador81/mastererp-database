@@ -2,7 +2,7 @@
 
 ## Contrato de arquitectura frontend
 
-MasterERP conserva datos, reglas, procesos y autorización. `app-dev.uonify.com` es la entrada general DEV: la experiencia objetivo es un dashboard con chat y menú de módulos habilitados para el tenant y autorizados para el usuario. Sus pantallas se presentan dentro de Uonify, con navegación, identidad y contexto comunes; conversar no es obligatorio. Finanzas agrupa Administración, Contabilidad, BI y capacidades asociadas y conserva build/pipeline/despliegue propios. Su hosting `finanzas-dev.uonify.com` existe como acceso independiente de desarrollo y pruebas, no como navegación objetivo del usuario final; no se exige un subdominio financiero en producción ni una entrada `/finanzas`. El primer recorrido de Clientes/Proveedores ya está integrado y probado en DEV; las demás capacidades siguen pendientes. Cognito autentica; MasterERP autoriza cada operación por API. Ver [contrato oficial y estado desplegado](docs/FRONTEND_ARCHITECTURE.md). La fuente oficial está en Platform/dev y sus copias en Infrastructure y Database deben ser idénticas; solo se trabaja en DEV.
+Decisión objetivo vigente: `dev.uonify.com` es la entrada general con cuenta, espacios, chat y lanzador. Cada aplicación principal abre su propio subdominio DEV y conserva build, pipeline y rollback independientes. Finanzas incluye Administración, Contabilidad, BI, MasterPay y Recursos humanos; Ecommerce administra sus tiendas y la tienda pública conserva un frontend separado. La cuenta compartida permitirá entrar a los servicios, pero Cognito autentica y las APIs MasterERP autorizan cada operación y espacio. La continuidad entre subdominios y la federación Google requieren configuración y validación explícitas; no se presumen desplegadas ni se pasan tokens por URL. `app-dev.uonify.com` y la composición histórica de pantallas son estado anterior, no la nueva arquitectura objetivo. Ver [contrato oficial](docs/FRONTEND_ARCHITECTURE.md) y [numeración](docs/MODULE_RENUMBERING.md). Solo DEV.
 
 ## Visión objetivo
 
@@ -16,7 +16,7 @@ El backend autentica y valida el actor antes de establecer contexto transacciona
 
 ## Arquitectura y repositorios
 
-Flujo objetivo: usuario → App Shell/Uonify → API o herramienta MCP → módulo propietario → datos y auditoría. Los contratos de cada módulo deben fijar entradas, permisos, errores y resultados. Los conectores técnicos viven en integraciones; Digital Sales gobierna sus capacidades comerciales.
+Flujo objetivo: usuario → App Shell/Uonify → API o herramienta MCP → módulo propietario → datos y auditoría. Los contratos de cada módulo deben fijar entradas, permisos, errores y resultados. Los conectores técnicos viven en integraciones; Ecommerce gobierna sus capacidades comerciales y cada dominio conserva su autorización.
 
 | Repositorio | Responsabilidad |
 | --- | --- |
@@ -28,7 +28,7 @@ Las cuatro capas replican rutas funcionales; directorios técnicos internos no r
 
 ## Dominios funcionales
 
-0 Uonify; 1.0 Plataforma Base (1.1 onboarding, 1.2 gestión, 1.3 shell); 2.1 Catálogo; 2.2 Finanzas; 2.3 Operaciones; 2.4 Digital Sales; 2.5 Servicios; 2.6 Centro de Agentes; 2.7 Recursos Humanos; 2.8 Productividad; 2.9 POS; 2.10 Transporte; 2.11 Seguridad. Marketing es 2.8.2, MasterCRM 2.8.3, Google Workspace 2.8.4 y Microsoft 365 2.8.5. Transporte incluye Chipipro y MRW; no existe Despacho. Registro detallado en [MODULE_REGISTRY](docs/MODULE_REGISTRY.md).
+0 Uonify; 1.0 Plataforma Base; 2.1 Inventario; 2.2 Finanzas (incluye 2.2.5 Recursos humanos); 2.3 Ecommerce; 2.4 Marketing; 2.5 Servicios; 2.6 Centro de Agentes; 2.7 CRM; 2.8 Productividad; 2.9 POS; 2.10 Transporte (incluye 2.10.5 Rutas); 2.11 Estudio. Seguridad reside en 1.2.6, dentro de Gestión de Plataforma Base. Marketing: 2.4; CRM: 2.7; Google Workspace: 2.8.2; Microsoft 365: 2.8.3. No existe Despacho. Registro detallado en [MODULE_REGISTRY](docs/MODULE_REGISTRY.md) y correspondencias antiguas → nuevas en [el mapa de transición](docs/MODULE_RENUMBERING.md).
 
 ## Estado comprobado y pendientes
 
