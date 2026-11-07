@@ -202,7 +202,7 @@ def lambda_handler(event, context):
     correlation_id = getattr(context, "aws_request_id", "unknown")
     sql_dir = Path(__file__).parent / "sql"
     connection = _connection()
-    if event.get("action") in ("inspect_sales_candidate", "validate_sales_candidate", "apply_sales_model", "concurrency_sales"):
+    if event.get("action") in ("inspect_sales_candidate", "validate_sales_candidate", "apply_sales_model", "concurrency_sales", "validate_sales_regressions"):
         from sales_validation import execute
         try:
             return execute(connection, event, context, _connection)

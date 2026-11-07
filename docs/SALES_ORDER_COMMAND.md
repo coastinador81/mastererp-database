@@ -79,3 +79,14 @@ Solo frontend/build se valida localmente. No instalar PostgreSQL ni Docker. Vali
 Commit inicial 38c60e0, workflow 42315235753: deploy-migrator y preflight succeeded; el catálogo consultado después seguía sin ventas_origen ni venta_desde_pedido, demostrando rollback. El paquete previo coincidía con HEAD 80989c6 para handler/SQL; la inspección oficial no detectó ledger de migraciones. No se fabrica un registro de aplicación a partir del número del archivo.
 
 El selector batch=sales ejecuta validate_sales_candidate en push y apply_sales_model solamente con workflow_dispatch + apply_model=true. Customer/045 conserva su contrato. La acción concurrency_sales usa dos sesiones reales con igual/distinta clave: A revierte, B espera y continúa, y también revierte. No acredita replay concurrente después de commit; ese caso sigue pendiente. Las fixtures base, visibles entre conexiones por commit, se limpian por el UUID y código exclusivos de la ejecución; las ventas selladas no se confirman ni se eluden sus protecciones para borrarlas.
+
+
+## Aplicación real en AWS DEV — 7 noviembre 2026
+
+Respaldo `mastererp-dev-before-sales-046-20261107` disponible antes de aplicar. Preflight inicial 42315235753 aprobado, rollback comprobado por catálogo sin relación/comando. Una ampliación de fixtures falló en 42315476956 por usar estado de módulo `inactive` no admitido: SQLSTATE 23514, constraint tenant_modules_status_check, cero pasadas confirmadas. Se corrigió la fixture a `suspended`, sin cambiar permisos ni SQL del modelo aplicado.
+
+Preflight definitivo de c32ca4b: 42315864514 aprobado. Aplicación oficial 42316033780 de ese commit: succeeded, tests passed, committed_passes=2, effective_role=mastererp_app. Se aplicó/reaplicó solo 046. SHA-256 de schema: 4bd9dd64cfe5332cadef27d16f770563d2742e0dbfcb0b4a2586faaad6dca8dd. Las pruebas SQL sí se ejecutaron en RDS DEV; no son pruebas locales.
+
+Concurrencia real (correlation dc911fa8-e6a0-4cdd-a373-af7ea8c46c2f): igual clave y distinta clave sobre el mismo pedido, segundo escritor esperó 0.725/0.727 s y completó tras rollback de A; ambos revirtieron su venta. Fixtures base limpiadas. Esto no certifica replay concurrente tras commit ni funcionamiento HTTP. Evidencia sanitizada en sales-046-evidence/.
+
+La función de resolución de origen para el adapter de Pedidos se incluyó antes de aplicar 046. La fecha comercial puede omitirse y se calcula en la zona horaria de la empresa. El backend está preparado como candidato, todavía sin desplegar: falta decidir asignación de administration.sales.write y conservar reason/detail de la confirmación antes de publicar esa integración. No se modificaron APIs, otras Lambdas ni permisos de roles reales.

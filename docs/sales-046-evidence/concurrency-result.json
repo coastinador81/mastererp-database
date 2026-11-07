@@ -1,0 +1,22 @@
+{
+  "status": "succeeded",
+  "tests": "passed",
+  "results": [
+    {
+      "scenario": "same_key",
+      "effective_role": "mastererp_app",
+      "second_wait_seconds": 0.725,
+      "first": "rolled_back",
+      "second": "succeeded_then_rolled_back"
+    },
+    {
+      "scenario": "different_key_same_order",
+      "effective_role": "mastererp_app",
+      "second_wait_seconds": 0.727,
+      "first": "rolled_back",
+      "second": "succeeded_then_rolled_back"
+    }
+  ],
+  "scope": "rollback contention; committed replay covered by SQL transaction test, not this race",
+  "correlation_id": "dc911fa8-e6a0-4cdd-a373-af7ea8c46c2f"
+}

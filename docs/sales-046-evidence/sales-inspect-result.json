@@ -1,0 +1,9 @@
+{
+  "status": "succeeded",
+  "read_only": true,
+  "sales_relation": null,
+  "sales_command": null,
+  "order_transition": "operaciones.pedido_transicionar(uuid,uuid,bigint,text,text,text)",
+  "customer_command": "administracion.party_write_v2(uuid,text,text,uuid,text,text,bigint,text,jsonb,bigint,bigint)",
+  "migration_ledgers": []
+}

@@ -20,7 +20,8 @@ def inspect(c):
             AND (table_name ILIKE '%migration%' OR table_name IN ('schema_version','alembic_version'))""")
         return {"status": "succeeded", "read_only": True, "sales_relation": objects[0],
                 "sales_command": objects[1], "order_transition": objects[2],
-                "customer_command": objects[3], "migration_ledgers": [r[0] for r in ledgers]}
+                "customer_command": objects[3], "migration_ledgers": [r[0] for r in ledgers],
+                "concurrency_fixture_tenants_remaining": c.run("SELECT count(*) FROM plataforma.tenants WHERE code ~ '^qa_sales_[0-9a-f]{32}$'")[0][0]}
     finally:
         c.run("ROLLBACK")
 
@@ -42,6 +43,18 @@ def execute(c, event, context, factory):
         from sales_concurrency import validate
         return validate(c, context, factory)
     folder = Path(__file__).parent / "sql"
+    if action == "validate_sales_regressions":
+        results = []
+        for name in ("customer_administration_test.sql", "common_party_code_test.sql",
+                     "storefront_customer_identity_test.sql", "operations_orders_test.sql"):
+            c.run("BEGIN")
+            try:
+                fixture(c, (folder / name).read_text(encoding="utf-8"))
+                results.append({"file": name, "status": "passed"})
+            finally:
+                c.run("ROLLBACK")
+        return {"status": "succeeded", "tests": "passed", "results": results,
+                "schema_applied": False, "correlation_id": context.aws_request_id}
     candidate = (folder / SCHEMA).read_text(encoding="utf-8")
     test = (folder / TEST).read_text(encoding="utf-8")
     phase, filename, passes = "baseline", SCHEMA, 0
