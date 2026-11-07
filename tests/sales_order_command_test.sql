@@ -51,6 +51,7 @@ DECLARE result jsonb; replay jsonb; caught boolean; sale uuid;
  company uuid:='00014603-0000-0000-0000-000000000001'; pedido uuid:='00014608-0000-0000-0000-000000000001';
 BEGIN
  IF current_user<>'mastererp_app' THEN RAISE EXCEPTION 'Wrong effective role'; END IF;
+ IF operaciones.pedido_origen_ecommerce(company,pedido) IS NOT TRUE THEN RAISE EXCEPTION 'Origin resolution mismatch'; END IF;
  IF has_table_privilege(current_user,'administracion.ventas_origen','INSERT,UPDATE,DELETE')
  OR has_table_privilege(current_user,'administracion.documentos','INSERT,UPDATE,DELETE')
  THEN RAISE EXCEPTION 'Direct sale DML leaked'; END IF;

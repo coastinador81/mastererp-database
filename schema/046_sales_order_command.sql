@@ -29,7 +29,7 @@ CREATE POLICY lectura_autorizada ON administracion.ventas_origen FOR SELECT TO m
 
 CREATE OR REPLACE FUNCTION administracion.venta_desde_pedido(
  p_empresa uuid,p_pedido uuid,p_version bigint,p_idempotency_key varchar,
- p_fecha date,p_tipo_cambio numeric DEFAULT NULL,p_cambio_fecha date DEFAULT NULL,
+ p_fecha date DEFAULT NULL,p_tipo_cambio numeric DEFAULT NULL,p_cambio_fecha date DEFAULT NULL,
  p_cambio_fuente text DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,administracion,operaciones,plataforma,organizacion,catalogo,auditoria,pg_temp AS $$
@@ -37,7 +37,7 @@ DECLARE
  tenant uuid:=plataforma.current_app_tenant_id(); actor uuid:=plataforma.current_app_user_id();
  correlation uuid; pedido operaciones.pedidos%ROWTYPE; cached plataforma.idempotency_keys%ROWTYPE;
  sale uuid:=gen_random_uuid(); fingerprint text; response jsonb; base char(3); rate numeric;
- rate_date date; rate_source text; initial_operation text; ignored jsonb;
+ rate_date date; rate_source text; initial_operation text; ignored jsonb; commercial_date date;
 BEGIN
  initial_operation:=NULLIF(current_setting('app.current_operation',true),'');
  IF initial_operation IS DISTINCT FROM 'administracion.documento.venta.crear'
@@ -46,14 +46,15 @@ BEGIN
  OR plataforma.has_current_tenant_capability('erp.operations','operations.orders.read',p_empresa) IS NOT TRUE
  THEN RAISE EXCEPTION 'Sale command denied' USING ERRCODE='42501'; END IF;
  correlation:=NULLIF(current_setting('app.correlation_id',true),'')::uuid;
- IF p_empresa IS NULL OR p_pedido IS NULL OR p_version IS NULL OR p_version<1 OR p_fecha IS NULL
+ IF p_empresa IS NULL OR p_pedido IS NULL OR p_version IS NULL OR p_version<1
  OR correlation IS NULL OR p_idempotency_key IS NULL OR length(btrim(p_idempotency_key)) NOT BETWEEN 1 AND 100
  THEN RAISE EXCEPTION 'Invalid sale command' USING ERRCODE='22023'; END IF;
  fingerprint:=encode(public.digest(jsonb_build_object('empresa',p_empresa,'pedido',p_pedido,
   'version',p_version,'fecha',p_fecha,'cambio',p_tipo_cambio,'cambio_fecha',p_cambio_fecha,
   'cambio_fuente',p_cambio_fuente)::text,'sha256'),'hex');
  -- Company -> idempotency key -> order -> document. Same-key calls serialize before lookup.
- SELECT base_currency_code INTO base FROM organizacion.companies
+ SELECT base_currency_code,COALESCE(p_fecha,(transaction_timestamp() AT TIME ZONE timezone)::date)
+ INTO base,commercial_date FROM organizacion.companies
  WHERE tenant_id=tenant AND id=p_empresa AND status='active' FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Company not found' USING ERRCODE='42501'; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended(p_idempotency_key,0));
@@ -84,7 +85,7 @@ BEGIN
  IF pedido.moneda=base THEN
   IF p_tipo_cambio IS NOT NULL AND p_tipo_cambio<>1 THEN
    RAISE EXCEPTION 'Same-currency exchange rate must be one' USING ERRCODE='22023'; END IF;
-  rate:=1; rate_date:=p_fecha; rate_source:='same_currency';
+  rate:=1; rate_date:=commercial_date; rate_source:='same_currency';
  ELSE
   IF p_tipo_cambio IS NULL OR p_tipo_cambio<=0 OR scale(p_tipo_cambio)>12
   OR p_tipo_cambio>=1000000000000 OR p_cambio_fecha IS NULL
@@ -104,7 +105,7 @@ BEGIN
  INSERT INTO administracion.documentos(id,tenant_id,empresa_id,sucursal_id,clase,tercero_id,rol_tercero,
  fecha,numero,moneda,moneda_base,tipo_cambio,cambio_fecha,cambio_fuente,total,
  origen_sistema,referencia_externa,idempotency_key,creado_por)
- VALUES(sale,tenant,p_empresa,pedido.sucursal_id,'venta',pedido.cliente_id,'cliente',p_fecha,
+ VALUES(sale,tenant,p_empresa,pedido.sucursal_id,'venta',pedido.cliente_id,'cliente',commercial_date,
  'VEN-'||sale::text,pedido.moneda,base,rate,rate_date,rate_source,pedido.total,
  'ecommerce',p_pedido::text,p_idempotency_key,actor);
  INSERT INTO administracion.detalles_documento(tenant_id,empresa_id,sucursal_id,documento_id,posicion,
@@ -131,6 +132,25 @@ BEGIN
  jsonb_build_object('empresa_id',p_empresa,'pedido_id',p_pedido,'resultado','succeeded'));
  RETURN response;
 END $$;
+
+-- Server-side routing decision for the existing Orders adapter; no browser origin trust.
+CREATE OR REPLACE FUNCTION operaciones.pedido_origen_ecommerce(p_empresa uuid,p_pedido uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,operaciones,plataforma,pg_temp AS $$
+DECLARE tenant uuid:=plataforma.current_app_tenant_id(); branch uuid;
+BEGIN
+ IF plataforma.has_current_tenant_capability('erp.operations','operations.orders.read',p_empresa) IS NOT TRUE
+ THEN RAISE EXCEPTION 'Order origin denied' USING ERRCODE='42501'; END IF;
+ SELECT sucursal_id INTO branch FROM operaciones.pedidos
+ WHERE tenant_id=tenant AND empresa_id=p_empresa AND id=p_pedido;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Order not found' USING ERRCODE='P0002'; END IF;
+ IF plataforma.has_current_tenant_capability('erp.operations','operations.orders.read',p_empresa,branch) IS NOT TRUE
+ THEN RAISE EXCEPTION 'Order branch denied' USING ERRCODE='42501'; END IF;
+ RETURN EXISTS(SELECT 1 FROM operaciones.pedido_eventos WHERE tenant_id=tenant AND empresa_id=p_empresa
+ AND pedido_id=p_pedido AND motivo='STOREFRONT_CHECKOUT' AND estado_nuevo='PENDING');
+END $$;
+REVOKE ALL ON FUNCTION operaciones.pedido_origen_ecommerce(uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION operaciones.pedido_origen_ecommerce(uuid,uuid) TO mastererp_app;
 
 CREATE OR REPLACE FUNCTION administracion.venta_anular(
  p_empresa uuid,p_pedido uuid,p_version bigint,p_motivo text)
