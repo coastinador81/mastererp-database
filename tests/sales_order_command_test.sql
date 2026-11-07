@@ -117,7 +117,7 @@ DO $$ BEGIN
 END $$;
 RESET ROLE;
 UPDATE plataforma.users SET status='active' WHERE id='00014601-0000-0000-0000-000000000001';
-UPDATE plataforma.tenant_modules SET status='inactive' WHERE tenant_id='00014602-0000-0000-0000-000000000001'
+UPDATE plataforma.tenant_modules SET status='suspended' WHERE tenant_id='00014602-0000-0000-0000-000000000001'
  AND module_id IN(SELECT id FROM plataforma.modules WHERE code='erp.finance');
 SET LOCAL ROLE mastererp_app;
 DO $$ BEGIN
