@@ -4,8 +4,8 @@ import hashlib
 from dev_validation import _dev_guard
 
 
-SCHEMA = "047_sales_confirmation_contract.sql"
-TEST = "sales_confirmation_contract_test.sql"
+SCHEMA = "048_sales_read_model.sql"
+TEST = "sales_read_test.sql"
 
 
 def inspect(c):
@@ -83,6 +83,8 @@ def execute(c, event, context, factory):
             c.run(candidate)
             filename = TEST
             fixture(c, test)
+            filename = "sales_confirmation_contract_test.sql"
+            fixture(c, (folder / filename).read_text(encoding="utf-8"))
             filename = "sales_order_command_test.sql"
             fixture(c, (folder / filename).read_text(encoding="utf-8"))
         finally:
@@ -103,13 +105,15 @@ def execute(c, event, context, factory):
             c.run("BEGIN")
             try:
                 fixture(c, test)
+                filename = "sales_confirmation_contract_test.sql"
+                fixture(c, (folder / filename).read_text(encoding="utf-8"))
                 filename = "sales_order_command_test.sql"
                 fixture(c, (folder / filename).read_text(encoding="utf-8"))
             finally:
                 c.run("ROLLBACK")
         return dict(result, status="succeeded", tests="passed", schemas=["administracion"],
                     table_count=None, committed_passes=passes, validation_only=passes == 0,
-                    effective_role="mastererp_app", test_files=[TEST])
+                    effective_role="mastererp_app", test_files=[TEST,"sales_confirmation_contract_test.sql","sales_order_command_test.sql"])
     except Exception as error:
         c.run("ROLLBACK")
         details = error.args[0] if error.args and isinstance(error.args[0], dict) else {}

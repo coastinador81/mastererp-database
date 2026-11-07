@@ -17,7 +17,8 @@ if __name__=='__main__':
         if before=='0'*40:raise ValueError('Initial push requires explicit reviewed batch')
         paths=subprocess.check_output(['git','diff','--name-only',before,os.environ['GITHUB_SHA']],text=True).splitlines()
         if any(p in ('schema/046_sales_order_command.sql','tests/sales_order_command_test.sql',
-                     'schema/047_sales_confirmation_contract.sql','tests/sales_confirmation_contract_test.sql')
+                     'schema/047_sales_confirmation_contract.sql','tests/sales_confirmation_contract_test.sql',
+                     'schema/048_sales_read_model.sql','tests/sales_read_test.sql')
                or p.startswith('migrations/lambda/sales_') for p in paths):batch='sales'
     if batch not in ('customer','sales'):raise ValueError('Unknown migration batch')
     with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
