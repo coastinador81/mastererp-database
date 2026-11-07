@@ -66,7 +66,7 @@ def execute(c, event, context):
                 c.run("UPDATE plataforma.user_tenants SET status=:status WHERE tenant_id=:tenant AND user_id=:actor",
                       status="active" if operation == "restore" else "inactive", tenant=tenant, actor=actor)
             if operation == "archive":
-                c.run("UPDATE plataforma.tenants SET status='inactive' WHERE id=:id AND code=:code", id=tenant, code=run)
+                c.run("UPDATE plataforma.tenants SET status='suspended' WHERE id=:id AND code=:code", id=tenant, code=run)
         rows = c.run("""SELECT v.pedido_id::text,v.venta_id::text,v.estado,d.total::text,d.cerrado FROM administracion.ventas_origen v
             JOIN administracion.documentos d ON d.id=v.venta_id WHERE v.tenant_id=:tenant ORDER BY v.pedido_id""", tenant=tenant)
         c.run("SET CONSTRAINTS ALL IMMEDIATE")
@@ -74,6 +74,8 @@ def execute(c, event, context):
         return {"status": "succeeded", "tenant": tenant, "company": company, "orders": orders,
                 "sales": rows, "operation": operation,
                 "archive_note": "Immutable QA sale history retained in inactive DEV fixture tenant" if operation == "archive" else None}
-    except Exception:
+    except Exception as error:
         c.run("ROLLBACK")
-        raise RuntimeError("Sales HTTP fixture failed; operation=" + str(operation)) from None
+        details = error.args[0] if error.args and isinstance(error.args[0], dict) else {}
+        raise RuntimeError("Sales HTTP fixture failed; operation=" + str(operation)
+                           + "; sqlstate=" + details.get("C", "unknown")) from None
