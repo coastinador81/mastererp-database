@@ -1,4 +1,4 @@
-# Listado y detalle de Ventas — candidato DEV
+# Listado y detalle de Ventas — DEV validado
 
 Fuente de datos: documentos de venta oficiales vinculados a pedidos; sin nuevas tablas ni backfill. 048 añade ventas_leer, índice de creación y amplía la lectura de empresas del contexto para administration.read, conservando lectores de Clientes/Compras.
 
@@ -6,4 +6,4 @@ GET /v1/administration/ventas y GET /v1/administration/ventas/{id}: Lambda exist
 
 Workflow oficial batch=sales: preflight 048 con rollback y suites anteriores; aplicación explícita aplica/reaplica solo 048, sin repetir 046/047. Backend/SQL se validan en AWS DEV; local solo comprobaciones estáticas y frontend/build. Pruebas nuevas sales_read_test.sql usan SET ROLE mastererp_app, verifican rol efectivo, límites de lectura, contexto de empresas sin permiso de Clientes, búsqueda, paginación, precisión, snapshot histórico y restricciones inmediatas antes del rollback.
 
-Estado: candidato preparado, pendiente de ejecutar y registrar evidencia real. Publicar API antes de activar menú frontend. Sin facturación, cobros, creación manual ni nuevas fuentes. No cambiar propiedad de stacks ni reimportar API con SAM.
+Estado: 048 aplicada y reaplicada en RDS DEV; workflow [42324367060](https://github.com/eticayservicios/mastererp-database/actions/runs/42324367060) aprobado, tras preflight y snapshot mastererp-dev-before-sales-read-048-20261107 disponible. SHA-256: 35dbecf3e60fcc598e9473bd92855a0a5fad356e7bebc9f50fd2644da6bd8d74. El helper posterior 291552a actualizó solo el migrador; apply fue omitido. Veinte comprobaciones HTTP de lectura aprobadas contra API y proxy frontend: listado, detalle, búsqueda, paginación, permisos, pertenencia, módulo, tenant y empresa. Se reutilizaron tres ventas QA selladas, sin generar otras ni alterar su historial; fixtures suspendidas al terminar. Publicar API antes de activar menú frontend. Sin facturación, cobros, creación manual ni nuevas fuentes. No cambiar propiedad de stacks ni reimportar API con SAM.
