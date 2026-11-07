@@ -69,10 +69,15 @@ def execute(c, event, context):
                 c.run("UPDATE plataforma.tenants SET status='suspended' WHERE id=:id AND code=:code", id=tenant, code=run)
         rows = c.run("""SELECT v.pedido_id::text,v.venta_id::text,v.estado,d.total::text,d.cerrado FROM administracion.ventas_origen v
             JOIN administracion.documentos d ON d.id=v.venta_id WHERE v.tenant_id=:tenant ORDER BY v.pedido_id""", tenant=tenant)
+        order_states = c.run("SELECT id::text,estado,version FROM operaciones.pedidos WHERE tenant_id=:tenant ORDER BY id", tenant=tenant)
+        audit_sales = c.run("SELECT count(*) FROM auditoria.events WHERE tenant_id=:tenant AND actor_user_id=:actor AND action='administracion.documento.venta.crear' AND correlation_id IS NOT NULL", tenant=tenant, actor=actor)[0][0]
+        audit_orders = c.run("SELECT count(*) FROM auditoria.events WHERE tenant_id=:tenant AND actor_user_id=:actor AND action='operations.orders.transition' AND correlation_id IS NOT NULL", tenant=tenant, actor=actor)[0][0]
+        tenant_status = c.run("SELECT status FROM plataforma.tenants WHERE id=:tenant", tenant=tenant)[0][0]
         c.run("SET CONSTRAINTS ALL IMMEDIATE")
         c.run("COMMIT")
         return {"status": "succeeded", "tenant": tenant, "company": company, "orders": orders,
-                "sales": rows, "operation": operation,
+                "sales": rows, "order_states": order_states, "audit_sales": audit_sales,
+                "audit_orders": audit_orders, "tenant_status": tenant_status, "operation": operation,
                 "archive_note": "Immutable QA sale history retained in inactive DEV fixture tenant" if operation == "archive" else None}
     except Exception as error:
         c.run("ROLLBACK")
