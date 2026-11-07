@@ -1,0 +1,172 @@
+{
+  "run": "qa-sales-http-2e4bd4e04e4c",
+  "environment": "AWS DEV us-west-1",
+  "results": [
+    {
+      "case": "missing_token",
+      "http": 401,
+      "expected": 401,
+      "result": "passed"
+    },
+    {
+      "case": "foreign_actor",
+      "http": 403,
+      "expected": 403,
+      "result": "passed"
+    },
+    {
+      "case": "confirmation_persisted",
+      "http": 200,
+      "expected": 200,
+      "result": "passed"
+    },
+    {
+      "case": "order_detail_persisted",
+      "http": 200,
+      "expected": 200,
+      "result": "passed"
+    },
+    {
+      "case": "idempotent_replay",
+      "http": 200,
+      "expected": 200,
+      "result": "passed"
+    },
+    {
+      "case": "reason_content_conflict",
+      "http": 409,
+      "expected": 409,
+      "result": "passed"
+    },
+    {
+      "case": "stale_version",
+      "http": 409,
+      "expected": 409,
+      "result": "passed"
+    },
+    {
+      "case": "deny",
+      "http": 403,
+      "expected": 403,
+      "result": "passed"
+    },
+    {
+      "case": "module_disabled",
+      "http": 403,
+      "expected": 403,
+      "result": "passed"
+    },
+    {
+      "case": "membership_inactive",
+      "http": 403,
+      "expected": 403,
+      "result": "passed"
+    },
+    {
+      "case": "concurrent_same_key_0",
+      "http": 200,
+      "expected": 200,
+      "result": "passed"
+    },
+    {
+      "case": "concurrent_same_key_1",
+      "http": 200,
+      "expected": 200,
+      "result": "passed"
+    },
+    {
+      "case": "concurrent_distinct_keys_single_sale",
+      "http": [
+        200,
+        409
+      ],
+      "result": "passed"
+    },
+    {
+      "case": "uonify_spaces_existing_session",
+      "http": 200,
+      "expected": 200,
+      "result": "passed"
+    }
+  ],
+  "fixture": {
+    "tenant": "f8c58d3e-50c8-580b-b7a9-157a415f432f",
+    "company": "5c1aa4b8-6840-5ad4-9e01-677e5e347494",
+    "orders": [
+      "b9fb44ea-48d5-5305-8621-639b36250992",
+      "c61218e1-9a59-5c31-bc77-47b9bba4c9bb",
+      "afd7faa7-40cc-5548-a8b0-108e060bc738"
+    ]
+  },
+  "persisted_evidence": {
+    "status": "succeeded",
+    "tenant": "f8c58d3e-50c8-580b-b7a9-157a415f432f",
+    "company": "5c1aa4b8-6840-5ad4-9e01-677e5e347494",
+    "orders": [
+      "b9fb44ea-48d5-5305-8621-639b36250992",
+      "c61218e1-9a59-5c31-bc77-47b9bba4c9bb",
+      "afd7faa7-40cc-5548-a8b0-108e060bc738"
+    ],
+    "sales": [
+      [
+        "afd7faa7-40cc-5548-a8b0-108e060bc738",
+        "da37c685-51d5-4833-82ed-007ed1993402",
+        "ACTIVE",
+        "10",
+        true
+      ],
+      [
+        "b9fb44ea-48d5-5305-8621-639b36250992",
+        "7918f9cc-0f33-41dc-a2ec-af7b28b76459",
+        "ACTIVE",
+        "10",
+        true
+      ],
+      [
+        "c61218e1-9a59-5c31-bc77-47b9bba4c9bb",
+        "e03d1697-0f55-4120-aacb-e6f558bac621",
+        "ACTIVE",
+        "10",
+        true
+      ]
+    ],
+    "operation": "inspect",
+    "archive_note": null
+  },
+  "status": "passed",
+  "archive": {
+    "status": "succeeded",
+    "tenant": "f8c58d3e-50c8-580b-b7a9-157a415f432f",
+    "company": "5c1aa4b8-6840-5ad4-9e01-677e5e347494",
+    "orders": [
+      "b9fb44ea-48d5-5305-8621-639b36250992",
+      "c61218e1-9a59-5c31-bc77-47b9bba4c9bb",
+      "afd7faa7-40cc-5548-a8b0-108e060bc738"
+    ],
+    "sales": [
+      [
+        "afd7faa7-40cc-5548-a8b0-108e060bc738",
+        "da37c685-51d5-4833-82ed-007ed1993402",
+        "ACTIVE",
+        "10",
+        true
+      ],
+      [
+        "b9fb44ea-48d5-5305-8621-639b36250992",
+        "7918f9cc-0f33-41dc-a2ec-af7b28b76459",
+        "ACTIVE",
+        "10",
+        true
+      ],
+      [
+        "c61218e1-9a59-5c31-bc77-47b9bba4c9bb",
+        "e03d1697-0f55-4120-aacb-e6f558bac621",
+        "ACTIVE",
+        "10",
+        true
+      ]
+    ],
+    "operation": "archive",
+    "archive_note": "Immutable QA sale history retained in inactive DEV fixture tenant"
+  }
+}

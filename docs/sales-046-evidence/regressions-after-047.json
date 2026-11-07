@@ -1,0 +1,24 @@
+{
+  "status": "succeeded",
+  "tests": "passed",
+  "results": [
+    {
+      "file": "customer_administration_test.sql",
+      "status": "passed"
+    },
+    {
+      "file": "common_party_code_test.sql",
+      "status": "passed"
+    },
+    {
+      "file": "storefront_customer_identity_test.sql",
+      "status": "passed"
+    },
+    {
+      "file": "operations_orders_test.sql",
+      "status": "passed"
+    }
+  ],
+  "schema_applied": false,
+  "correlation_id": "be3f37f3-fd05-49df-a6a1-eae4e678d490"
+}

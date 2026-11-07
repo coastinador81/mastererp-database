@@ -1,0 +1,13 @@
+{
+  "status": "succeeded",
+  "tenant": "0b48d957-016a-5a05-aa15-8330fca3b761",
+  "company": "0fcf9f07-64c8-5ba8-957b-95c05eeeded6",
+  "orders": [
+    "40330e2b-424d-5042-a624-c3f615f3320a",
+    "864c21b2-6b9a-5f0d-b93b-79c22a51926e",
+    "9d41e9b3-d93d-580b-afc8-2773a2b8872b"
+  ],
+  "sales": [],
+  "operation": "archive",
+  "archive_note": "Immutable QA sale history retained in inactive DEV fixture tenant"
+}

@@ -1,103 +1,90 @@
-# Ventas desde pedidos — candidato 046
+# Ventas desde pedidos — contrato y validación DEV
 
-Estado: implementación SQL local pendiente de revisión, pruebas PostgreSQL en AWS DEV e integración backend. No aplicada a RDS. No acredita operaciones de Ventas por API.
+Estado al 7 noviembre 2026: 046 y 047 aplicadas/reaplicadas en RDS DEV; confirmación eCommerce conectada y validada por API Gateway. Región us-west-1, cuenta 277352717693. No se implementó frontend, CRUD propio de Ventas, facturación ni cobros.
 
-## Decisiones y propiedad
+## Modelo y propiedad
 
-Decisión del propietario: generar la venta al confirmar el pedido; un pedido genera una sola venta. eCommerce es el único origen habilitado inicialmente. Cancelación básica, sin borrar historial ni automatizar reversos financieros.
+Finanzas → Administración → Gestión comercial → Ventas posee `administracion.documentos` clase venta y sus detalles; `administracion.ventas` continúa como vista histórica. Operaciones posee pedidos, eCommerce checkout y la identidad de canal, e Inventario sus reservas. Se reutilizan terceros, roles de cliente, productos y monedas existentes.
 
-Finanzas → Administración → Gestión comercial → Ventas (`2.2.1.1.3-ventas`) posee el registro comercial. Operaciones conserva el pedido y su estado. eCommerce conserva checkout e identidad del cliente; Inventario conserva reservas. No se duplican terceros, productos, monedas ni tablas de venta.
+`administracion.ventas_origen` vincula un pedido con una sola venta mediante claves compuestas de tenant/empresa y unicidad en ambos sentidos. Guarda snapshot del cliente del pedido y estado ACTIVE/CANCELLED. El documento conserva origen_sistema=ecommerce y referencia_externa=pedido UUID. Otros orígenes no están habilitados; un origen futuro necesita adaptación autorizada, no un valor libre del navegador.
 
-`administracion.documentos` con clase `venta` y `detalles_documento` conservan los importes. `administracion.ventas_origen` relaciona pedido y documento mediante claves foráneas compuestas de tenant/empresa, con unicidad en ambos sentidos y snapshot del cliente tomado del pedido. `origen_sistema` y `referencia_externa` del documento conservan la procedencia. El campo de origen admite futuras extensiones; el comando solo habilita eCommerce, comprobado por el evento servidor STOREFRONT_CHECKOUT. Otros canales deberán aportar un adaptador autorizado, no un origen elegido libremente por el navegador. La relación actual admite orígenes que generen pedidos de Operaciones; documentos externos sin pedido requerirán un diseño adicional.
+## Operación transaccional
 
-## Comando de registro
+`administracion.venta_desde_pedido(p_empresa uuid,p_pedido uuid,p_version bigint,p_idempotency_key varchar,p_fecha date DEFAULT NULL,p_tipo_cambio numeric DEFAULT NULL,p_cambio_fecha date DEFAULT NULL,p_cambio_fuente text DEFAULT NULL)`.
 
-Firma:
+Autoriza actor/tenant/pertenencia/empresa/sucursal activos, Finanzas habilitado, administration.sales.write y lectura operativa habilitada. El origen se resuelve mediante eventos servidor. Bloquea empresa → clave → pedido, valida versión y perfil de cliente por empresa. Confirma PENDING→CONFIRMED mediante helper privado acotado, copia cabecera/líneas, representa la tarifa de entrega existente como línea sin producto ficticio, sella el documento, crea vínculo y audita. Todo confirma o revierte junto. Las restricciones de agregado son diferidas y deben forzarse antes de cerrar las pruebas, no entre cabecera y detalles.
 
-```sql
-administracion.venta_desde_pedido(
- p_empresa uuid, p_pedido uuid, p_version bigint,
- p_idempotency_key varchar, p_fecha date,
- p_tipo_cambio numeric DEFAULT NULL,
- p_cambio_fecha date DEFAULT NULL, p_cambio_fuente text DEFAULT NULL
-) RETURNS jsonb
+No toma precios actuales ni inventa impuestos, descuentos o tipos de cambio. Misma moneda base: cambio 1; moneda distinta: cambio, fecha y fuente explícitos. Fecha omitida: fecha de la empresa según su zona horaria. La aplicación verifica la procedencia de esos datos; no usa una tasa ficticia para desbloquear la confirmación.
+
+Misma clave y contenido devuelve el resultado original; actor/tenant/operación o contenido distintos provocan conflicto. Otra clave no genera segunda venta. 047 incluye reason/detail del contrato HTTP en la huella cuando existen y los conserva en el evento. Las llamadas antiguas sin esos campos mantienen su huella compatible.
+
+## Autorización aprobada
+
+El propietario aprobó Administradores de Finanzas. No existía rol de Finanzas en DEV: 047 creó `tenant.finance_admin` con administration.sales.write, administration.read y operations.orders.read. No recibe operations.orders.write. El helper de confirmación no es ejecutable directamente por mastererp_app; solo el comando autorizado puede usarlo. Los overrides de denegación prevalecen. No hay grupos Cognito ni plataforma.admin como acceso universal.
+
+No se alteraron pertenencias de usuarios reales. Asignar este rol a personas reales requiere conservar sus responsabilidades actuales; no reemplazar silenciosamente el rol de propietario. Las pruebas HTTP reutilizaron actores Cognito sintéticos existentes, con el rol aprobado solo en su tenant de fixture.
+
+## Contrato HTTP desplegado
+
+Lambda mastererp-dev-orders, stack propietario mastererp-dev-operations, API administrativa qx8nmypdhi. Rutas, JWT y CORS existentes conservados.
+
+```http
+POST /v1/companies/{company_id}/orders/{order_id}/transitions
+Authorization: Bearer <access-token>
+X-Tenant-Id: <tenant-uuid>
+Idempotency-Key: <clave-estable>
+Content-Type: application/json
+
+{"version":1,"status":"CONFIRMED","reason":"ORDER_APPROVED","detail":"Detalle opcional"}
 ```
 
-Contexto establecido por backend después de autenticar y autorizar: `app.current_user_id`, `app.current_tenant_id`, `app.current_operation=administracion.documento.venta.crear`, `app.correlation_id`. Se usa mastererp_app, nunca credenciales administrativas para operaciones de aplicación.
+El adapter identifica eCommerce en PostgreSQL y llama al comando de Ventas usando mastererp_app y SSL verify-full. Otros orígenes/transiciones conservan el comando operativo anterior. Campos opcionales: sale_date, exchange_rate, exchange_date, exchange_source. Sin Idempotency-Key se deriva `sv:<pedido_id>:<version>`, conservando el contrato anterior. La respuesta mantiene el pedido y añade `sale: {id,pedido_id,estado,version}`. La versión del vínculo comercial y la del pedido son distintas.
 
-Exige Finanzas habilitado y permiso nuevo `administration.sales.write`, además de Operaciones habilitado y permisos `operations.orders.read/write`. El permiso nuevo se declara sin asignarlo automáticamente a roles; su asignación explícita queda pendiente. Se conservan overrides y validación de usuario, tenant, pertenencia, empresa y sucursal activos. El contrato común comprueba contención por tenant/empresa; no se inventa una ACL por empresa que el modelo compartido no ofrece.
+Sin token: 401; identidad ajena, permiso revocado, módulo deshabilitado o pertenencia inactiva: 403; conflicto de contenido/versión: 409. Entradas inválidas: 400. Errores SQL sanitizados, sin tokens ni connection strings.
 
-Secuencia transaccional:
+## Pagos y cancelación básica
 
-1. Autorizar y validar parámetros; bloquear empresa → clave idempotente → pedido.
-2. Resolver un reintento por actor, tenant, operación y huella de empresa/pedido/versión/fecha/cambio. El mismo contenido devuelve la respuesta original; otra huella o actor produce conflicto. No se reciclan claves expiradas.
-3. Verificar versión, origen y perfil de cliente en la empresa. Otro comando con una clave distinta no puede generar una segunda venta.
-4. Si está PENDING, utilizar la transición vigente a CONFIRMED y restaurar el contexto de operación. Si ya está CONFIRMED y aún no tiene venta, registrar explícitamente, sin backfill. Otros estados se rechazan.
-5. Copiar precios, descripciones, cantidades y total del pedido. La tarifa de entrega existente se representa como línea de servicio separada sin producto ficticio. No recalcular precios actuales ni inventar impuestos/descuentos.
-6. Moneda igual a la base: cambio 1. Distinta: exigir cambio positivo, fecha y fuente explícitos; no inventar tasa. El backend deberá validar su procedencia y la fecha comercial en la zona de la empresa.
-7. Sellar el documento después de insertar sus detalles, crear vínculo, guardar respuesta idempotente y auditar identificadores/resultado/correlación. Las restricciones diferidas vigentes comprueban sumas, precisión y vínculo de idempotencia al confirmar la transacción.
+047 acepta cash/PENDING_COLLECTION o los métodos mobile/transfer y alias legacy cuando el estado almacenado es VALIDATED. Rechaza pagos pendientes de verificación, métodos desconocidos y valores ausentes. La validación real de un pago bancario NO está implementada por esta entrega; las pruebas SQL configuran ese estado exclusivamente en fixtures.
 
-Respuesta: `{ "id": "<venta-uuid>", "pedido_id": "<pedido-uuid>", "estado": "ACTIVE", "version": 1 }`. `version` es la del vínculo comercial; el documento sellado tiene su propia versión. No facturar, cobrar, contabilizar ni reservar inventario nuevamente. Un error o una restricción diferida fallida revierte también la confirmación del pedido dentro de esta transacción.
+`administracion.venta_anular(p_empresa,p_pedido,p_version,p_motivo)` conserva documentos e importes, cambia el vínculo a CANCELLED y audita. Exige pedido ya CANCELLED y reserva identificada existente/RELEASED. Bloquea documentos posteriores, relaciones y cartera; no libera inventario, cancela el pedido ni genera reversos. Los consumidores de la vista histórica deben unir el vínculo para distinguir anuladas. Su exposición HTTP/UI queda pendiente.
 
-Errores previstos: 42501 autorización; P0002 no encontrado; 40001 versión obsoleta; 23505 conflicto de idempotencia o pedido ya registrado; 22023 parámetros/origen no soportado; 23514 incompatibilidad comercial, precisión o efectos posteriores. El backend mapeará estos códigos a HTTP sanitizado; esa adaptación aún no está implementada.
+## Evidencia real
 
-## Anulación básica
+| Comprobación | Resultado |
+| --- | --- |
+| 046 preflight/aplicación | 42315864514 / 42316033780; aplicación y reaplicación, solo 046 |
+| 047 preflight/aplicación | 42317415678 / 42317791665; aplicación y reaplicación, solo 047 |
+| Suites SQL | SET ROLE mastererp_app, rol efectivo comprobado, constraints inmediatos al final y rollback; éxito |
+| Pagos actuales y fail-closed | Preflight 42319423025 aprobado: mobile/transfer validados aceptados, pendientes/desconocidos rechazados |
+| Sesiones independientes con rollback | Dos escenarios con espera 0.725/0.727 s; ambas ventas revertidas y fixtures base limpiadas |
+| API de Ventas por confirmación | 14 casos aprobados; 3 pedidos CONFIRMED versión 2, 3 ventas selladas de importe 10 |
+| Concurrencia HTTP con commit | Misma clave: ambos 200 y mismo ID; claves distintas: 200/409 y una sola venta |
+| Auditoría persistida | 3 eventos de creación de venta y 3 de transición, actor/tenant/correlación presentes |
+| Regresiones SQL | Clientes, código común, Storefront y Pedidos aprobados, sin reaplicar esquemas |
+| Regresiones HTTP | 33 comprobaciones de Clientes/Proveedores aprobadas; fixtures limpiadas |
+| Uonify | Sesión Cognito existente y consulta de espacios: HTTP 200; no se afirma prueba completa de chat/Gemini |
+| CI backend | 18 pruebas unitarias remotas, importación del módulo DB, ZIP ARM64 y dependencias comprobados |
 
-`administracion.venta_anular(p_empresa uuid,p_pedido uuid,p_version bigint,p_motivo text)` requiere operación `administracion.venta.anular` y permisos de escritura de Ventas/Operaciones.
+Evidencia JSON sanitizada en [sales-046-evidence](sales-046-evidence/). No se ejecutó PostgreSQL ni Docker local. Los validadores estructurales/Phase 5 y git diff --check también pasaron, sin presentarlos como pruebas funcionales.
 
-Solo anula una venta cuyo pedido **ya esté CANCELLED en Operaciones** y cuya reserva identificada exista y esté RELEASED en Inventario. No cancela el pedido ni libera stock por sí misma. Bloquea documentos posteriores, relaciones documentales y partidas de cartera; tampoco puede anular reservas activas o consumidas. Los documentos y sus importes permanecen sellados, el vínculo cambia a CANCELLED, incrementa versión y registra actor/fecha/motivo y auditoría. Restricciones diferidas impiden añadir documentos financieros posteriormente a una venta anulada.
+046 SHA-256: 4bd9dd64cfe5332cadef27d16f770563d2742e0dbfcb0b4a2586faaad6dca8dd. 047 SHA-256: 8e780a06ef989a094d30d0fcf30aacdd5c0624e49f8bfbb5823f028727857a70. El paquete anterior coincidía con HEAD 80989c6 para handler/SQL. No existe ledger de migraciones detectado en RDS: se verificaron catálogo, funciones, hashes y resultados de workflows; formalizar ese historial queda pendiente.
 
-La vista histórica `administracion.ventas` no cambia: los consumidores deberán unir `ventas_origen` y consultar su estado para distinguir ventas activas/anuladas, sin contar una anulada como vigente. No afirmar que hoy existe un dashboard financiero que aplique esta distinción.
+## Despliegue y recuperación
 
-Pendiente: diseñar la orquestación de cancelación del pedido y liberación de inventario antes de exponer esta operación en UI/API. Si ya hay factura, cobro u otros efectos, se necesita el proceso de devolución/ajuste que se definirá posteriormente; no se elimina ni compensa automáticamente nada.
+Workflows oficiales: deploy-migrator actualiza el paquete antes de aplicar; push hace preflight con rollback; aplicación explícita con batch=sales, apply_model=true. El selector actual aplica solo 047 y exige 046 existente; no reaplica Storefront ni 045. Mantener código/SQL del mismo commit y revisar el lote antes de futuras publicaciones.
 
-## Integración y problemas previos
+Respaldos disponibles antes de aplicar: mastererp-dev-before-sales-046-20261107 y mastererp-dev-before-sales-contract-047-20261107. No editar migraciones aplicadas ni borrar datos para recuperar; correcciones posteriores mediante nueva migración y evaluación explícita de restauración.
 
-La función `operaciones.pedido_transicionar` y sus consumidores actuales permanecen intactos. Por tanto, confirmar por el endpoint antiguo NO invoca el nuevo comando: el siguiente lote debe conectar la confirmación de eCommerce con este comando y su autorización, sin introducir dos escrituras independientes. Otros pedidos/orígenes siguen su flujo vigente.
+Backend desplegado desde Platform e2013ad, workflow de artefacto 42318856201. ZIP SHA-256 61f69a11947e9fe16f0070f846f366c3d2d17a8801c2aa09d289e68c447aadc8. CloudFormation actualizó solo OrdersFunction.Code y reevaluó dinámicamente OrdersIntegration por el mismo ARN: sin reemplazos, IDs físicos/configuración/URI/rutas/JWT/CORS iguales antes/después. No se creó API, Lambda, migrador ni entorno adicional.
 
-Problema previo confirmado en el código: checkout 040 guarda métodos `mobile`/`transfer`, mientras que la transición 016 espera `mobile_payment`/`bank_transfer` con estado VALIDATED. El flujo de validación de pagos no está resuelto en este lote. El comando conserva la validación existente y no fuerza esos pedidos a confirmados ni transforma un pago pendiente en validado. Efectivo con PENDING_COLLECTION conserva el camino permitido.
+## Problemas encontrados y corregidos
 
-## Archivos y publicación futura
+Previo: la fixture Storefront enviaba cash como texto tras el cambio de contrato a JSON; se corrigió la prueba, no 039/040/043. Propio de esta entrega: fixtures usaron estados no admitidos y una prueba adicional dejó constraints inmediatos entre cabecera/detalles; los preflight fallidos confirmaron cero pasadas. Se corrigieron las fixtures sin ampliar permisos.
 
-- `schema/046_sales_order_command.sql`: nueva relación, permiso, comandos y restricciones diferidas.
-- `tests/sales_order_command_test.sql`: fixtures identificadas QA-046 en transacción, rol efectivo mastererp_app, rollback final.
-- Manifiesto del migrador: incluye los dos archivos para empaquetado. El lote activo `applied_schema` sigue siendo 045: agregar al ZIP NO activa ni valida 046.
+El primer artefacto x86 se bloqueó antes de desplegar al comprobar ARM64. La reevaluación dinámica de la integración se revisó expresamente. Un artefacto ARM64 omitía typing_extensions.py y produjo HTTP 500: se restauró el ZIP anterior verificado mediante change set, se corrigió el empaquetador y se añadió comprobación de importación/contenido. El paquete final pasó las pruebas HTTP. No se oculta ese fallo ni se atribuye a la infraestructura anterior.
 
-No publicar todavía: push con schema/ o tests/ dispara Apply DEV database model. Antes de publicar, conciliar dev remoto y registro real de migraciones, confirmar que 046 sigue libre, revisar respaldo vigente y preparar un selector explícito de preflight/aplicación SOLO 046 mediante el migrador oficial. No volver a ejecutar indiscriminadamente 039/040/045. El preflight deberá aplicar 046 y ejecutar la fixture dentro de una misma transacción que termine en rollback; después, aplicar/reaplicar 046 en transacciones separadas y repetir pruebas rollback-only. Los fallos deben propagarse al workflow.
+## Fixtures y pendientes
 
-## Validación y recuperación
+Las ventas selladas de prueba se conservan como historia en un tenant DEV identificado y suspendido, con pertenencia inactiva; no se desactivaron triggers para borrarlas. No es un ambiente QA nuevo. El intento inicial, sin ventas, también quedó suspendido. Las fixtures de concurrencia con rollback y de Clientes/Proveedores sí se limpiaron.
 
-Preparado, no ejecutado en PostgreSQL: confirmación+venta, respuesta idempotente, contenido distinto, venta duplicada con otra clave, versión obsoleta, revocación, contexto ausente, RLS, escritura directa denegada, fallo monetario con rollback completo, cancelación bloqueada por reserva activa y cancelación conservando historial. Las pruebas verifican current_user, usan SET ROLE mastererp_app y fuerzan SET CONSTRAINTS ALL IMMEDIATE antes del ROLLBACK. La preparación de fixtures es privilegiada, las comprobaciones de aplicación no.
-
-Pendiente en AWS DEV: ejecución real, moneda distinta, origen no permitido, empresa/tenant ajenos e inactivos, efectos financieros posteriores, regresiones de checkout/Clientes/Compras, y concurrencia con dos conexiones independientes. Para concurrencia se necesita fixture QA-046 previamente confirmada y aislada (no visible entre sesiones si toda su preparación queda sin commit): A ejecuta comando y mantiene la transacción; B ejecuta misma clave/contenido y espera; al confirmar A, B devuelve el mismo ID. Con distinta clave para el mismo pedido, solo una venta y conflicto en B; con rollback de A, B puede completar. Repetir con confirmación operativa simultánea para verificar versiones/bloqueos. Limpiar únicamente fixtures creadas para esta validación mediante un procedimiento revisado; no improvisar eliminaciones en datos existentes.
-
-Solo frontend/build se valida localmente. No instalar PostgreSQL ni Docker. Validadores estructurales y revisión estática no certifican estas pruebas SQL. Recuperación previa a aplicar: descartar candidato sin efecto remoto. Tras aplicar DDL, detener consumo nuevo y diagnosticar; no borrar ventas, editar migraciones aplicadas ni restaurar una copia completa sobre datos posteriores. Si falla antes del COMMIT, rollback revierte el lote. Cualquier corrección posterior será una migración nueva y la restauración de respaldo requerirá evaluar los datos creados después.
-
-
-## Preflight AWS — 7 noviembre 2026
-
-Commit inicial 38c60e0, workflow 42315235753: deploy-migrator y preflight succeeded; el catálogo consultado después seguía sin ventas_origen ni venta_desde_pedido, demostrando rollback. El paquete previo coincidía con HEAD 80989c6 para handler/SQL; la inspección oficial no detectó ledger de migraciones. No se fabrica un registro de aplicación a partir del número del archivo.
-
-El selector batch=sales ejecuta validate_sales_candidate en push y apply_sales_model solamente con workflow_dispatch + apply_model=true. Customer/045 conserva su contrato. La acción concurrency_sales usa dos sesiones reales con igual/distinta clave: A revierte, B espera y continúa, y también revierte. No acredita replay concurrente después de commit; ese caso sigue pendiente. Las fixtures base, visibles entre conexiones por commit, se limpian por el UUID y código exclusivos de la ejecución; las ventas selladas no se confirman ni se eluden sus protecciones para borrarlas.
-
-
-## Aplicación real en AWS DEV — 7 noviembre 2026
-
-Respaldo `mastererp-dev-before-sales-046-20261107` disponible antes de aplicar. Preflight inicial 42315235753 aprobado, rollback comprobado por catálogo sin relación/comando. Una ampliación de fixtures falló en 42315476956 por usar estado de módulo `inactive` no admitido: SQLSTATE 23514, constraint tenant_modules_status_check, cero pasadas confirmadas. Se corrigió la fixture a `suspended`, sin cambiar permisos ni SQL del modelo aplicado.
-
-Preflight definitivo de c32ca4b: 42315864514 aprobado. Aplicación oficial 42316033780 de ese commit: succeeded, tests passed, committed_passes=2, effective_role=mastererp_app. Se aplicó/reaplicó solo 046. SHA-256 de schema: 4bd9dd64cfe5332cadef27d16f770563d2742e0dbfcb0b4a2586faaad6dca8dd. Las pruebas SQL sí se ejecutaron en RDS DEV; no son pruebas locales.
-
-Concurrencia real (correlation dc911fa8-e6a0-4cdd-a373-af7ea8c46c2f): igual clave y distinta clave sobre el mismo pedido, segundo escritor esperó 0.725/0.727 s y completó tras rollback de A; ambos revirtieron su venta. Fixtures base limpiadas. Esto no certifica replay concurrente tras commit ni funcionamiento HTTP. Evidencia sanitizada en sales-046-evidence/.
-
-La función de resolución de origen para el adapter de Pedidos se incluyó antes de aplicar 046. La fecha comercial puede omitirse y se calcula en la zona horaria de la empresa. El backend está preparado como candidato, todavía sin desplegar: falta decidir asignación de administration.sales.write y conservar reason/detail de la confirmación antes de publicar esa integración. No se modificaron APIs, otras Lambdas ni permisos de roles reales.
-
-
-## Extensión 047 — autorización aprobada y contrato de confirmación
-
-El propietario aprobó asignar el permiso a Administradores de Finanzas. La inspección AWS de roles mostró que aún no existe un rol con nombre/código de Finanzas. 047 crea tenant.finance_admin y le asigna únicamente administration.sales.write, administration.read y operations.orders.read. No modifica pertenencias ni asigna usuarios a ese rol; no otorga operations.orders.write ni todos los permisos de Administración.
-
-047 reemplaza mediante migración nueva las funciones de Ventas, sin editar 046 ya aplicada. El helper de confirmación de pedido es privado (sin EXECUTE de mastererp_app), acotado a PENDING→CONFIRMED dentro del comando comercial autorizado y sin bypass RLS. Comprueba pago: efectivo pendiente de cobro, o mobile/transfer y alias legacy con estado VALIDATED; rechaza valores ausentes/desconocidos y pagos pendientes de verificación.
-
-El adapter establece app.sale_confirmation_reason/detail desde el contrato HTTP existente. El comando conserva esos datos en el evento de confirmación y los incluye en la huella idempotente cuando están presentes. Las llamadas anteriores sin esos campos mantienen su huella compatible. La anulación comercial requiere ahora lectura de Operaciones (pedido cancelado previamente y reserva liberada), sin conceder escritura operativa general.
-
-El lote sales del workflow pasa a aplicar/reaplicar solo 047 sobre la base 046 existente. Preflight y comprobación posterior ejecutan suite 047 y suite 046, cada fixture en su savepoint con rollback para no colisionar identificadores. No se reaplica 046 ni Storefront. Snapshot previo: mastererp-dev-before-sales-contract-047-20261107, comprobar available antes de aplicación explícita.
+Pendientes: asignaciones de personas reales al rol aprobado sin perder propiedad; frontend propio de Ventas; fuentes futuras; ingreso/verificación del cambio para monedas distintas en los consumidores; verificación real de pagos; cancelación coordinada y ajustes posteriores; ledger formal de migraciones. No se implementan Contabilidad, BI, cobros ni operaciones financieras adicionales.
