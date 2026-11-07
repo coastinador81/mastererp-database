@@ -65,10 +65,10 @@ BEGIN
  PERFORM set_config('app.current_operation','digital_sales.storefront.checkout',true);
  created:=ventas_digitales.checkout_crear('https://issuer.example.invalid','customer-sub-39','qa39.example.invalid',
   '[{"product_id":"00003900-0000-0000-0000-000000000008","quantity":2}]','{"address":"QA address"}',
-  'realtime','cash','qa-storefront-checkout-39');
+  'realtime','{"method":"cash"}','qa-storefront-checkout-39');
  replayed:=ventas_digitales.checkout_crear('https://issuer.example.invalid','customer-sub-39','qa39.example.invalid',
   '[{"product_id":"00003900-0000-0000-0000-000000000008","quantity":2}]','{"address":"QA address"}',
-  'realtime','cash','qa-storefront-checkout-39');
+  'realtime','{"method":"cash"}','qa-storefront-checkout-39');
  IF created->>'id' IS NULL OR created<>replayed OR created->>'total'<>'12' THEN
   RAISE EXCEPTION 'Checkout response mismatch';END IF;
 END $$;

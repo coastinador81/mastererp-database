@@ -51,6 +51,12 @@ def execute(c, event, context, factory):
             try:
                 fixture(c, (folder / name).read_text(encoding="utf-8"))
                 results.append({"file": name, "status": "passed"})
+            except Exception as error:
+                details = error.args[0] if error.args and isinstance(error.args[0], dict) else {}
+                return {"status": "failed", "tests": "failed", "phase": "regression", "file": name,
+                        "sqlstate": details.get("C", "validation_error"), "results": results,
+                        "candidate_message": str(details.get("M", "Regression failed"))[:180],
+                        "schema_applied": False, "correlation_id": context.aws_request_id}
             finally:
                 c.run("ROLLBACK")
         return {"status": "succeeded", "tests": "passed", "results": results,
