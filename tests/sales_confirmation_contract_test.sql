@@ -70,6 +70,7 @@ DO $$ BEGIN
  THEN RAISE EXCEPTION 'Confirmation reason/detail lost'; END IF;
 END $$;
 
+SET CONSTRAINTS ALL DEFERRED;
 DO $$
 DECLARE method text; target uuid; counter integer:=0; caught boolean; result jsonb;
 BEGIN
