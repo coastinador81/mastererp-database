@@ -69,4 +69,49 @@ DO $$ BEGIN
  AND estado_nuevo='CONFIRMED' AND motivo='QA_APPROVED' AND detalle='QA contract detail')
  THEN RAISE EXCEPTION 'Confirmation reason/detail lost'; END IF;
 END $$;
+
+DO $$
+DECLARE method text; target uuid; counter integer:=0; caught boolean; result jsonb;
+BEGIN
+ IF has_function_privilege('mastererp_app','operaciones.pedido_confirmar_para_venta(uuid,uuid,bigint,text,text)','EXECUTE')
+ THEN RAISE EXCEPTION 'Private helper exposed'; END IF;
+ FOR method IN SELECT unnest(ARRAY['mobile','transfer','unknown']) LOOP
+  counter:=counter+1; target:=gen_random_uuid();
+  INSERT INTO plataforma.idempotency_keys(idempotency_key,actor_user_id,operation,request_tenant_id,request_fingerprint)
+   VALUES('qa-sales-047-payment-order-'||counter,'00014601-0000-0000-0000-000000000001','operations.orders.create',
+   '00014602-0000-0000-0000-000000000001',repeat('c',64));
+  INSERT INTO operaciones.pedidos(id,tenant_id,empresa_id,sucursal_id,cliente_id,numero,estado,moneda,subtotal,
+   cliente_snapshot,entrega_snapshot,pago_snapshot,ventana_entrega_ref,metodo_entrega,reserva_inventario_ref,idempotency_key)
+   SELECT target,tenant_id,empresa_id,sucursal_id,cliente_id,'QA-047-PAY-'||counter,'PENDING',moneda,subtotal,
+   cliente_snapshot,entrega_snapshot,jsonb_build_object('method',method,'status',CASE WHEN method='unknown' THEN 'VALIDATED' ELSE 'PENDING_VERIFICATION' END),
+   ventana_entrega_ref,metodo_entrega,reserva_inventario_ref,'qa-sales-047-payment-order-'||counter
+   FROM operaciones.pedidos WHERE id='00014608-0000-0000-0000-000000000001';
+  INSERT INTO operaciones.pedido_lineas(tenant_id,empresa_id,pedido_id,posicion,producto_id,producto_nombre,cantidad,precio_unitario)
+   SELECT tenant_id,empresa_id,target,posicion,producto_id,producto_nombre,cantidad,precio_unitario
+   FROM operaciones.pedido_lineas WHERE pedido_id='00014608-0000-0000-0000-000000000001';
+  INSERT INTO operaciones.pedido_eventos(tenant_id,empresa_id,pedido_id,estado_nuevo,motivo,actor_id,correlation_id)
+   VALUES('00014602-0000-0000-0000-000000000001','00014603-0000-0000-0000-000000000001',target,'PENDING','STOREFRONT_CHECKOUT',
+   '00014601-0000-0000-0000-000000000001','00014607-0000-0000-0000-000000000001');
+  SET LOCAL ROLE mastererp_app;
+  IF current_user<>'mastererp_app' THEN RAISE EXCEPTION 'Wrong effective role'; END IF;
+  caught:=false;
+  BEGIN
+   PERFORM administracion.venta_desde_pedido('00014603-0000-0000-0000-000000000001',target,1,'qa-sales-047-pay-'||counter,NULL);
+  EXCEPTION WHEN check_violation THEN caught:=true; END;
+  IF NOT caught THEN RAISE EXCEPTION 'Pending or unknown payment accepted'; END IF;
+  RESET ROLE;
+  IF EXISTS(SELECT 1 FROM administracion.ventas_origen WHERE pedido_id=target)
+  THEN RAISE EXCEPTION 'Failed payment left partial sale'; END IF;
+  IF method<>'unknown' THEN
+   UPDATE operaciones.pedidos SET pago_snapshot=jsonb_build_object('method',method,'status','VALIDATED') WHERE id=target;
+   SET LOCAL ROLE mastererp_app;
+   IF current_user<>'mastererp_app' THEN RAISE EXCEPTION 'Wrong effective role'; END IF;
+   result:=administracion.venta_desde_pedido('00014603-0000-0000-0000-000000000001',target,1,'qa-sales-047-pay-'||counter,NULL);
+   IF result->>'estado'<>'ACTIVE' THEN RAISE EXCEPTION 'Validated current payment alias rejected'; END IF;
+   RESET ROLE;
+  END IF;
+ END LOOP;
+ SET CONSTRAINTS ALL IMMEDIATE;
+END $$;
+
 ROLLBACK;
