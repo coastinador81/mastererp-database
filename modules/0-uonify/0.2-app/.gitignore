@@ -5,3 +5,21 @@
 .env.*
 !.env.example
 tmp/
+
+# 0-uonify/0.2-app (database): nunca volcados, copias de la base, datos reales ni .env reales
+*.pgdump
+*.tar
+*.sql.bz2
+*.sql.xz
+*.sql.zst
+*.roles.sql
+*.manifest
+*.csv
+/*.sql
+.pgpass
+pgpass
+postgres-password
+.local/
+.env*
+!*.example
+.DS_Store
