@@ -46,3 +46,9 @@ El Product Owner ampliará progresivamente los objetivos, prioridades, reglas de
 Las IA pueden resolver decisiones técnicas dentro de los estándares y contratos vigentes. Las decisiones funcionales no definidas se marcan como pendientes y se acuerdan con el Product Owner antes de implementar el comportamiento afectado; el trabajo independiente puede continuar. No inventar requisitos ni expandir artificialmente los README para simular una especificación completa.
 
 No instalar herramientas, publicar ni desplegar por una tarea documental. Respetar contratos y alcance; no inventar recursos o pruebas aprobadas. Preguntar solo cuando la ambigüedad cambie contratos, propiedad o arquitectura; continuar comprobaciones independientes. Verificar implementación real y comunicar validaciones omitidas.
+
+<!-- ux-ui-standard:start -->
+## Lectura obligatoria de UX/UI
+
+Antes de diseñar o modificar interfaces administrativas y los contratos que las soportan, leer y respetar [docs/UX_UI_STANDARD.md](docs/UX_UI_STANDARD.md), junto con el contrato frontend y el README propietario. Platform mantiene la fuente; Database e Infrastructure conservan copias idénticas. Aplicar Inter, tabla regular de 14 px, menú blanco y paleta gris/azul acordada; reutilizar componentes y variables. Una imagen no autoriza datos ficticios ni funciones sin contrato. Ante desviaciones, advertir y recomendar una corrección concreta conforme a AGENTS, conservando trabajo ajeno. Los README resumen la guía y no definen otra identidad visual. Esta regla documental no autoriza migrar interfaces, cambiar APIs, SQL o recursos ni publicar por sí sola.
+<!-- ux-ui-standard:end -->

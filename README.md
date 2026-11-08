@@ -42,6 +42,12 @@ Leer [PROJECT.md](PROJECT.md), [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIB
 
 Estado: estructura funcional creada; las implementaciones y despliegues se distinguen en PROJECT.md y README de cada módulo. No hay un build frontend operativo declarado en este repositorio.
 
+<!-- ux-ui-standard:start -->
+## Estándar UX/UI de los módulos
+
+La referencia administrativa común es Finanzas/Proveedores: Inter regular, menú blanco, fondo gris azulado, acentos azules, tablas suaves e iconos de línea. Leer el [estándar UX/UI y la imagen de referencia](docs/UX_UI_STANDARD.md) antes de desarrollar una interfaz o su contrato. La implementación visual pertenece a Platform; esta guía no acredita que todos los módulos estén adaptados ni cambia las responsabilidades de cada repositorio.
+<!-- ux-ui-standard:end -->
+
 ## Organización de aplicaciones vigente
 
 La numeración local se ha actualizado a la [distribución de aplicaciones y mapa de transición](docs/MODULE_RENUMBERING.md). No implica despliegue, migración de stacks ni cambio de contratos SQL/API.
