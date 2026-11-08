@@ -56,6 +56,7 @@ Todo lo visual de Uonify —módulo `0-uonify` y https://dev.uonify.com: interfa
 - No se inventan diseños, estilos ni patrones de UX/UI nuevos. Todo cambio visual respeta el manual, y lo que el manual no cubra no se improvisa: lo decide el Product Owner.
 - Un cambio visual de Uonify que no cumpla el manual no se fusiona.
 - En Uonify prevalece este manual; [docs/UX_UI_STANDARD.md](docs/UX_UI_STANDARD.md) sigue rigiendo las interfaces administrativas de MasterERP.
+- Excepción del propietario (08-11-2026): Finanzas (`2.2-finance`) adopta también este manual. Alcance: fase 1, solo visual, en la Finanzas independiente (finanzas-dev), con una capa de tema propia de `2.2-finance` (selector `:root.finance-app.uonify-brand`). No cambian la funcionalidad, las APIs, las rutas, los permisos ni los datos. Ecommerce, la tienda y el resto de apps siguen con el estándar del equipo.
 
 ## Organización de aplicaciones vigente
 
