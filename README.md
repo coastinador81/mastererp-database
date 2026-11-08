@@ -48,6 +48,15 @@ Estado: estructura funcional creada; las implementaciones y despliegues se disti
 La referencia administrativa común es Finanzas/Proveedores: Inter regular, menú blanco, fondo gris azulado, acentos azules, tablas suaves e iconos de línea. Leer el [estándar UX/UI y la imagen de referencia](docs/UX_UI_STANDARD.md) antes de desarrollar una interfaz o su contrato. La implementación visual pertenece a Platform; esta guía no acredita que todos los módulos estén adaptados ni cambia las responsabilidades de cada repositorio.
 <!-- ux-ui-standard:end -->
 
+## Diseño de Uonify: el manual de identidad corporativa es canon
+
+Todo lo visual de Uonify —módulo `0-uonify` y https://dev.uonify.com: interfaz, UX/UI, marca, logotipos, color, tipografía, iconografía, componentes, web y piezas gráficas— se rige por el [manual de identidad corporativa de Uonify](https://github.com/eticayservicios/mastererp-platform/blob/dev/frontend/modules/0-uonify/identidad-corporativa/Uonify_Identidad_Corporativa.pdf). Es el canon por decisión del Product Owner (08-11-2026), una excepción del propietario documentada con su alcance:
+
+- Quien vaya a tocar cualquier diseño o UX/UI de Uonify lee antes el manual.
+- No se inventan diseños, estilos ni patrones de UX/UI nuevos. Todo cambio visual respeta el manual, y lo que el manual no cubra no se improvisa: lo decide el Product Owner.
+- Un cambio visual de Uonify que no cumpla el manual no se fusiona.
+- En Uonify prevalece este manual; [docs/UX_UI_STANDARD.md](docs/UX_UI_STANDARD.md) sigue rigiendo las interfaces administrativas de MasterERP.
+
 ## Organización de aplicaciones vigente
 
 La numeración local se ha actualizado a la [distribución de aplicaciones y mapa de transición](docs/MODULE_RENUMBERING.md). No implica despliegue, migración de stacks ni cambio de contratos SQL/API.

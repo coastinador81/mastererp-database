@@ -16,3 +16,6 @@ Estado verificable: la reserva documental no acredita implementación; conservar
 
 Validaciones: estructura local mediante scripts/validate_structure.py. Pendientes: contratos específicos, responsable nominal y pruebas funcionales antes de habilitar esta capacidad.
 
+## Diseño de Uonify (canon)
+
+Todo lo visual de Uonify se rige por el [manual de identidad corporativa](https://github.com/eticayservicios/mastererp-platform/blob/dev/frontend/modules/0-uonify/identidad-corporativa/Uonify_Identidad_Corporativa.pdf). Antes de tocar diseño o UX/UI se lee el manual. No se inventan diseños ni patrones nuevos, y lo que el manual no cubra lo decide el Product Owner. La regla completa está en el README raíz del repo.
