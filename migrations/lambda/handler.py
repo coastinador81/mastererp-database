@@ -315,6 +315,12 @@ def lambda_handler(event, context):
             return provision(connection, event, context)
         finally:
             connection.close()
+    if event.get("action") == "provision_uonify_finance_member":
+        from uonify_access import provision_finance_member
+        try:
+            return provision_finance_member(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action") == "validate_administration":
         from administration_validation import validate, concurrency
         try:
