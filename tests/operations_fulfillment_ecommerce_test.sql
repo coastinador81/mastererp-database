@@ -25,7 +25,8 @@ INSERT INTO catalogo.productos(id,tenant_id,codigo,nombre,precio,estado) VALUES(
 INSERT INTO catalogo.inventarios(tenant_id,empresa_id,nodo_id,producto_id,existencia,reservado,actualizado_por)
  VALUES('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001',10,1,'00008001-0000-0000-0000-000000000001');
 INSERT INTO plataforma.idempotency_keys(idempotency_key,actor_user_id,operation,request_tenant_id,request_fingerprint)
- VALUES('fulfillment-reservation','00008001-0000-0000-0000-000000000001','catalog.inventory.reserve','00008002-0000-0000-0000-000000000001',repeat('b',64));
+ VALUES('fulfillment-reservation','00008001-0000-0000-0000-000000000001','catalog.inventory.reserve','00008002-0000-0000-0000-000000000001',repeat('b',64)),
+ ('fulfillment-order','00008001-0000-0000-0000-000000000001','operations.orders.create','00008002-0000-0000-0000-000000000001',repeat('b',64));
 INSERT INTO catalogo.reservas_inventario(id,tenant_id,empresa_id,nodo_id,referencia_externa,idempotency_key,creado_por)
  VALUES('00008007-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','ORDER-READY','fulfillment-reservation','00008001-0000-0000-0000-000000000001');
 INSERT INTO catalogo.reserva_inventario_lineas VALUES('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008007-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001',1);
