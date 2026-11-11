@@ -36,6 +36,9 @@ SET LOCAL ROLE mastererp_app;
 DO $$ DECLARE item jsonb; caught boolean:=false; BEGIN
  item:=operaciones.pedidos_leer('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001');
  IF item->>'status'<>'PENDING' OR item->>'total'<>'10' OR jsonb_array_length(item->'items')<>1 THEN RAISE EXCEPTION 'Order read mismatch'; END IF;
+ item:=operaciones.pedidos_listar('00009003-0000-0000-0000-000000000001','PENDING','customer','cash',10,NULL,NULL,false,NULL,NULL);
+ IF jsonb_array_length(item->'items')<>1 OR item->'items'->0->>'number'<>'ORDER-1' OR item->'next_cursor'<>'null'::jsonb
+ THEN RAISE EXCEPTION 'Order directory search mismatch'; END IF;
  item:=operaciones.pedido_transicionar('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001',1,'CONFIRMED','ORDER_CONFIRMED');
  IF item->>'status'<>'CONFIRMED' OR (item->>'version')::int<>2 THEN RAISE EXCEPTION 'Transition mismatch'; END IF;
  IF jsonb_array_length(item->'history')<>1
