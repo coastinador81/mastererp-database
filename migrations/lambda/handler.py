@@ -428,10 +428,11 @@ def lambda_handler(event, context):
     except Exception as error:
         details = error.args[0] if error.args and isinstance(error.args[0], dict) else {}
         sqlstate = details.get("C", "unknown")
-        raise RuntimeError(
-            f"phase={phase}; file={filename}; sqlstate={sqlstate}; "
-            f"constraint={re.sub(r'[^A-Za-z0-9_]','',str(details.get('n','unknown')))}; committed_passes={committed_passes}; correlation_id={correlation_id}"
-        ) from None
+        message = re.sub(r"[^A-Za-z0-9 _-]", "", str(details.get("M", "migration failed")))[:160]
+        return {"status":"failed","tests":"failed","phase":phase,"file":filename,
+                "sqlstate":sqlstate,"constraint":re.sub(r'[^A-Za-z0-9_]','',str(details.get('n','unknown'))),
+                "candidate_message":message,"committed_passes":committed_passes,
+                "correlation_id":correlation_id}
     finally:
         try:
             connection.run("SELECT pg_advisory_unlock(734561903)")
