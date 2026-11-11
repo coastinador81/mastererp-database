@@ -50,6 +50,7 @@ DO $$ DECLARE item jsonb; caught boolean:=false; BEGIN
  THEN RAISE EXCEPTION 'Order note mismatch'; END IF;
  IF operaciones.pedido_nota_crear('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001','Contactar al cliente','orders-note-key')->>'id'<>item->>'id'
  THEN RAISE EXCEPTION 'Order note idempotency mismatch'; END IF;
+ PERFORM set_config('app.current_operation','operations.orders.transition',true);
  BEGIN PERFORM operaciones.pedido_transicionar('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001',1,'PREPARING','START');
  EXCEPTION WHEN serialization_failure THEN caught:=true; END;
  IF NOT caught THEN RAISE EXCEPTION 'Stale version accepted'; END IF;
