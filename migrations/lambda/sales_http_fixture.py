@@ -10,7 +10,7 @@ def execute(c, event, context):
     run, identity, operation = event.get("run", ""), event.get("identity_run", ""), event.get("operation")
     if not re.fullmatch(r"qa-sales-http-[0-9a-f]{12}", run) or not re.fullmatch(r"qa-identity-[0-9a-f]{12}", identity):
         raise ValueError("Identified synthetic fixture required")
-    if operation not in ("prepare", "prepare_read", "read_denied", "inspect", "deny", "module_disabled", "membership_inactive", "restore", "archive"):
+    if operation not in ("prepare", "prepare_receipt", "prepare_read", "read_denied", "inspect", "deny", "module_disabled", "membership_inactive", "restore", "archive"):
         raise ValueError("Unknown fixture operation")
     actor_rows = c.run("SELECT id::text FROM plataforma.users WHERE email=:email AND status='active'",
                        email=identity + "-admin-a@example.invalid")
@@ -30,7 +30,7 @@ def execute(c, event, context):
     foreign_company = str(uuid5(NAMESPACE_URL, run + ":read-foreign-company"))
     c.run("BEGIN")
     try:
-        if operation == "prepare":
+        if operation in ("prepare", "prepare_receipt"):
             assert c.run("SELECT count(*) FROM plataforma.roles WHERE code='tenant.finance_admin'")[0][0] == 1
             setup = setup[setup.index("INSERT INTO plataforma.users"):]
             setup = re.sub(r"INSERT INTO plataforma.users.*?;\n", "", setup, count=1, flags=re.S)
@@ -57,6 +57,11 @@ def execute(c, event, context):
                 c.run("""INSERT INTO operaciones.pedido_eventos(tenant_id,empresa_id,pedido_id,estado_nuevo,motivo,actor_id,correlation_id)
                     VALUES(:tenant,:company,:id,'PENDING','STOREFRONT_CHECKOUT',:actor,:correlation)""",
                     tenant=tenant, company=company, id=target, actor=actor, correlation=str(uuid4()))
+            if operation == "prepare_receipt":
+                c.run("""UPDATE operaciones.pedidos SET pago_snapshot=jsonb_build_object(
+                    'method','mobile_payment','status','PENDING_VERIFICATION','reference',:reference)
+                    WHERE tenant_id=:tenant AND empresa_id=:company AND id=:order""",
+                    reference=run + "-receipt", tenant=tenant, company=company, order=order)
         else:
             assert c.run("SELECT count(*) FROM plataforma.tenants WHERE id=:id AND code=:code", id=tenant, code=run)[0][0] == 1
             if operation == "prepare_read":
