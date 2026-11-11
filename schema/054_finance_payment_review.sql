@@ -25,7 +25,7 @@ REVOKE ALL ON administracion.revisiones_pago FROM PUBLIC,mastererp_app;
 
 CREATE OR REPLACE FUNCTION administracion.pagos_pendientes_leer(p_empresa uuid,p_limit integer DEFAULT 50)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
-SET search_path=pg_catalog,administracion,operaciones,plataforma,pg_temp AS $$
+SET search_path=pg_catalog,administracion,operaciones,plataforma,organizacion,pg_temp AS $$
 DECLARE result jsonb;
 BEGIN
  IF p_empresa IS NULL OR p_limit NOT BETWEEN 1 AND 100 THEN RAISE EXCEPTION 'Invalid input' USING ERRCODE='22023'; END IF;
@@ -33,11 +33,12 @@ BEGIN
  THEN RAISE EXCEPTION 'Payment review denied' USING ERRCODE='42501'; END IF;
  SELECT COALESCE(jsonb_agg(item ORDER BY created_at DESC,id DESC),'[]') INTO result FROM (
   SELECT p.id,p.creado_en created_at,jsonb_build_object('order_id',p.id,'number',p.numero,'version',p.version,
-   'created_at',p.creado_en,'currency',p.moneda,'total',p.total,'customer',p.cliente_snapshot,
+   'created_at',p.creado_en,'currency',p.moneda,'base_currency',c.base_currency_code,'total',p.total,'customer',p.cliente_snapshot,
    'payment',p.pago_snapshot,'branch_id',p.sucursal_id,'review',CASE WHEN r.id IS NULL THEN NULL ELSE
    jsonb_build_object('id',r.id,'decision',r.estado,'reason',r.motivo,'evidence',r.evidencia,
     'reviewed_by',r.creado_por,'reviewed_at',r.creado_en) END) item
   FROM operaciones.pedidos p
+  JOIN organizacion.companies c ON c.tenant_id=p.tenant_id AND c.id=p.empresa_id
   LEFT JOIN administracion.revisiones_pago r ON r.tenant_id=p.tenant_id
    AND r.empresa_id=p.empresa_id AND r.pedido_id=p.id
   WHERE p.tenant_id=plataforma.current_app_tenant_id() AND p.empresa_id=p_empresa
@@ -55,6 +56,7 @@ SET search_path=pg_catalog,administracion,operaciones,plataforma,auditoria,pg_te
 DECLARE tenant uuid:=plataforma.current_app_tenant_id(); actor uuid:=plataforma.current_app_user_id();
  order_row operaciones.pedidos%ROWTYPE; cached plataforma.idempotency_keys%ROWTYPE; review_id uuid:=gen_random_uuid();
  fingerprint text; correlation uuid; sale jsonb; response jsonb; sale_key varchar;
+ base char(3); exchange jsonb; exchange_rate numeric; exchange_date date; exchange_source text;
 BEGIN
  IF p_empresa IS NULL OR p_pedido IS NULL OR p_version IS NULL OR p_version<1
  OR p_decision NOT IN ('VALIDATED','REJECTED') OR length(btrim(p_motivo)) NOT BETWEEN 1 AND 300
@@ -83,6 +85,17 @@ BEGIN
  IF order_row.estado<>'PENDING' OR order_row.pago_snapshot->>'status'<>'PENDING_VERIFICATION'
  OR order_row.pago_snapshot->>'method' NOT IN ('mobile','transfer','mobile_payment','bank_transfer')
  THEN RAISE EXCEPTION 'Pending electronic payment required' USING ERRCODE='23514'; END IF;
+ SELECT base_currency_code INTO base FROM organizacion.companies
+ WHERE tenant_id=tenant AND id=p_empresa AND status='active';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Company not found' USING ERRCODE='42501'; END IF;
+ exchange:=p_evidencia->'exchange_rate';
+ IF p_decision='VALIDATED' AND order_row.moneda<>base THEN
+  IF jsonb_typeof(exchange)<>'object' OR exchange->>'rate' IS NULL OR exchange->>'date' IS NULL
+  OR length(btrim(COALESCE(exchange->>'source',''))) NOT BETWEEN 1 AND 150
+  THEN RAISE EXCEPTION 'Exchange rate, date and source required' USING ERRCODE='22023'; END IF;
+  exchange_rate:=(exchange->>'rate')::numeric; exchange_date:=(exchange->>'date')::date;
+  exchange_source:=btrim(exchange->>'source');
+ END IF;
  INSERT INTO plataforma.idempotency_keys(idempotency_key,actor_user_id,operation,resource_id,request_fingerprint,request_tenant_id)
  VALUES(p_idempotency_key,actor,'administration.receipts.validate',review_id,fingerprint,tenant);
  INSERT INTO administracion.revisiones_pago(id,tenant_id,empresa_id,pedido_id,estado,motivo,evidencia,creado_por,idempotency_key)
@@ -94,7 +107,8 @@ BEGIN
   PERFORM set_config('app.current_operation','administracion.documento.venta.crear',true);
   PERFORM set_config('app.sale_confirmation_reason','PAYMENT_VALIDATED',true);
   sale_key:='payment-sale:'||review_id::text;
-  sale:=administracion.venta_desde_pedido(p_empresa,p_pedido,p_version,sale_key,NULL,NULL,NULL,NULL);
+  sale:=administracion.venta_desde_pedido(p_empresa,p_pedido,p_version,sale_key,NULL,
+   exchange_rate,exchange_date,exchange_source);
  END IF;
  PERFORM set_config('app.current_operation','administration.receipts.validate',true);
  response:=jsonb_build_object('id',review_id,'order_id',p_pedido,'decision',p_decision,'reason',btrim(p_motivo),

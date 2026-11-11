@@ -6,6 +6,7 @@ OPERATIONS_PATHS={
     'schema/053_operations_order_cancellation_notes.sql',
     'schema/054_finance_payment_review.sql',
     'schema/055_finance_receipts_history.sql',
+    'schema/056_finance_receipt_exchange_rate.sql',
 }
 
 def batch_for_paths(requested,paths):

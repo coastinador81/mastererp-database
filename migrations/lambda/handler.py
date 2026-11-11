@@ -78,6 +78,7 @@ SCHEMA_FILES = (
     "053_operations_order_cancellation_notes.sql",
     "054_finance_payment_review.sql",
     "055_finance_receipts_history.sql",
+    "056_finance_receipt_exchange_rate.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -365,7 +366,7 @@ def lambda_handler(event, context):
     # Fixed reviewed manifests; no event can supply arbitrary SQL filenames.
     applied_schema = ("051_operations_preparation_flow.sql", "052_operations_order_history_read.sql",
                       "053_operations_order_cancellation_notes.sql", "054_finance_payment_review.sql",
-                      "055_finance_receipts_history.sql")
+                      "055_finance_receipts_history.sql", "056_finance_receipt_exchange_rate.sql")
     operations = event.get("action") in ("apply_operations_model", "validate_operations_candidate")
     selected_schema = applied_schema[1:] if operations else applied_schema[:1]
     selected_tests = (("operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql") if operations else
