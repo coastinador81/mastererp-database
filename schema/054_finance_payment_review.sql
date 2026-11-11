@@ -4,7 +4,7 @@ INSERT INTO plataforma.permissions(code,description) VALUES
 ON CONFLICT(code) DO NOTHING;
 INSERT INTO plataforma.role_permissions(role_id,permission_code)
  SELECT r.id,'administration.receipts.validate' FROM plataforma.roles r
- WHERE r.code='tenant.finance_admin' ON CONFLICT DO NOTHING;
+ WHERE r.code IN ('tenant.owner','tenant.finance_admin') ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS administracion.revisiones_pago (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL, empresa_id uuid NOT NULL,
