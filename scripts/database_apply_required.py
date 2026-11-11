@@ -1,6 +1,22 @@
 """Classify push paths without reapplying a model for code-only Lambda updates."""
 import os,re,subprocess
 
+OPERATIONS_PATHS={
+    'schema/052_operations_order_history_read.sql',
+    'schema/053_operations_order_cancellation_notes.sql',
+    'schema/054_finance_payment_review.sql',
+    'schema/055_finance_receipts_history.sql',
+}
+
+def batch_for_paths(requested,paths):
+    batch=requested or 'customer'
+    if any(p in OPERATIONS_PATHS for p in paths):return 'operations'
+    if any(p in ('schema/046_sales_order_command.sql','tests/sales_order_command_test.sql',
+                 'schema/047_sales_confirmation_contract.sql','tests/sales_confirmation_contract_test.sql',
+                 'schema/048_sales_read_model.sql','tests/sales_read_test.sql')
+           or p.startswith('migrations/lambda/sales_') for p in paths):return 'sales'
+    return batch
+
 def required(event,before,after):
     if event=='workflow_dispatch':return True  # Explicit Apply action retains its contract.
     if event!='push' or not re.fullmatch('[0-9a-f]{40}',before or '') or not re.fullmatch('[0-9a-f]{40}',after or ''):
@@ -16,10 +32,7 @@ if __name__=='__main__':
         before=os.environ['BEFORE_SHA']
         if before=='0'*40:raise ValueError('Initial push requires explicit reviewed batch')
         paths=subprocess.check_output(['git','diff','--name-only',before,os.environ['GITHUB_SHA']],text=True).splitlines()
-        if any(p in ('schema/046_sales_order_command.sql','tests/sales_order_command_test.sql',
-                     'schema/047_sales_confirmation_contract.sql','tests/sales_confirmation_contract_test.sql',
-                     'schema/048_sales_read_model.sql','tests/sales_read_test.sql')
-               or p.startswith('migrations/lambda/sales_') for p in paths):batch='sales'
+        batch=batch_for_paths(batch,paths)
     if batch not in ('customer','sales','operations'):raise ValueError('Unknown migration batch')
     with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
         out.write('required='+value+'\n'+'batch='+batch+'\n')

@@ -1,4 +1,5 @@
 -- Preserve reviewed customer receipts in Cobros and complete the owner orchestration grant.
+-- The read function keeps its legacy pending-only name for API compatibility.
 INSERT INTO plataforma.role_permissions(role_id,permission_code)
  SELECT r.id,p.code FROM plataforma.roles r CROSS JOIN plataforma.permissions p
  WHERE r.code='tenant.owner'
