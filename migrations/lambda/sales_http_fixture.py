@@ -40,6 +40,10 @@ def execute(c, event, context):
             setup = setup.replace("qa-sales-046-sql", role).replace("qa-sales-046", run)
             setup = setup.replace("sales-046-order-key", run + "-order1")
             c.run(setup)
+            if operation == "prepare_orders":
+                c.run("""INSERT INTO plataforma.tenant_modules(tenant_id,module_id,status)
+                    SELECT :tenant,id,'active' FROM plataforma.modules WHERE code='erp.catalog'
+                    ON CONFLICT(tenant_id,module_id) DO UPDATE SET status='active'""", tenant=tenant)
             for index, target in enumerate(orders[1:], 2):
                 key, reserve = run + "-order" + str(index), str(uuid5(NAMESPACE_URL, run + "reserve" + str(index)))
                 c.run("""INSERT INTO plataforma.idempotency_keys(idempotency_key,actor_user_id,operation,request_tenant_id,request_fingerprint)
