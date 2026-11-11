@@ -59,7 +59,7 @@ def execute(c, event, context):
                     tenant=tenant, company=company, id=target, actor=actor, correlation=str(uuid4()))
             if operation == "prepare_receipt":
                 c.run("""UPDATE operaciones.pedidos SET pago_snapshot=jsonb_build_object(
-                    'method','mobile_payment','status','PENDING_VERIFICATION','reference',:reference)
+                    'method','mobile_payment','status','PENDING_VERIFICATION','reference',CAST(:reference AS text))
                     WHERE tenant_id=:tenant AND empresa_id=:company AND id=:order""",
                     reference=run + "-receipt", tenant=tenant, company=company, order=order)
         else:
