@@ -4,7 +4,7 @@ INSERT INTO plataforma.role_permissions(role_id,permission_code)
  SELECT r.id,p.code FROM plataforma.roles r CROSS JOIN plataforma.permissions p
  WHERE r.code='qa-fulfillment' AND p.code IN(
   'operations.orders.read','operations.orders.write','operations.preparation.read','operations.preparation.write','operations.routes.read','operations.routes.write',
-  'catalog.inventory.reserve','digital_sales.ecommerce.read','digital_sales.ecommerce.write');
+  'catalog.inventory.read','catalog.inventory.reserve','digital_sales.ecommerce.read','digital_sales.ecommerce.write');
 INSERT INTO plataforma.users(id,email,display_name) VALUES('00008001-0000-0000-0000-000000000001','qa-fulfillment@example.invalid','Fulfillment test');
 INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES('00008002-0000-0000-0000-000000000001','qa-fulfillment','qa-fulfillment','Fulfillment','active');
 INSERT INTO plataforma.user_tenants(tenant_id,user_id,role_id,status)
@@ -52,7 +52,7 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  PERFORM set_config('app.current_operation','operations.orders.cancel',true);
  item:=operaciones.pedido_cancelar('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000002',1,'CUSTOMER_REQUEST',NULL);
  IF item->>'status'<>'CANCELLED' OR item->'inventory'->>'status'<>'RELEASED'
- OR (SELECT reservado FROM catalogo.inventarios WHERE tenant_id='00008002-0000-0000-0000-000000000001' AND empresa_id='00008003-0000-0000-0000-000000000001' AND nodo_id='00008004-0000-0000-0000-000000000001' AND producto_id='00008006-0000-0000-0000-000000000001')<>1
+ OR catalogo.inventario_leer('00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001')->>'reserved'<>'1'
  THEN RAISE EXCEPTION 'Coordinated cancellation mismatch'; END IF;
  PERFORM set_config('app.current_operation','operations.preparation.start',true);
  item:=operaciones.preparacion_iniciar('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001',1);

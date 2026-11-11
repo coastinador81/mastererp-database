@@ -379,8 +379,8 @@ def lambda_handler(event, context):
         try:
             for filename in selected_schema:
                 connection.run((sql_dir / filename).read_text(encoding="utf-8"))
-            filename = selected_tests[0]
-            run_rollback_fixture(connection, sql_dir / filename)
+            for filename in selected_tests:
+                run_rollback_fixture(connection, sql_dir / filename)
         finally:
             connection.run("ROLLBACK")
         if event.get("action") in ("validate_common_party_code_candidate", "validate_customer_admin_candidate", "validate_operations_candidate"):
