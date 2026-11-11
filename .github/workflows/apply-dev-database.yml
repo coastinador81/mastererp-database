@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       apply_model:
-        description: Apply the reviewed customer administration batch after successful preflight
+        description: Apply the selected reviewed batch after successful preflight
         type: boolean
         default: false
       batch:
         description: Explicit reviewed migration batch
         type: choice
-        options: [customer, sales]
+        options: [customer, sales, operations]
         default: customer
   push:
     branches: [dev]
@@ -77,6 +77,10 @@ jobs:
           if [ "$BATCH" = 'sales' ]; then
             payload='{"action":"validate_sales_candidate"}'
             if [ "$APPLY_MODEL" = 'true' ]; then payload='{"action":"apply_sales_model"}'; fi
+          fi
+          if [ "$BATCH" = 'operations' ]; then
+            payload='{"action":"validate_operations_candidate"}'
+            if [ "$APPLY_MODEL" = 'true' ]; then payload='{"action":"apply_operations_model"}'; fi
           fi
           aws lambda invoke \
             --function-name mastererp-dev-database-migrator \

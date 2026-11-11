@@ -20,7 +20,7 @@ if __name__=='__main__':
                      'schema/047_sales_confirmation_contract.sql','tests/sales_confirmation_contract_test.sql',
                      'schema/048_sales_read_model.sql','tests/sales_read_test.sql')
                or p.startswith('migrations/lambda/sales_') for p in paths):batch='sales'
-    if batch not in ('customer','sales'):raise ValueError('Unknown migration batch')
+    if batch not in ('customer','sales','operations'):raise ValueError('Unknown migration batch')
     with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
         out.write('required='+value+'\n'+'batch='+batch+'\n')
     print('Database apply required: '+value)

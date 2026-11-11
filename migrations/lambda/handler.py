@@ -354,16 +354,19 @@ def lambda_handler(event, context):
             return configure_payments(connection, event, context)
         finally:
             connection.close()
-    if event.get("action", "apply_model") not in ("apply_model", "validate_common_party_code_candidate", "validate_customer_admin_candidate"):
+    if event.get("action", "apply_model") not in ("apply_model", "validate_common_party_code_candidate", "validate_customer_admin_candidate", "apply_operations_model", "validate_operations_candidate"):
         connection.close()
         raise ValueError("Unsupported migration action")
     phase = "lock"
     filename = "none"
     committed_passes = 0
-    # Customer batch: apply/reapply only the latest customer schema; preserve prior Storefront migrations.
-    applied_schema = ("051_operations_preparation_flow.sql",)
-    selected_tests = ("operations_preparation_flow_test.sql", "operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql", "storefront_store_payment_methods_test.sql", "storefront_customer_payment_methods_test.sql", "customer_legacy_contact_test.sql", "customer_administration_test.sql", "common_party_code_test.sql", "administration_parties_test.sql",
-                      "party_details_test.sql", "catalog_brands_suppliers_test.sql")
+    # Fixed reviewed manifests; no event can supply arbitrary SQL filenames.
+    applied_schema = ("051_operations_preparation_flow.sql", "052_operations_order_history_read.sql",
+                      "053_operations_order_cancellation_notes.sql", "054_finance_payment_review.sql")
+    operations = event.get("action") in ("apply_operations_model", "validate_operations_candidate")
+    selected_schema = applied_schema[1:] if operations else applied_schema[:1]
+    selected_tests = (("operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql") if operations else
+        ("operations_preparation_flow_test.sql", "operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql", "storefront_store_payment_methods_test.sql", "storefront_customer_payment_methods_test.sql", "customer_legacy_contact_test.sql", "customer_administration_test.sql", "common_party_code_test.sql", "administration_parties_test.sql", "party_details_test.sql", "catalog_brands_suppliers_test.sql"))
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL AND EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='ventas_digitales' AND p.proname='checkout_crear') AND to_regprocedure('administracion.party_write_v2(uuid,text,text,uuid,text,text,bigint,text,jsonb,bigint,bigint)') IS NOT NULL AND NOT has_table_privilege('mastererp_app','catalogo.terceros','UPDATE')")[0][0] is not True:
         connection.close()
         raise RuntimeError("Compatible 001-040 baseline required; no automatic bootstrap")
@@ -374,15 +377,15 @@ def lambda_handler(event, context):
         phase = "preflight"
         connection.run("BEGIN")
         try:
-            for filename in applied_schema:
+            for filename in selected_schema:
                 connection.run((sql_dir / filename).read_text(encoding="utf-8"))
-            filename = "operations_preparation_flow_test.sql"
+            filename = selected_tests[0]
             run_rollback_fixture(connection, sql_dir / filename)
         finally:
             connection.run("ROLLBACK")
-        if event.get("action") in ("validate_common_party_code_candidate", "validate_customer_admin_candidate"):
+        if event.get("action") in ("validate_common_party_code_candidate", "validate_customer_admin_candidate", "validate_operations_candidate"):
             return {"status":"succeeded","tests":"passed","validation_only":True,
-                    "committed_passes":0,"files_applied":list(applied_schema),
+                    "committed_passes":0,"files_applied":list(selected_schema),
                     "schemas":[],"table_count":None,"correlation_id":correlation_id}
         # Commit the model independently of rollback-only fixtures. A second
         # application exercises repeatability before checking effective ACLs.
@@ -390,7 +393,7 @@ def lambda_handler(event, context):
             phase = "schema" if committed_passes == 0 else "reapply"
             connection.run("BEGIN")
             try:
-                for filename in applied_schema:
+                for filename in selected_schema:
                     connection.run((sql_dir / filename).read_text(encoding="utf-8"))
                 connection.run("COMMIT")
                 committed_passes += 1
@@ -415,7 +418,7 @@ def lambda_handler(event, context):
         )[0][0]
         return {
             "status": "succeeded",
-            "files_applied": list(applied_schema + selected_tests),
+            "files_applied": list(selected_schema + selected_tests),
             "schemas": schemas,
             "table_count": table_count,
             "tests": "passed",
