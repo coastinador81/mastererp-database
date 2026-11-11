@@ -58,6 +58,8 @@ def execute(c, event, context):
                     VALUES(:tenant,:company,:id,'PENDING','STOREFRONT_CHECKOUT',:actor,:correlation)""",
                     tenant=tenant, company=company, id=target, actor=actor, correlation=str(uuid4()))
             if operation == "prepare_receipt":
+                c.run("""UPDATE organizacion.companies SET base_currency_code='VES'
+                    WHERE tenant_id=:tenant AND id=:company""", tenant=tenant, company=company)
                 c.run("""UPDATE operaciones.pedidos SET pago_snapshot=jsonb_build_object(
                     'method','mobile_payment','status','PENDING_VERIFICATION','reference',CAST(:reference AS text))
                     WHERE tenant_id=:tenant AND empresa_id=:company AND id=:order""",
