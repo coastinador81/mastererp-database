@@ -10,7 +10,7 @@ def execute(c, event, context):
     run, identity, operation = event.get("run", ""), event.get("identity_run", ""), event.get("operation")
     if not re.fullmatch(r"qa-sales-http-[0-9a-f]{12}", run) or not re.fullmatch(r"qa-identity-[0-9a-f]{12}", identity):
         raise ValueError("Identified synthetic fixture required")
-    if operation not in ("prepare", "prepare_receipt", "prepare_read", "read_denied", "inspect", "deny", "module_disabled", "membership_inactive", "restore", "archive"):
+    if operation not in ("prepare", "prepare_orders", "prepare_receipt", "prepare_read", "read_denied", "inspect", "deny", "module_disabled", "membership_inactive", "restore", "archive"):
         raise ValueError("Unknown fixture operation")
     actor_rows = c.run("SELECT id::text FROM plataforma.users WHERE email=:email AND status='active'",
                        email=identity + "-admin-a@example.invalid")
@@ -30,13 +30,14 @@ def execute(c, event, context):
     foreign_company = str(uuid5(NAMESPACE_URL, run + ":read-foreign-company"))
     c.run("BEGIN")
     try:
-        if operation in ("prepare", "prepare_receipt"):
-            assert c.run("SELECT count(*) FROM plataforma.roles WHERE code='tenant.finance_admin'")[0][0] == 1
+        if operation in ("prepare", "prepare_orders", "prepare_receipt"):
+            role = "tenant.owner" if operation == "prepare_orders" else "tenant.finance_admin"
+            assert c.run("SELECT count(*) FROM plataforma.roles WHERE code=:role", role=role)[0][0] == 1
             setup = setup[setup.index("INSERT INTO plataforma.users"):]
             setup = re.sub(r"INSERT INTO plataforma.users.*?;\n", "", setup, count=1, flags=re.S)
             for old, new in ids.items():
                 setup = setup.replace(old, new)
-            setup = setup.replace("qa-sales-046-sql", "tenant.finance_admin").replace("qa-sales-046", run)
+            setup = setup.replace("qa-sales-046-sql", role).replace("qa-sales-046", run)
             setup = setup.replace("sales-046-order-key", run + "-order1")
             c.run(setup)
             for index, target in enumerate(orders[1:], 2):
