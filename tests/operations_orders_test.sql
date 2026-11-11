@@ -38,6 +38,18 @@ DO $$ DECLARE item jsonb; caught boolean:=false; BEGIN
  IF item->>'status'<>'PENDING' OR item->>'total'<>'10' OR jsonb_array_length(item->'items')<>1 THEN RAISE EXCEPTION 'Order read mismatch'; END IF;
  item:=operaciones.pedido_transicionar('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001',1,'CONFIRMED','ORDER_CONFIRMED');
  IF item->>'status'<>'CONFIRMED' OR (item->>'version')::int<>2 THEN RAISE EXCEPTION 'Transition mismatch'; END IF;
+ IF jsonb_array_length(item->'history')<>1
+ OR item->'history'->0->>'status'<>'CONFIRMED'
+ OR item->'history'->0->>'reason'<>'ORDER_CONFIRMED'
+ OR item->'history'->0->>'actor_name'<>'Orders test'
+ THEN RAISE EXCEPTION 'Order history mismatch'; END IF;
+ PERFORM set_config('app.current_operation','operations.orders.notes.create',true);
+ item:=operaciones.pedido_nota_crear('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001','Contactar al cliente','orders-note-key');
+ IF item->>'note'<>'Contactar al cliente' OR item->>'actor_name'<>'Orders test'
+ OR jsonb_array_length(operaciones.pedido_notas_leer('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001'))<>1
+ THEN RAISE EXCEPTION 'Order note mismatch'; END IF;
+ IF operaciones.pedido_nota_crear('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001','Contactar al cliente','orders-note-key')->>'id'<>item->>'id'
+ THEN RAISE EXCEPTION 'Order note idempotency mismatch'; END IF;
  BEGIN PERFORM operaciones.pedido_transicionar('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001',1,'PREPARING','START');
  EXCEPTION WHEN serialization_failure THEN caught:=true; END;
  IF NOT caught THEN RAISE EXCEPTION 'Stale version accepted'; END IF;

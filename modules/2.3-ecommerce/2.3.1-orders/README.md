@@ -7,6 +7,8 @@ Estado: candidato funcional no aplicado en DEV. `schema/016_operations_orders.sq
 incluye modelo multi-tenant, líneas, historial, lectura, creación idempotente y
 transiciones autorizadas. La creación exige la referencia opaca de una reserva
 ya emitida por el propietario de Inventario; Pedidos no escribe su stock.
+`052_operations_order_history_read.sql` amplía la proyección autorizada con el
+historial existente de eventos, incluido actor y fecha, sin duplicar datos.
 
 
 ## Contrato y estado de esta capa

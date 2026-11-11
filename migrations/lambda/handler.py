@@ -73,6 +73,9 @@ SCHEMA_FILES = (
     "049_storefront_customer_payment_methods.sql",
     "050_storefront_store_payment_methods.sql",
     "051_operations_preparation_flow.sql",
+    "052_operations_order_history_read.sql",
+    "053_operations_order_cancellation_notes.sql",
+    "054_finance_payment_review.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
