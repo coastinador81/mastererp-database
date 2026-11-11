@@ -4,7 +4,7 @@ INSERT INTO plataforma.role_permissions(role_id,permission_code)
  SELECT r.id,p.code FROM plataforma.roles r CROSS JOIN plataforma.permissions p
  WHERE r.code='qa-fulfillment' AND p.code IN(
   'operations.orders.read','operations.orders.write','operations.preparation.read','operations.preparation.write','operations.routes.read','operations.routes.write',
-  'catalog.inventory.read','catalog.inventory.reserve','digital_sales.ecommerce.read','digital_sales.ecommerce.write');
+  'catalog.inventory.read','catalog.inventory.reserve','digital_sales.ecommerce.read','digital_sales.ecommerce.write','transport.deliveries.execute','transport.drivers.read');
 INSERT INTO plataforma.users(id,email,display_name) VALUES('00008001-0000-0000-0000-000000000001','qa-fulfillment@example.invalid','Fulfillment test');
 INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES('00008002-0000-0000-0000-000000000001','qa-fulfillment','qa-fulfillment','Fulfillment','active');
 INSERT INTO plataforma.user_tenants(tenant_id,user_id,role_id,status)
@@ -36,15 +36,15 @@ INSERT INTO catalogo.reservas_inventario(id,tenant_id,empresa_id,nodo_id,referen
 INSERT INTO catalogo.reserva_inventario_lineas VALUES('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008007-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001',1);
 INSERT INTO catalogo.reserva_inventario_lineas VALUES('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008007-0000-0000-0000-000000000002','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001',1);
 INSERT INTO operaciones.pedidos(id,tenant_id,empresa_id,sucursal_id,cliente_id,numero,estado,moneda,subtotal,cliente_snapshot,entrega_snapshot,pago_snapshot,ventana_entrega_ref,metodo_entrega,reserva_inventario_ref,idempotency_key,creado_por,version)
- VALUES('00008008-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008005-0000-0000-0000-000000000001','ORDER-READY','CONFIRMED','USD',15,'{}','{}','{}','slot','realtime','00008007-0000-0000-0000-000000000001','fulfillment-order','00008001-0000-0000-0000-000000000001',1);
+ VALUES('00008008-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008005-0000-0000-0000-000000000001','ORDER-READY','CONFIRMED','USD',15,'{}','{"latitude":10.48,"longitude":-66.9}','{}','slot','realtime','00008007-0000-0000-0000-000000000001','fulfillment-order','00008001-0000-0000-0000-000000000001',1);
 INSERT INTO operaciones.pedidos(id,tenant_id,empresa_id,sucursal_id,cliente_id,numero,estado,moneda,subtotal,cliente_snapshot,entrega_snapshot,pago_snapshot,ventana_entrega_ref,metodo_entrega,reserva_inventario_ref,idempotency_key,creado_por,version)
  VALUES('00008008-0000-0000-0000-000000000002','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008005-0000-0000-0000-000000000001','ORDER-CANCEL','PENDING','USD',15,'{}','{}','{"method":"cash","status":"PENDING_COLLECTION"}','slot','realtime','00008007-0000-0000-0000-000000000002','fulfillment-cancel-order','00008001-0000-0000-0000-000000000001',1);
 INSERT INTO operaciones.pedido_lineas(id,tenant_id,empresa_id,pedido_id,posicion,producto_id,producto_nombre,cantidad,precio_unitario)
  VALUES('00008009-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001',1,'00008006-0000-0000-0000-000000000001','Public product',1,15);
 INSERT INTO operaciones.pedido_lineas(id,tenant_id,empresa_id,pedido_id,posicion,producto_id,producto_nombre,cantidad,precio_unitario)
  VALUES('00008009-0000-0000-0000-000000000002','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000002',1,'00008006-0000-0000-0000-000000000001','Public product',1,15);
-INSERT INTO transporte.repartidores(id,tenant_id,codigo,nombre,telefono,estado,disponibilidad,creado_por)
- VALUES('00008010-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','DRIVER','Driver','04140000000','ACTIVE','AVAILABLE','00008001-0000-0000-0000-000000000001');
+INSERT INTO transporte.repartidores(id,tenant_id,usuario_id,codigo,nombre,telefono,estado,disponibilidad,acceso_estado,creado_por)
+ VALUES('00008010-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','00008001-0000-0000-0000-000000000001','DRIVER','Driver','04140000000','ACTIVE','AVAILABLE','LINKED','00008001-0000-0000-0000-000000000001');
 INSERT INTO transporte.repartidor_nodos VALUES('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008010-0000-0000-0000-000000000001',true,transaction_timestamp());
 SELECT set_config('app.current_user_id','00008001-0000-0000-0000-000000000001',true),set_config('app.current_tenant_id','00008002-0000-0000-0000-000000000001',true),set_config('app.current_company_id','00008003-0000-0000-0000-000000000001',true),set_config('app.correlation_id','00008011-0000-0000-0000-000000000001',true),set_config('app.current_operation','operations.preparation.start',true);
 SET LOCAL ROLE mastererp_app;
@@ -65,9 +65,16 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  route:=operaciones.ruta_crear('00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001',current_date,'slot','["00008008-0000-0000-0000-000000000001"]','fulfillment-route');rid:=(route->>'id')::uuid;
  PERFORM set_config('app.current_operation','operations.routes.assign',true);route:=operaciones.ruta_asignar('00008003-0000-0000-0000-000000000001',rid,1,'00008010-0000-0000-0000-000000000001');
  PERFORM set_config('app.current_operation','operations.routes.transition',true);route:=operaciones.ruta_transicionar('00008003-0000-0000-0000-000000000001',rid,2,'IN_ROUTE');
- PERFORM set_config('app.current_operation','operations.routes.stop.complete',true);route:=operaciones.ruta_parada_finalizar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{}');
- PERFORM set_config('app.current_operation','operations.routes.transition',true);route:=operaciones.ruta_transicionar('00008003-0000-0000-0000-000000000001',rid,3,'COMPLETED');
- IF route->>'status'<>'COMPLETED' OR operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001')->>'status'<>'DELIVERED' THEN RAISE EXCEPTION 'Route completion mismatch'; END IF;
+ PERFORM set_config('app.current_operation','transport.deliveries.execute',true);
+ BEGIN
+  PERFORM operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{"latitude":11.48,"longitude":-66.9,"accuracy_meters":10}');
+  RAISE EXCEPTION 'Distant delivery evidence was accepted';
+ EXCEPTION WHEN check_violation THEN NULL; END;
+ route:=operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{"latitude":10.48,"longitude":-66.9,"accuracy_meters":10}');
+ IF route->>'route_completed'<>'true' OR route->'route'->>'status'<>'COMPLETED' OR operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001')->>'status'<>'DELIVERED' THEN RAISE EXCEPTION 'Driver route completion mismatch'; END IF;
+ route:=operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{"latitude":10.48,"longitude":-66.9,"accuracy_meters":10}');
+ IF route->>'idempotent'<>'true' OR route->>'route_completed'<>'true' THEN RAISE EXCEPTION 'Driver delivery retry mismatch'; END IF;
+ IF transporte.repartidores_leer('00008003-0000-0000-0000-000000000001',NULL,'00008010-0000-0000-0000-000000000001')->>'availability'<>'AVAILABLE' THEN RAISE EXCEPTION 'Driver was not released'; END IF;
  PERFORM set_config('app.current_operation','digital_sales.ecommerce.configure',true);store:=ventas_digitales.tienda_configurar('00008003-0000-0000-0000-000000000001',NULL,'00008004-0000-0000-0000-000000000001','shop.example.test','Test shop',NULL,'{"branding":{"primaryColor":"#123456"}}');
  store:=ventas_digitales.tienda_configurar('00008003-0000-0000-0000-000000000001',(store->>'id')::uuid,NULL,NULL,NULL,1,'{"status":"ACTIVE"}');
  store:=ventas_digitales.catalogo_publico('shop.example.test',20);
