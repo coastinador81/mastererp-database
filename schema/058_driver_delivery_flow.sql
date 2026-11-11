@@ -124,34 +124,7 @@ BEGIN
   'route_completed',completed,'idempotent',false);
 END $$;
 
-CREATE OR REPLACE FUNCTION operaciones.ruta_repartidor_tienda(p_dominio text)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
-SET search_path=pg_catalog,operaciones,ventas_digitales,plataforma,pg_temp AS $$
-DECLARE company uuid;
-BEGIN
- SELECT empresa_id INTO company FROM ventas_digitales.tiendas
- WHERE tenant_id=plataforma.current_app_tenant_id() AND lower(dominio)=lower(p_dominio) AND estado='ACTIVE';
- IF NOT FOUND THEN RAISE EXCEPTION 'Store not found' USING ERRCODE='P0002'; END IF;
- RETURN operaciones.ruta_repartidor_actual(company);
-END $$;
-
-CREATE OR REPLACE FUNCTION operaciones.ruta_entrega_tienda(
- p_dominio text,p_ruta uuid,p_pedido uuid,p_estado text,p_evidencia jsonb)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
-SET search_path=pg_catalog,operaciones,ventas_digitales,plataforma,pg_temp AS $$
-DECLARE company uuid;
-BEGIN
- SELECT empresa_id INTO company FROM ventas_digitales.tiendas
- WHERE tenant_id=plataforma.current_app_tenant_id() AND lower(dominio)=lower(p_dominio) AND estado='ACTIVE';
- IF NOT FOUND THEN RAISE EXCEPTION 'Store not found' USING ERRCODE='P0002'; END IF;
- RETURN operaciones.ruta_entrega_registrar(company,p_ruta,p_pedido,p_estado,p_evidencia);
-END $$;
-
 REVOKE ALL ON FUNCTION operaciones.ruta_repartidor_actual(uuid),
  operaciones.ruta_entrega_registrar(uuid,uuid,uuid,text,jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION operaciones.ruta_repartidor_actual(uuid),
  operaciones.ruta_entrega_registrar(uuid,uuid,uuid,text,jsonb) TO mastererp_app;
-REVOKE ALL ON FUNCTION operaciones.ruta_repartidor_tienda(text),
- operaciones.ruta_entrega_tienda(text,uuid,uuid,text,jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION operaciones.ruta_repartidor_tienda(text),
- operaciones.ruta_entrega_tienda(text,uuid,uuid,text,jsonb) TO mastererp_app;
