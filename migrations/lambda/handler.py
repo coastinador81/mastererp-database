@@ -19,6 +19,7 @@ def run_rollback_fixture(connection, path):
         raise ValueError("Rollback fixture boundaries required")
     connection.run(text[len("BEGIN;"):-len("ROLLBACK;")])
     connection.run("SET CONSTRAINTS ALL IMMEDIATE")
+    connection.run("RESET ROLE")
 
 
 SCHEMA_FILES = (
