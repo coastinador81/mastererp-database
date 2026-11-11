@@ -4,11 +4,11 @@ Fuente oficial: Platform/dev, `docs/UX_UI_STANDARD.md`. Database e Infrastructur
 
 ## Alcance y estado
 
-El patrón acordado es la interfaz administrativa de Finanzas/Proveedores: menú blanco, fondo gris azulado muy claro, acentos azules, tipografía Inter regular, superficies limpias e iconos de línea. Es la referencia para desarrollar y revisar las interfaces administrativas de los módulos de MasterERP.
+El manual de identidad corporativa de Uonify define los fundamentos visuales del producto. La experiencia aprobada de `dev.uonify.com` es la referencia principal de marca; la interfaz administrativa de Finanzas/Proveedores concreta cómo aplicar esos fundamentos en listados y formularios operativos: menú blanco, fondo gris azulado muy claro, acentos azules, tipografía Inter regular, superficies limpias e iconos de línea.
 
 La implementación de referencia está en Finanzas; documentar este estándar no significa que los demás módulos ya lo apliquen. Se adopta al crear o modificar sus interfaces, conservando objetivos, datos, contratos y cambios del equipo. Esta entrega es documental y no rediseña aplicaciones existentes.
 
-Uonify/chat, POS y storefront pueden necesitar composiciones diferentes según su responsabilidad. Reutilizan la identidad y los componentes compatibles; el menú administrativo y la tabla no se imponen a toda experiencia. Una necesidad de layout se documenta en el módulo; una decisión funcional pendiente se acuerda con el Product Owner. No se cambia la arquitectura ni la integración por una preferencia estética.
+Uonify/chat, administración, POS, storefront y móvil pueden necesitar composiciones diferentes según su responsabilidad. Son superficies conectadas del mismo producto y reutilizan identidad, tokens y componentes compatibles; el menú administrativo y la tabla no se imponen a toda experiencia. Una necesidad de layout se documenta en el módulo; una decisión funcional pendiente se acuerda con el Product Owner. No se cambia la arquitectura ni la integración por una preferencia estética.
 
 Leer también [arquitectura frontend](FRONTEND_ARCHITECTURE.md), [desarrollo](DEVELOPMENT_STANDARD.md) y [carpetas](FOLDER_STANDARD.md).
 
@@ -43,16 +43,18 @@ Los estados de éxito, advertencia y error también llevan texto o icono compren
 
 ## Tokens, componentes y propiedad
 
-- Centralizar colores, tipografía, espacios, radios y sombras en variables reutilizables. Escala de espaciado: 4, 8, 12, 16, 20, 24 y 32 px; reutilizarla para alineaciones y separaciones.
+- Centralizar colores, tipografía, espacios, radios, movimiento y sombras en variables reutilizables. La fuente común comienza en `frontend/shared/ui/design-tokens.css`; no se importa la implementación interna de `0-uonify/0.2-app`. Escala de espaciado: 4, 8, 12, 16, 20, 24 y 32 px; reutilizarla para alineaciones y separaciones.
 - Radios orientativos: 8 px en controles, 12–16 px en tarjetas. Bordes discretos y sombras mínimas; superficies sin opacidad global.
 - Contenido centrado con máximo aproximado de 1480 px y columnas que permitan encoger el área principal. Menú de referencia de unos 256 px y encabezado de unos 80 px en escritorio; son dimensiones del shell, no alturas rígidas para todo contenido.
 - Reutilizar encabezados, breadcrumbs, botones, iconos, campos, tablas, paginación y estados existentes. Buscar antes de crear otro componente o una dependencia de iconos.
-- La implementación actual usa variables `--finance-*` y alcance `.finance-app`. No importar esa hoja esperando que aplique automáticamente a otra aplicación ni añadir esa clase a Uonify para forzar su apariencia.
-- Al necesitar una base compartida para otro módulo, extraer o adaptar los componentes en su propietario técnico común de Platform, conservando estos valores y revisando consumidores. No duplicar una paleta o una fuente por módulo. La existencia de esta guía no acredita una biblioteca visual compartida ya implementada.
+- La base administrativa compartida vive en `frontend/shared/ui/admin-application.css`. Mantiene temporalmente variables `--finance-*` y alcance `.finance-app` para compatibilidad; el código nuevo usa `--uon-*`. No añadir la clase para conceder identidad, comportamiento o permisos.
+- Al necesitar una base compartida para otro módulo, extraer o adaptar los componentes en su propietario técnico común de Platform, conservando estos valores y revisando consumidores. No duplicar una paleta o una fuente por módulo. La existencia de tokens no acredita que todas las pantallas o componentes ya estén migrados.
+
+Fundamentos corporativos comunes: azul rector `#0178F7`, azul de acción accesible `#006AE1`, aqua reservado a IA/Uony y actividad en vivo, retícula de 8 px con ajuste fino de 4 px, radios 4/8/12/16 px y movimiento de 120/200/320 ms con reducción de movimiento. Los colores semánticos se usan para estados, no como decoración. JetBrains Mono se reserva para identificadores técnicos cuando ayude a distinguirlos.
 
 Referencias de código existentes, verificadas en Platform:
 
-- [Tokens y estilos de Finanzas](https://github.com/eticayservicios/mastererp-platform/blob/dev/frontend/modules/2.2-finance/src/finance.css).
+- [Fundamentos corporativos](https://github.com/eticayservicios/mastererp-platform/blob/dev/frontend/shared/ui/design-tokens.css) y [base administrativa](https://github.com/eticayservicios/mastererp-platform/blob/dev/frontend/shared/ui/admin-application.css).
 - [Iconos de línea](https://github.com/eticayservicios/mastererp-platform/blob/dev/frontend/modules/2.2-finance/src/FinanceIcon.jsx) y [navegación](https://github.com/eticayservicios/mastererp-platform/blob/dev/frontend/modules/2.2-finance/src/FinanceNavigation.jsx).
 - [Listado y buscador de Proveedores](https://github.com/eticayservicios/mastererp-platform/blob/dev/frontend/modules/2.2-finance/2.2.1-administration/screens/parties/SupplierDirectory.jsx) y [fila accesible](https://github.com/eticayservicios/mastererp-platform/blob/dev/frontend/modules/2.2-finance/2.2.1-administration/screens/parties/SupplierRow.jsx).
 - [Fuente local y procedencia](https://github.com/eticayservicios/mastererp-platform/blob/dev/frontend/modules/2.2-finance/src/assets/fonts/README.md).

@@ -4,11 +4,13 @@ Estado: arquitectura objetivo aprobada y numeración local reorganizada. No acre
 
 ## 1. Entrada y aplicaciones independientes
 
-MasterERP conserva los datos, reglas, procesos y autorización. Uonify es la entrada general objetivo DEV en `dev.uonify.com`: cuenta, espacios, chat y lanzador. No se exige conversar para abrir una aplicación. Cada aplicación principal abre su subdominio, con componentes, build, pipeline, despliegue y rollback propios. Administración no es otra aplicación: vive dentro de Finanzas, junto con Contabilidad, BI, MasterPay y Recursos humanos.
+MasterERP conserva los datos, reglas, procesos y autorización. Uonify es el producto principal y la entrada general objetivo DEV en `dev.uonify.com`: cuenta, espacios, chat y lanzador. Uony permite iniciar, completar y revisar flujos mediante APIs o herramientas autorizadas; las vistas manuales trabajan sobre los mismos contratos y siguen disponibles. No se exige conversar para abrir una aplicación. Cada aplicación principal abre su subdominio, con componentes, build, pipeline, despliegue y rollback propios. Administración no es otra aplicación: vive dentro de Finanzas, junto con Contabilidad, BI, MasterPay y Recursos humanos.
 
 Esta decisión sustituye la experiencia objetivo anterior de mostrar todas las pantallas dentro del App Shell de Uonify. La composición de código existente puede conservarse durante la transición; no implica que deba borrarse ni publicarse otro hosting automáticamente. El contrato anterior se conserva como referencia histórica en [FRONTEND_ARCHITECTURE_BEFORE_RENUMBERING.md](history/FRONTEND_ARCHITECTURE_BEFORE_RENUMBERING.md).
 
 Las aplicaciones, dominios propuestos y rutas están en [MODULE_RENUMBERING.md](MODULE_RENUMBERING.md) y [MODULE_REGISTRY.md](MODULE_REGISTRY.md). Ecommerce administrativo usa `ecom-dev.uonify.com`; su tienda pública independiente usa `tienda-dev.uonify.com` y pertenece al mismo dominio funcional. La biblioteca de catálogo es única y consumida por Inventario, POS, Compras y Ecommerce.
+
+Los subdominios no representan productos desconectados: son superficies de un mismo producto modular. Comparten identidad, cuenta y contexto mediante contratos explícitos, pero conservan despliegue y recuperación independientes. `app-dev.uonify.com` es el shell administrativo histórico y no debe describirse como la puerta maestra vigente.
 
 ## 2. Cuenta común y acceso a servicios
 
@@ -30,6 +32,8 @@ Terceros, productos, empresas, monedas, identidad y servicios de IA se reutiliza
 
 Inventario mantiene existencias, nodos y preparación entre canales. Ecommerce presenta los pedidos de su canal y puede invocar preparación; POS reutiliza nodos e inventario. Transporte administra repartidores y rutas. Recursos humanos pertenece a Finanzas, conservando sus permisos específicos y sin acceso automático por tener un permiso financiero general.
 
+La identidad visual común se deriva del manual corporativo de Uonify mediante tokens y componentes neutrales alojados en `frontend/shared`. Las aplicaciones no importan código interno de `0-uonify/0.2-app` ni copian paletas propias. Cada canal conserva la composición adecuada a su función —chat, administración, storefront o móvil— y comparte fundamentos de marca, accesibilidad y estados. Los estilos nunca conceden permisos ni sustituyen contratos funcionales.
+
 ## 5. Cuatro capas y propiedad
 
 Frontend y backend de Platform, Database e Infrastructure mantienen la misma numeración y rutas funcionales. [FOLDER_STANDARD.md](FOLDER_STANDARD.md) exige README por carpeta funcional y resources.yml en Infrastructure. Una carpeta, pantalla o YAML no obliga a crear Lambda, tabla o stack. Recursos compartidos se declaran una sola vez en el padre común; los consumidores reciben referencias explícitas.
@@ -38,7 +42,7 @@ Mover archivos no cambia el stack propietario ni los recursos físicos. Se conse
 
 ## 6. Estado y pendientes
 
-Los repositorios contienen hosting y aplicaciones anteriores en distintos grados de implementación. `app-dev.uonify.com` sigue apareciendo en contratos técnicos vigentes; `dev.uonify.com` es la entrada objetivo y su sustitución no se ejecuta por esta reorganización. Las pruebas históricas acreditan únicamente sus versiones y alcance originales. La renumeración local no valida de nuevo DNS, certificados, login, permisos SQL ni funcionamiento en AWS.
+Los repositorios contienen hosting y aplicaciones anteriores en distintos grados de implementación. `app-dev.uonify.com` puede seguir apareciendo en evidencia histórica y contratos técnicos en transición; `dev.uonify.com` es la entrada principal vigente. Las pruebas históricas acreditan únicamente sus versiones y alcance originales. La renumeración local no valida de nuevo DNS, certificados, login, permisos SQL ni funcionamiento en AWS.
 
 Pendientes: configurar/validar SSO y federación Google, actualizar de forma coordinada callbacks/CORS/dominios, definir continuidad y logout, cerrar entradas de servicios y límites por aplicación, y preparar cualquier migración de propiedad AWS. No afirmar una implementación completa por tener README, build o endpoints health aprobados.
 
