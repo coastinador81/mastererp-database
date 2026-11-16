@@ -2,6 +2,7 @@
 import os,re,subprocess
 
 OPERATIONS_PATHS={
+    'schema/050_storefront_store_payment_methods.sql',
     'schema/052_operations_order_history_read.sql',
     'schema/053_operations_order_cancellation_notes.sql',
     'schema/054_finance_payment_review.sql',
@@ -9,6 +10,10 @@ OPERATIONS_PATHS={
     'schema/056_finance_receipt_exchange_rate.sql',
     'schema/057_storefront_payment_declaration.sql',
     'schema/057_operations_orders_search.sql',
+    'schema/058_driver_delivery_flow.sql',
+    'schema/059_delivery_contract_consistency.sql',
+    'tests/operations_fulfillment_ecommerce_test.sql',
+    'tests/storefront_store_payment_methods_test.sql',
 }
 
 def batch_for_paths(requested,paths):
