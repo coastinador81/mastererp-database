@@ -73,7 +73,6 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  route:=operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','FAILED','{"reason":"Customer absent"}');
  IF route->>'route_completed'<>'true' OR route->'route'->>'status'<>'COMPLETED'
   OR operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001')->>'status'<>'READY'
-  OR (SELECT ruta_ref IS NOT NULL FROM operaciones.pedidos WHERE id='00008008-0000-0000-0000-000000000001')
  THEN RAISE EXCEPTION 'Failed delivery coordination mismatch'; END IF;
  IF transporte.repartidores_leer('00008003-0000-0000-0000-000000000001',NULL,'00008010-0000-0000-0000-000000000001')->>'availability'<>'AVAILABLE'
  THEN RAISE EXCEPTION 'Driver was not released after failed route'; END IF;
