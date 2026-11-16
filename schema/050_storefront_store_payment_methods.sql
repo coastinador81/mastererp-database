@@ -18,7 +18,9 @@ BEGIN
  IF NULLIF(current_setting('app.current_operation',true),'') IS DISTINCT FROM 'digital_sales.storefront.checkout'
  OR p_issuer!~'^https://' OR length(p_subject) NOT BETWEEN 1 AND 255
  OR p_dominio IS NULL OR jsonb_typeof(p_items)<>'array' OR jsonb_array_length(p_items)=0
- OR jsonb_typeof(p_entrega)<>'object' OR length(COALESCE(btrim(p_entrega->>'address'),'')) NOT BETWEEN 1 AND 300
+ OR jsonb_typeof(p_entrega)<>'object' OR length(COALESCE(btrim(p_entrega->>'address'),'')) NOT BETWEEN 5 AND 500
+ OR jsonb_typeof(p_entrega->'latitude') IS DISTINCT FROM 'number' OR (p_entrega->>'latitude')::numeric NOT BETWEEN -90 AND 90
+ OR jsonb_typeof(p_entrega->'longitude') IS DISTINCT FROM 'number' OR (p_entrega->>'longitude')::numeric NOT BETWEEN -180 AND 180
  OR p_metodo_entrega<>'realtime' OR jsonb_typeof(p_pago)<>'object'
  OR payment_method IS NULL OR payment_method NOT IN ('cash','pos','mobile','transfer','custom')
  OR (payment_method NOT IN ('cash','pos') AND COALESCE(payment_reference,'')!~'^[0-9]{4,40}$')
@@ -120,9 +122,12 @@ BEGIN
   reserva_inventario_ref,idempotency_key,creado_por)
  SELECT order_id,tenant,store.empresa_id,store.nodo_id,customer,
   'ORD-'||upper(substr(replace(order_id::text,'-',''),1,12)),'PENDING',currency_code,subtotal_value,
-  node.tarifa_entrega,jsonb_build_object('customer_id',customer,'name',t.nombre),p_entrega,
+  node.tarifa_entrega,jsonb_build_object('customer_id',customer,'name',t.nombre,'phone',profile.telefono),p_entrega,
   payment_snapshot,'immediate',p_metodo_entrega,
-  reservation_id::text,p_idempotency_key,actor FROM catalogo.terceros t WHERE t.tenant_id=tenant AND t.id=customer;
+  reservation_id::text,p_idempotency_key,actor FROM catalogo.terceros t
+  LEFT JOIN ventas_digitales.cliente_perfiles profile
+   ON (profile.tenant_id,profile.empresa_id,profile.cliente_id)=(tenant,store.empresa_id,t.id)
+  WHERE t.tenant_id=tenant AND t.id=customer;
  INSERT INTO operaciones.pedido_lineas(tenant_id,empresa_id,pedido_id,posicion,producto_id,producto_nombre,cantidad,precio_unitario)
  SELECT tenant,store.empresa_id,order_id,ordinality,(item->>'product_id')::uuid,item->>'product_name',
   (item->>'quantity')::numeric,(item->>'unit_price')::numeric

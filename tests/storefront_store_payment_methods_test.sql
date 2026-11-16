@@ -54,9 +54,12 @@ BEGIN
   'customer50@example.invalid','Customer 50',raw_token);
 END $$;
 RESET ROLE;
+UPDATE ventas_digitales.cliente_perfiles SET telefono='+584121234567'
+ WHERE tenant_id='00005000-0000-0000-0000-000000000002' AND empresa_id='00005000-0000-0000-0000-000000000003'
+ AND cliente_id='00005000-0000-0000-0000-000000000005';
 CREATE FUNCTION pg_temp.qa50_checkout(payment jsonb,idempotency text) RETURNS jsonb LANGUAGE sql AS $f$
  SELECT ventas_digitales.checkout_crear('https://issuer.example.invalid','customer-sub-50','qa50.example.invalid',
-  '[{"product_id":"00005000-0000-0000-0000-000000000008","quantity":1}]','{"address":"QA address"}',
+  '[{"product_id":"00005000-0000-0000-0000-000000000008","quantity":1}]','{"address":"QA address","latitude":10.48,"longitude":-66.9}',
   'realtime',payment,idempotency) $f$;
 SET LOCAL ROLE mastererp_app;
 DO $$
@@ -66,6 +69,14 @@ BEGIN
  pos:=pg_temp.qa50_checkout('{"method":"pos"}','qa50-pos');
  custom:=pg_temp.qa50_checkout('{"method":"custom","methodId":"zelle","reference":"778899"}','qa50-custom');
  IF pos->>'id' IS NULL OR custom->>'id' IS NULL THEN RAISE EXCEPTION 'Store payment checkout failed';END IF;
+ IF (SELECT cliente_snapshot->>'phone' FROM operaciones.pedidos WHERE id=(pos->>'id')::uuid)<>'+584121234567'
+ THEN RAISE EXCEPTION 'Customer phone snapshot missing';END IF;
+ BEGIN
+  PERFORM ventas_digitales.checkout_crear('https://issuer.example.invalid','customer-sub-50','qa50.example.invalid',
+   '[{"product_id":"00005000-0000-0000-0000-000000000008","quantity":1}]','{"address":"Missing coordinates"}',
+   'realtime','{"method":"pos"}','qa50-no-location');
+  RAISE EXCEPTION 'Checkout without coordinates was accepted';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
  BEGIN
   PERFORM pg_temp.qa50_checkout('{"method":"custom","methodId":"binance","reference":"778899"}','qa50-disabled');
   RAISE EXCEPTION 'Disabled custom method accepted';

@@ -68,8 +68,20 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  PERFORM set_config('app.current_operation','transport.deliveries.execute',true);
  BEGIN
   PERFORM operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{"latitude":11.48,"longitude":-66.9,"accuracy_meters":10}');
-  RAISE EXCEPTION 'Distant delivery evidence was accepted';
+ RAISE EXCEPTION 'Distant delivery evidence was accepted';
  EXCEPTION WHEN check_violation THEN NULL; END;
+ route:=operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','FAILED','{"reason":"Customer absent"}');
+ IF route->>'route_completed'<>'true' OR route->'route'->>'status'<>'COMPLETED'
+  OR operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001')->>'status'<>'READY'
+  OR (SELECT ruta_ref IS NOT NULL FROM operaciones.pedidos WHERE id='00008008-0000-0000-0000-000000000001')
+ THEN RAISE EXCEPTION 'Failed delivery coordination mismatch'; END IF;
+ IF transporte.repartidores_leer('00008003-0000-0000-0000-000000000001',NULL,'00008010-0000-0000-0000-000000000001')->>'availability'<>'AVAILABLE'
+ THEN RAISE EXCEPTION 'Driver was not released after failed route'; END IF;
+ PERFORM set_config('app.current_operation','operations.routes.create',true);
+ route:=operaciones.ruta_crear('00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001',current_date,'slot','["00008008-0000-0000-0000-000000000001"]','fulfillment-route-retry');rid:=(route->>'id')::uuid;
+ PERFORM set_config('app.current_operation','operations.routes.assign',true);route:=operaciones.ruta_asignar('00008003-0000-0000-0000-000000000001',rid,1,'00008010-0000-0000-0000-000000000001');
+ PERFORM set_config('app.current_operation','operations.routes.transition',true);route:=operaciones.ruta_transicionar('00008003-0000-0000-0000-000000000001',rid,2,'IN_ROUTE');
+ PERFORM set_config('app.current_operation','transport.deliveries.execute',true);
  route:=operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{"latitude":10.48,"longitude":-66.9,"accuracy_meters":10}');
  IF route->>'route_completed'<>'true' OR route->'route'->>'status'<>'COMPLETED' OR operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001')->>'status'<>'DELIVERED' THEN RAISE EXCEPTION 'Driver route completion mismatch'; END IF;
  route:=operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{"latitude":10.48,"longitude":-66.9,"accuracy_meters":10}');
