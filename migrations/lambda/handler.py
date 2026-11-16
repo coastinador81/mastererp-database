@@ -79,6 +79,7 @@ SCHEMA_FILES = (
     "054_finance_payment_review.sql",
     "055_finance_receipts_history.sql",
     "056_finance_receipt_exchange_rate.sql",
+    "057_storefront_payment_declaration.sql",
     "057_operations_orders_search.sql",
     "058_driver_delivery_flow.sql",
 )

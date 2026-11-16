@@ -7,6 +7,7 @@ OPERATIONS_PATHS={
     'schema/054_finance_payment_review.sql',
     'schema/055_finance_receipts_history.sql',
     'schema/056_finance_receipt_exchange_rate.sql',
+    'schema/057_storefront_payment_declaration.sql',
     'schema/057_operations_orders_search.sql',
 }
 
