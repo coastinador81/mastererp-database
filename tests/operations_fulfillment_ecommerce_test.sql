@@ -68,7 +68,8 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
   OR route->'stops'->0->'items'->0->>'quantity'<>'1'
  THEN RAISE EXCEPTION 'Driver route order detail mismatch'; END IF;
  PERFORM set_config('app.current_operation','operations.routes.assign',true);route:=operaciones.ruta_asignar('00008003-0000-0000-0000-000000000001',rid,1,'00008010-0000-0000-0000-000000000001');
- PERFORM set_config('app.current_operation','operations.routes.transition',true);route:=operaciones.ruta_transicionar('00008003-0000-0000-0000-000000000001',rid,2,'IN_ROUTE');
+ PERFORM set_config('app.current_operation','transport.routes.start',true);route:=operaciones.ruta_repartidor_iniciar('00008003-0000-0000-0000-000000000001');
+ IF route->'route'->>'status'<>'IN_ROUTE' THEN RAISE EXCEPTION 'Driver route start mismatch'; END IF;
  PERFORM set_config('app.current_operation','transport.deliveries.execute',true);
  BEGIN
   PERFORM operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{"latitude":11.48,"longitude":-66.9,"accuracy_meters":10}');

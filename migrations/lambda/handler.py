@@ -85,6 +85,7 @@ SCHEMA_FILES = (
     "059_delivery_contract_consistency.sql",
     "060_operations_order_delivery_trace.sql",
     "061_driver_route_history.sql",
+    "062_driver_route_start.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -376,7 +377,7 @@ def lambda_handler(event, context):
                       "055_finance_receipts_history.sql", "056_finance_receipt_exchange_rate.sql",
                       "057_operations_orders_search.sql", "058_driver_delivery_flow.sql",
                       "059_delivery_contract_consistency.sql", "060_operations_order_delivery_trace.sql",
-                      "061_driver_route_history.sql")
+                      "061_driver_route_history.sql", "062_driver_route_start.sql")
     operations = event.get("action") in ("apply_operations_model", "validate_operations_candidate")
     selected_schema = applied_schema[1:] if operations else applied_schema[:1]
     selected_tests = (("operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql",
