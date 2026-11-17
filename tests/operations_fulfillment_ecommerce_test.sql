@@ -70,8 +70,9 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  PERFORM set_config('app.current_operation','operations.routes.assign',true);route:=operaciones.ruta_asignar('00008003-0000-0000-0000-000000000001',rid,1,'00008010-0000-0000-0000-000000000001');
  PERFORM set_config('app.current_operation','transport.routes.start',true);route:=operaciones.ruta_repartidor_iniciar('00008003-0000-0000-0000-000000000001');
  IF route->'route'->>'status'<>'IN_ROUTE' THEN RAISE EXCEPTION 'Driver route start mismatch'; END IF;
- IF NOT EXISTS(SELECT 1 FROM operaciones.pedido_eventos WHERE pedido_id='00008008-0000-0000-0000-000000000001'
-  AND estado_nuevo='OUT_FOR_DELIVERY' AND motivo='ROUTE_STARTED' AND detalle=rid::text)
+ item:=operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001');
+ IF NOT item->'history' @> jsonb_build_array(jsonb_build_object(
+  'status','OUT_FOR_DELIVERY','reason','ROUTE_STARTED','detail',rid::text))
  THEN RAISE EXCEPTION 'Route start history mismatch'; END IF;
  PERFORM set_config('app.current_operation','transport.deliveries.execute',true);
  BEGIN
