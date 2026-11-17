@@ -124,7 +124,7 @@ BEGIN
     FROM operaciones.pedido_eventos e JOIN plataforma.users u ON u.id=e.actor_id
     WHERE e.tenant_id=p.tenant_id AND e.empresa_id=p.empresa_id AND e.pedido_id=p.id),
    'delivery_attempts',(SELECT COALESCE(jsonb_agg(jsonb_build_object(
-    'route_id',s.ruta_id,'route_date',r.fecha,'status',s.estado,
+    'route_id',s.ruta_id,'route_date',r.fecha,'stop_sequence',s.secuencia,'status',s.estado,
     'driver_id',d.id,'driver_name',d.nombre,
     'evidence',s.evidencia,'updated_at',s.actualizado_en)
     ORDER BY s.actualizado_en,s.ruta_id),'[]')

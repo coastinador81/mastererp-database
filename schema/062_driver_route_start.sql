@@ -30,6 +30,12 @@ BEGIN
   FROM operaciones.ruta_paradas s WHERE (s.tenant_id,s.empresa_id,s.ruta_id)=(tenant,p_empresa,route.id)
    AND (p.tenant_id,p.empresa_id,p.id)=(s.tenant_id,s.empresa_id,s.pedido_id)
    AND p.estado='READY' AND p.ruta_ref=route.id::text;
+ INSERT INTO operaciones.pedido_eventos(
+  tenant_id,empresa_id,pedido_id,estado_anterior,estado_nuevo,motivo,detalle,actor_id,correlation_id,creado_en)
+ SELECT s.tenant_id,s.empresa_id,s.pedido_id,'READY','OUT_FOR_DELIVERY','ROUTE_STARTED',route.id::text,
+  actor,NULLIF(current_setting('app.correlation_id',true),'')::uuid,transaction_timestamp()
+ FROM operaciones.ruta_paradas s
+ WHERE (s.tenant_id,s.empresa_id,s.ruta_id)=(tenant,p_empresa,route.id);
  UPDATE transporte.repartidores SET disponibilidad='ON_ROUTE',version=version+1,actualizado_en=transaction_timestamp()
   WHERE tenant_id=tenant AND id=driver.id;
  correlation:=NULLIF(current_setting('app.correlation_id',true),'')::uuid;
