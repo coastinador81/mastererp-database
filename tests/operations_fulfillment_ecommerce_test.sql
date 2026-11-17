@@ -63,6 +63,10 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  IF item->>'status'<>'COMPLETED' OR operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001')->>'status'<>'READY' THEN RAISE EXCEPTION 'Preparation completion mismatch'; END IF;
  PERFORM set_config('app.current_operation','operations.routes.create',true);
  route:=operaciones.ruta_crear('00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001',current_date,'slot','["00008008-0000-0000-0000-000000000001"]','fulfillment-route');rid:=(route->>'id')::uuid;
+ IF route->'stops'->0->>'order_number'<>'ORDER-READY'
+  OR route->'stops'->0->'items'->0->>'name'<>'Public product'
+  OR route->'stops'->0->'items'->0->>'quantity'<>'1'
+ THEN RAISE EXCEPTION 'Driver route order detail mismatch'; END IF;
  PERFORM set_config('app.current_operation','operations.routes.assign',true);route:=operaciones.ruta_asignar('00008003-0000-0000-0000-000000000001',rid,1,'00008010-0000-0000-0000-000000000001');
  PERFORM set_config('app.current_operation','operations.routes.transition',true);route:=operaciones.ruta_transicionar('00008003-0000-0000-0000-000000000001',rid,2,'IN_ROUTE');
  PERFORM set_config('app.current_operation','transport.deliveries.execute',true);

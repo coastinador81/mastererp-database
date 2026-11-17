@@ -6,9 +6,14 @@ SET search_path=pg_catalog,operaciones,ventas_digitales,pg_temp AS $$
   'id',r.id,'node_id',r.nodo_id,'driver_id',r.repartidor_id,'date',r.fecha,
   'status',r.estado,'delivery_window_ref',r.ventana_ref,'version',r.version,
   'stops',(SELECT COALESCE(jsonb_agg(jsonb_build_object(
-   'order_id',s.pedido_id,'sequence',s.secuencia,'status',s.estado,
+   'order_id',s.pedido_id,'order_number',p.numero,'sequence',s.secuencia,'status',s.estado,
    'delivery',p.entrega_snapshot,'customer',jsonb_build_object(
     'name',p.cliente_snapshot->>'name','phone',COALESCE(NULLIF(p.cliente_snapshot->>'phone',''),profile.telefono)),
+   'items',(SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'id',line.id,'product_id',line.producto_id,'name',line.producto_nombre,
+    'quantity',line.cantidad,'position',line.posicion) ORDER BY line.posicion),'[]')
+    FROM operaciones.pedido_lineas line
+    WHERE (line.tenant_id,line.empresa_id,line.pedido_id)=(p.tenant_id,p.empresa_id,p.id)),
    'evidence',s.evidencia,'updated_at',s.actualizado_en) ORDER BY s.secuencia),'[]')
    FROM operaciones.ruta_paradas s JOIN operaciones.pedidos p
     ON (p.tenant_id,p.empresa_id,p.id)=(s.tenant_id,s.empresa_id,s.pedido_id)
