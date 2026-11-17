@@ -100,6 +100,10 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  route:=operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{"latitude":10.48,"longitude":-66.9,"accuracy_meters":10}');
  IF route->>'idempotent'<>'true' OR route->>'route_completed'<>'true' THEN RAISE EXCEPTION 'Driver delivery retry mismatch'; END IF;
  IF transporte.repartidores_leer('00008003-0000-0000-0000-000000000001',NULL,'00008010-0000-0000-0000-000000000001')->>'availability'<>'AVAILABLE' THEN RAISE EXCEPTION 'Driver was not released'; END IF;
+ route:=operaciones.ruta_repartidor_actual('00008003-0000-0000-0000-000000000001');
+ IF route->'route'<>'null'::jsonb OR jsonb_array_length(route->'routes')<>2
+  OR route->'routes'->0->>'status'<>'COMPLETED' OR route->'routes'->0->>'created_at' IS NULL
+ THEN RAISE EXCEPTION 'Driver route history mismatch'; END IF;
  PERFORM set_config('app.current_operation','digital_sales.ecommerce.configure',true);store:=ventas_digitales.tienda_configurar('00008003-0000-0000-0000-000000000001',NULL,'00008004-0000-0000-0000-000000000001','shop.example.test','Test shop',NULL,'{"branding":{"primaryColor":"#123456"}}');
  store:=ventas_digitales.tienda_configurar('00008003-0000-0000-0000-000000000001',(store->>'id')::uuid,NULL,NULL,NULL,1,'{"status":"ACTIVE"}');
  store:=ventas_digitales.catalogo_publico('shop.example.test',20);
