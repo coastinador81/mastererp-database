@@ -50,9 +50,7 @@ DO $$ DECLARE item jsonb; caught boolean:=false; BEGIN
  item:=operaciones.pedido_transicionar('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001',2,'CONFIRMED','ORDER_CONFIRMED');
  IF item->>'status'<>'CONFIRMED' OR (item->>'version')::int<>3 THEN RAISE EXCEPTION 'Transition mismatch'; END IF;
  IF jsonb_array_length(item->'history')<>2
- OR item->'history'->1->>'status'<>'CONFIRMED'
- OR item->'history'->1->>'reason'<>'ORDER_CONFIRMED'
- OR item->'history'->1->>'actor_name'<>'Orders test'
+ OR NOT item->'history' @> '[{"status":"CONFIRMED","reason":"ORDER_CONFIRMED","actor_name":"Orders test"}]'
  THEN RAISE EXCEPTION 'Order history mismatch'; END IF;
  PERFORM set_config('app.current_operation','operations.orders.notes.create',true);
  item:=operaciones.pedido_nota_crear('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001','Contactar al cliente','orders-note-key');
