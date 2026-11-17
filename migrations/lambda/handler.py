@@ -86,6 +86,7 @@ SCHEMA_FILES = (
     "060_operations_order_delivery_trace.sql",
     "061_driver_route_history.sql",
     "062_driver_route_start.sql",
+    "063_operations_order_returns.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -146,6 +147,7 @@ TEST_FILES = (
     "storefront_customer_payment_methods_test.sql",
     "storefront_store_payment_methods_test.sql",
     "operations_preparation_flow_test.sql",
+    "operations_order_returns_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"

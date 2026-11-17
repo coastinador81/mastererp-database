@@ -18,6 +18,12 @@ evento inmutable del pedido; todavía requiere el workflow y smoke DEV.
 El mismo candidato incorpora `pedido_direccion_corregir`: exige estado seguro,
 ausencia de ruta activa, versión optimista, permiso específico, motivo y contexto
 auditable, y conserva intacta la dirección maestra del cliente.
+`063_operations_order_returns.sql` es el candidato local para devoluciones
+administrativas coordinadas. Modela solicitud, decisión, recepción física,
+reintegro selectivo, referencias obligatorias de reembolso y nota de crédito e
+historial inmutable. Pedidos conserva el expediente, Inventario el movimiento
+`RETURN` y Finanzas confirma referencias de documentos reales. No habilita
+solicitudes desde Storefront ni acredita todavía API/UI o aplicación en DEV.
 
 
 ## Contrato y estado de esta capa
