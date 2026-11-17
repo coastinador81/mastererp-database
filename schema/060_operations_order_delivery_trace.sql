@@ -19,12 +19,12 @@ BEGIN
    RAISE EXCEPTION 'Delivery trace context required' USING ERRCODE='22023';
   END IF;
   INSERT INTO operaciones.pedido_eventos(
-   tenant_id,empresa_id,pedido_id,estado_anterior,estado_nuevo,motivo,detalle,actor_id,correlation_id)
+   tenant_id,empresa_id,pedido_id,estado_anterior,estado_nuevo,motivo,detalle,actor_id,correlation_id,creado_en)
   VALUES(NEW.tenant_id,NEW.empresa_id,NEW.pedido_id,'OUT_FOR_DELIVERY',
    CASE NEW.estado WHEN 'DELIVERED' THEN 'DELIVERED' ELSE 'READY' END,
    CASE NEW.estado WHEN 'DELIVERED' THEN 'DELIVERY_COMPLETED' ELSE 'DELIVERY_FAILED' END,
    CASE WHEN NEW.estado='FAILED' THEN NULLIF(btrim(NEW.evidencia->>'reason'),'') END,
-   actor,correlation);
+   actor,correlation,clock_timestamp());
  END IF;
  RETURN NEW;
 END $$;
@@ -80,9 +80,9 @@ BEGIN
  UPDATE operaciones.pedidos SET entrega_snapshot=next_snapshot,version=version+1,
   actualizado_en=transaction_timestamp() WHERE id=p_pedido;
  INSERT INTO operaciones.pedido_eventos(
-  tenant_id,empresa_id,pedido_id,estado_anterior,estado_nuevo,motivo,detalle,actor_id,correlation_id)
+  tenant_id,empresa_id,pedido_id,estado_anterior,estado_nuevo,motivo,detalle,actor_id,correlation_id,creado_en)
  VALUES(tenant,p_empresa,p_pedido,current.estado,current.estado,'DELIVERY_ADDRESS_CORRECTED',
-  btrim(p_motivo),actor,correlation);
+  btrim(p_motivo),actor,correlation,clock_timestamp());
  INSERT INTO auditoria.events(
   tenant_id,actor_user_id,module_code,entity_type,entity_id,action,correlation_id,metadata)
  VALUES(tenant,actor,'2.3.1-orders','pedido',p_pedido,operation,correlation,

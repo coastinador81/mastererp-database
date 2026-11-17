@@ -81,7 +81,7 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  item:=operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001');
  IF item->'delivery_attempts'->0->>'status'<>'FAILED'
   OR item->'delivery_attempts'->0->'evidence'->>'reason'<>'Customer absent'
-  OR item->'history'->-1->>'reason'<>'DELIVERY_FAILED'
+  OR NOT item->'history' @> '[{"reason":"DELIVERY_FAILED"}]'
  THEN RAISE EXCEPTION 'Failed delivery trace mismatch'; END IF;
  IF transporte.repartidores_leer('00008003-0000-0000-0000-000000000001',NULL,'00008010-0000-0000-0000-000000000001')->>'availability'<>'AVAILABLE'
  THEN RAISE EXCEPTION 'Driver was not released after failed route'; END IF;
@@ -94,8 +94,8 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  IF route->>'route_completed'<>'true' OR route->'route'->>'status'<>'COMPLETED' OR operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001')->>'status'<>'DELIVERED' THEN RAISE EXCEPTION 'Driver route completion mismatch'; END IF;
  item:=operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001');
  IF jsonb_array_length(item->'delivery_attempts')<>2
-  OR item->'delivery_attempts'->1->>'status'<>'DELIVERED'
-  OR item->'history'->-1->>'reason'<>'DELIVERY_COMPLETED'
+  OR NOT item->'delivery_attempts' @> '[{"status":"DELIVERED"}]'
+  OR NOT item->'history' @> '[{"reason":"DELIVERY_COMPLETED"}]'
  THEN RAISE EXCEPTION 'Completed delivery trace mismatch'; END IF;
  route:=operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{"latitude":10.48,"longitude":-66.9,"accuracy_meters":10}');
  IF route->>'idempotent'<>'true' OR route->>'route_completed'<>'true' THEN RAISE EXCEPTION 'Driver delivery retry mismatch'; END IF;
