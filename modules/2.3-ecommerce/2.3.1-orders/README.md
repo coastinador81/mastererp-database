@@ -12,6 +12,12 @@ historial existente de eventos, incluido actor y fecha, sin duplicar datos.
 `053_operations_order_cancellation_notes.sql` aporta notas persistentes y
 cancelación coordinada. `057_operations_orders_search.sql` añade el directorio
 filtrado y paginado por cursor con aislamiento de tenant y empresa.
+`060_operations_order_delivery_trace.sql` es el candidato local que proyecta
+los intentos de entrega autorizados y registra cada resultado terminal como un
+evento inmutable del pedido; todavía requiere el workflow y smoke DEV.
+El mismo candidato incorpora `pedido_direccion_corregir`: exige estado seguro,
+ausencia de ruta activa, versión optimista, permiso específico, motivo y contexto
+auditable, y conserva intacta la dirección maestra del cliente.
 
 
 ## Contrato y estado de esta capa

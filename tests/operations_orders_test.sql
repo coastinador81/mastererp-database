@@ -2,7 +2,8 @@ BEGIN;
 INSERT INTO plataforma.roles(code,name) VALUES('qa-orders-sql','Orders SQL fixture');
 INSERT INTO plataforma.role_permissions(role_id,permission_code)
  SELECT r.id,p.code FROM plataforma.roles r CROSS JOIN plataforma.permissions p
- WHERE r.code='qa-orders-sql' AND p.code IN ('operations.orders.read','operations.orders.write');
+ WHERE r.code='qa-orders-sql' AND p.code IN (
+  'operations.orders.read','operations.orders.write','operations.orders.address.correct');
 INSERT INTO plataforma.users(id,email,display_name) VALUES('00009001-0000-0000-0000-000000000001','qa-orders@example.invalid','Orders test');
 INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES('00009002-0000-0000-0000-000000000001','qa-orders','qa-orders','Orders','active');
 INSERT INTO plataforma.user_tenants(tenant_id,user_id,role_id,status)
@@ -39,12 +40,19 @@ DO $$ DECLARE item jsonb; caught boolean:=false; BEGIN
  item:=operaciones.pedidos_listar('00009003-0000-0000-0000-000000000001','PENDING','customer','cash',10,NULL,NULL,false,NULL,NULL);
  IF jsonb_array_length(item->'items')<>1 OR item->'items'->0->>'number'<>'ORDER-1' OR item->'next_cursor'<>'null'::jsonb
  THEN RAISE EXCEPTION 'Order directory search mismatch'; END IF;
- item:=operaciones.pedido_transicionar('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001',1,'CONFIRMED','ORDER_CONFIRMED');
- IF item->>'status'<>'CONFIRMED' OR (item->>'version')::int<>2 THEN RAISE EXCEPTION 'Transition mismatch'; END IF;
- IF jsonb_array_length(item->'history')<>1
- OR item->'history'->0->>'status'<>'CONFIRMED'
- OR item->'history'->0->>'reason'<>'ORDER_CONFIRMED'
- OR item->'history'->0->>'actor_name'<>'Orders test'
+ PERFORM set_config('app.current_operation','operations.orders.address.correct',true);
+ item:=operaciones.pedido_direccion_corregir('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001',1,'Av. Principal 123',10.48,-66.9,'Dirección histórica incompleta');
+ IF item->'delivery_snapshot'->>'address'<>'Av. Principal 123'
+  OR item->'delivery_snapshot'->>'latitude'<>'10.48' OR (item->>'version')::int<>2
+  OR item->'history'->0->>'reason'<>'DELIVERY_ADDRESS_CORRECTED'
+ THEN RAISE EXCEPTION 'Order address correction mismatch'; END IF;
+ PERFORM set_config('app.current_operation','operations.orders.transition',true);
+ item:=operaciones.pedido_transicionar('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001',2,'CONFIRMED','ORDER_CONFIRMED');
+ IF item->>'status'<>'CONFIRMED' OR (item->>'version')::int<>3 THEN RAISE EXCEPTION 'Transition mismatch'; END IF;
+ IF jsonb_array_length(item->'history')<>2
+ OR item->'history'->1->>'status'<>'CONFIRMED'
+ OR item->'history'->1->>'reason'<>'ORDER_CONFIRMED'
+ OR item->'history'->1->>'actor_name'<>'Orders test'
  THEN RAISE EXCEPTION 'Order history mismatch'; END IF;
  PERFORM set_config('app.current_operation','operations.orders.notes.create',true);
  item:=operaciones.pedido_nota_crear('00009003-0000-0000-0000-000000000001','00009008-0000-0000-0000-000000000001','Contactar al cliente','orders-note-key');
