@@ -4,7 +4,7 @@ INSERT INTO plataforma.role_permissions(role_id,permission_code)
  SELECT r.id,p.code FROM plataforma.roles r CROSS JOIN plataforma.permissions p
  WHERE r.code='qa-fulfillment' AND p.code IN(
   'operations.orders.read','operations.orders.write','operations.preparation.read','operations.preparation.write','operations.routes.read','operations.routes.write',
-  'catalog.inventory.read','catalog.inventory.reserve','digital_sales.ecommerce.read','digital_sales.ecommerce.write','transport.deliveries.execute','transport.drivers.read');
+  'catalog.inventory.read','catalog.inventory.reserve','digital_sales.ecommerce.read','digital_sales.ecommerce.write','transport.deliveries.execute','transport.routes.start','transport.drivers.read');
 INSERT INTO plataforma.users(id,email,display_name) VALUES('00008001-0000-0000-0000-000000000001','qa-fulfillment@example.invalid','Fulfillment test');
 INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES('00008002-0000-0000-0000-000000000001','qa-fulfillment','qa-fulfillment','Fulfillment','active');
 INSERT INTO plataforma.user_tenants(tenant_id,user_id,role_id,status)
