@@ -1,5 +1,5 @@
 """DEV-only prerequisites for one explicitly approved refund trace test."""
-from uuid import UUID, uuid5, NAMESPACE_URL
+from uuid import uuid4, uuid5, NAMESPACE_URL
 from dev_validation import _dev_guard
 
 TENANT='9095f990-c1f7-4ccb-953d-f84083331bd6'
@@ -30,7 +30,7 @@ def execute(connection,event,context):
           tenant=TENANT,company=COMPANY,order_id=ORDER)
         if len(scope)!=1 or any(value is None for value in scope[0]):raise ValueError('Approved cancelled order scope not satisfied')
         tenant,company,order_id,number,branch,customer,currency,total,base,sale,rate,rate_date,rate_source,actor=map(str,scope[0])
-        connection.run("SELECT set_config('app.current_user_id',:actor,true),set_config('app.current_tenant_id',:tenant,true),set_config('app.current_company_id',:company,true)",actor=actor,tenant=tenant,company=company)
+        connection.run("SELECT set_config('app.current_user_id',:actor,true),set_config('app.current_tenant_id',:tenant,true),set_config('app.current_company_id',:company,true),set_config('app.correlation_id',:correlation,true)",actor=actor,tenant=tenant,company=company,correlation=str(uuid4()))
         connection.run("""INSERT INTO administracion.cuentas_tesoreria(id,tenant_id,empresa_id,sucursal_id,creado_por,codigo,nombre,tipo,moneda,referencia_bancaria)
           VALUES(:id,:tenant,:company,:branch,:actor,'QA-USD-REFUNDS','Caja QA USD para reembolsos','caja','USD','PRUEBA DEV; no representa fondos reales')
           ON CONFLICT(tenant_id,empresa_id,codigo) DO NOTHING""",id=account,tenant=tenant,company=company,branch=branch,actor=actor)
