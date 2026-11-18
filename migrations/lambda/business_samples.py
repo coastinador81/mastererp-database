@@ -11,6 +11,9 @@ SAMPLES=(
 )
 
 def seed(connection,event,context):
+    if event.get('operation') in ('seed_orders','inspect_orders'):
+        from business_order_samples import orders
+        return orders(connection,event,context)
     _dev_guard(context)
     if event.get('name')!='Tumandaito':raise ValueError('Only the explicitly approved business may be seeded')
     operation=event.get('operation','seed')

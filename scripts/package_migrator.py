@@ -21,6 +21,7 @@ def package(destination, dependencies):
             files["sql/" + name] = root / folder / name
     files["common_code_validation.py"] = handler.with_name("common_code_validation.py")
     files["business_samples.py"] = handler.with_name("business_samples.py")
+    files["business_order_samples.py"] = handler.with_name("business_order_samples.py")
     files["party_validation.py"] = handler.with_name("party_validation.py")
     files["administration_validation.py"] = handler.with_name("administration_validation.py")
     files["sales_validation.py"] = handler.with_name("sales_validation.py")

@@ -23,3 +23,7 @@ Evento (sin datos reales en el código; correo y `sub` llegan en la invocación)
 - Idempotente: reejecutar no escribe ni audita de nuevo (`changed: false`). Se detiene sin escribir (`ValueError`) si el espacio o el módulo no son los esperados, si la identidad está inactiva o tiene otro correo, si el correo pertenece a otro usuario, si la pertenencia existe con rol, estado u overrides distintos, si el asiento es de otra identidad o si los permisos efectivos difieren. `inspect` puede relanzarse en cualquier momento para comprobar los permisos efectivos exactos.
 - Respuesta sin correos ni identificadores: `identity` y `membership` (`created`, `existing` o `absent`), `role` (siempre `null`), `module`, `companies`, `branches`, `space_visible`, `visible_companies`, `permissions` y `changed`.
 - Nunca cambia la propiedad del espacio, roles, `role_permissions`, otras pertenencias, módulos del tenant, datos de negocio ni Cognito. Retirar el acceso o cambiar la identidad del asiento requiere una acción explícita aparte.
+
+## Ordenes ficticias autorizadas de Tumandaito
+
+Accion existente `seed_tumandaito_suppliers`, operaciones `inspect_orders` / `seed_orders`, mediante workflow manual separado. Reutiliza comandos de compras como mastererp_app y no aplica migraciones. Ver [procedimiento, idempotencia y recuperacion](../../documentation/tumandaito-order-samples.md).

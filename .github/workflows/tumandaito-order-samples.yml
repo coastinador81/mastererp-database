@@ -1,0 +1,62 @@
+name: Tumandaito DEV order samples
+on:
+  push:
+    branches: [dev]
+    paths: ['.github/workflows/tumandaito-order-samples.yml']
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Explicitly approved synthetic orders only
+        type: choice
+        options: [inspect_orders, seed_orders]
+        default: inspect_orders
+      owner_subject:
+        description: Existing Cognito owner subject (not an email or password)
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: mastererp-dev-database
+  cancel-in-progress: false
+jobs:
+  deploy-migrator:
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/deploy-migrator.yml
+    secrets: inherit
+  samples:
+    if: github.event_name == 'workflow_dispatch'
+    needs: deploy-migrator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.MASTERERP_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.MASTERERP_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
+      - name: Invoke explicit sample operation, never apply a migration
+        shell: bash
+        env:
+          OWNER_SUBJECT: ${{ inputs.owner_subject }}
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          set -euo pipefail
+          test "$(aws sts get-caller-identity --query Account --output text)" = 277352717693
+          python - <<'PY'
+          import json, os, uuid
+          operation = os.environ['OPERATION']
+          assert operation in ('inspect_orders', 'seed_orders')
+          payload = dict(action='seed_tumandaito_suppliers', name='Tumandaito',
+                         operation=operation, owner_subject=str(uuid.UUID(os.environ['OWNER_SUBJECT'])))
+          with open('payload.json', 'w') as file: json.dump(payload, file)
+          PY
+          aws lambda invoke --function-name mastererp-dev-database-migrator \
+            --cli-binary-format raw-in-base64-out --payload fileb://payload.json \
+            --cli-read-timeout 310 response.json > metadata.json
+          test "$(jq -r '.FunctionError // empty' metadata.json)" = ''
+          jq -e '.status == "succeeded" and .application_role == "mastererp_app" and .synthetic == true' response.json >/dev/null
+          jq '{status,inspection_only,committed,application_role,synthetic,tenant_id,company_id,created,replayed,total_company_orders,orders:[.orders[]|{id,reference:(.reference // .numero),total,currency:(.currency // .moneda),source_id:(.source_id // .origen_id)}]}' response.json
