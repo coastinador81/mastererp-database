@@ -54,9 +54,10 @@ BEGIN
   'customer50@example.invalid','Customer 50',raw_token);
 END $$;
 RESET ROLE;
-UPDATE ventas_digitales.cliente_perfiles SET telefono='+584121234567'
- WHERE tenant_id='00005000-0000-0000-0000-000000000002' AND empresa_id='00005000-0000-0000-0000-000000000003'
- AND cliente_id='00005000-0000-0000-0000-000000000005';
+INSERT INTO ventas_digitales.cliente_perfiles(tenant_id,empresa_id,cliente_id,telefono)
+ VALUES('00005000-0000-0000-0000-000000000002','00005000-0000-0000-0000-000000000003',
+  '00005000-0000-0000-0000-000000000005','+584121234567')
+ ON CONFLICT(tenant_id,empresa_id,cliente_id) DO UPDATE SET telefono=EXCLUDED.telefono;
 CREATE FUNCTION pg_temp.qa50_checkout(payment jsonb,idempotency text) RETURNS jsonb LANGUAGE sql AS $f$
  SELECT ventas_digitales.checkout_crear('https://issuer.example.invalid','customer-sub-50','qa50.example.invalid',
   '[{"product_id":"00005000-0000-0000-0000-000000000008","quantity":1}]','{"address":"QA address","latitude":10.48,"longitude":-66.9}',
