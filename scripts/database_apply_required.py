@@ -21,7 +21,8 @@ def batch_for_paths(requested,paths):
     if any(p in OPERATIONS_PATHS for p in paths):return 'operations'
     if any(p in ('schema/046_sales_order_command.sql','tests/sales_order_command_test.sql',
                  'schema/047_sales_confirmation_contract.sql','tests/sales_confirmation_contract_test.sql',
-                 'schema/048_sales_read_model.sql','tests/sales_read_test.sql')
+                 'schema/048_sales_read_model.sql','tests/sales_read_test.sql',
+                 'schema/067_sales_administrative_order_origin.sql')
            or p.startswith('migrations/lambda/sales_') for p in paths):return 'sales'
     return batch
 

@@ -29,12 +29,16 @@ en DEV hasta `RECEIVED`; el cierre `COMPLETED` depende de Finanzas.
 exige una salida de tesorería y una nota de crédito de cliente cerrada,
 vinculadas al mismo expediente, cliente, empresa y factura del pedido.
 
-`066_operations_order_cancellation_matrix.sql` es el candidato local del punto
-9. Amplía el comando coordinado a `PREPARING` y `READY`: cancela la preparación,
+`066_operations_order_cancellation_matrix.sql` está aplicado en DEV para el
+punto 9. Amplía el comando coordinado a `PREPARING` y `READY`: cancela la preparación,
 libera reservas activas o revierte una reserva consumida mediante movimiento
 `RESTOCK`. Rechaza expresamente `OUT_FOR_DELIVERY`; primero debe cerrarse la
 parada como no entregada y retornar físicamente la mercancía. Conserva versión,
 motivo, permisos, evento y auditoría dentro de una sola transacción.
+`067_sales_administrative_order_origin.sql` permite que Finanzas confirme y
+cree la venta de pedidos originados por el comando administrativo autorizado
+`ORDER_CREATED`, además de `STOREFRONT_CHECKOUT`. La decisión sigue basada en
+eventos internos del servidor: el navegador no declara ni altera el origen.
 
 
 ## Contrato y estado de esta capa

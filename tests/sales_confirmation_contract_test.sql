@@ -44,7 +44,7 @@ INSERT INTO administracion.perfiles_tercero(tenant_id,empresa_id,tercero_id,rol)
  VALUES('00014602-0000-0000-0000-000000000001','00014603-0000-0000-0000-000000000001','00014605-0000-0000-0000-000000000001','cliente');
 INSERT INTO operaciones.pedido_eventos(tenant_id,empresa_id,pedido_id,estado_nuevo,motivo,actor_id,correlation_id)
  VALUES('00014602-0000-0000-0000-000000000001','00014603-0000-0000-0000-000000000001','00014608-0000-0000-0000-000000000001',
- 'PENDING','STOREFRONT_CHECKOUT','00014601-0000-0000-0000-000000000001','00014607-0000-0000-0000-000000000001');
+ 'PENDING','ORDER_CREATED','00014601-0000-0000-0000-000000000001','00014607-0000-0000-0000-000000000001');
 DELETE FROM plataforma.role_permissions WHERE role_id IN(SELECT id FROM plataforma.roles WHERE code='qa-sales-046-sql') AND permission_code='operations.orders.write';
 SET LOCAL ROLE mastererp_app;
 DO $$ DECLARE sale jsonb; replay jsonb; caught boolean:=false; BEGIN

@@ -4,7 +4,7 @@ import hashlib
 from dev_validation import _dev_guard
 
 
-SCHEMA = "048_sales_read_model.sql"
+SCHEMA = "067_sales_administrative_order_origin.sql"
 TEST = "sales_read_test.sql"
 
 
