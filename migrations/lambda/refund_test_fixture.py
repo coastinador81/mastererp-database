@@ -43,6 +43,7 @@ def execute(connection,event,context):
             connection.run('SAVEPOINT refund_probe')
             try:
                 connection.run("SELECT administracion.reembolso_pedido_registrar(:company,:order_id,:account,47,'USD',CURRENT_DATE,'Pago móvil','QA-PROBE',:credit,'qa-refund-probe-v1')",company=COMPANY,order_id=ORDER,account=account,credit=credit)
+                connection.run('SET CONSTRAINTS ALL IMMEDIATE')
                 probe='accepted'
             except Exception as error:
                 data=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
