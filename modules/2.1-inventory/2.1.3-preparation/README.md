@@ -12,6 +12,8 @@ Código: 2.1.3. Nombre/ruta: `2.1.3-preparation`. Objetivo y alcance: los descri
 
 Capa: datos. Dependencias: contexto autenticado, tenant y contratos del padre cuando correspondan; contratos adicionales pendientes de definición. Exclusiones: lógica y recursos de otros módulos; conectores técnicos fuera de Digital Sales. APIs/eventos/MCP: no declarar disponibles por existir esta carpeta; revisar implementación y contrato antes de consumir. Propuestas sin contrato confirmado permanecen pendientes.
 
-Estado verificable: inicio, líneas, finalización, autorización y consumo de reserva aprobados en PostgreSQL desechable. Aplicación DEV pendiente.
+Estado verificable: inicio, líneas, finalización, autorización y consumo de
+reserva aprobados y utilizados en DEV. `070_operations_directories_pagination.sql`
+es un candidato local para búsqueda y paginación completa; no está aplicado.
 
 Validaciones: estructura local mediante scripts/validate_structure.py. Pendientes: contratos específicos, responsable nominal y pruebas funcionales antes de habilitar esta capacidad.

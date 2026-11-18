@@ -65,6 +65,10 @@ INSERT INTO transporte.repartidor_nodos VALUES('00008002-0000-0000-0000-00000000
 SELECT set_config('app.current_user_id','00008001-0000-0000-0000-000000000001',true),set_config('app.current_tenant_id','00008002-0000-0000-0000-000000000001',true),set_config('app.current_company_id','00008003-0000-0000-0000-000000000001',true),set_config('app.correlation_id','00008011-0000-0000-0000-000000000001',true),set_config('app.current_operation','operations.preparation.start',true);
 SET LOCAL ROLE mastererp_app;
 DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
+ IF operaciones.preparacion_directorio_leer('00008003-0000-0000-0000-000000000001',NULL,'ORDER',1,0)->>'total'<>'2'
+  OR jsonb_array_length(operaciones.preparacion_directorio_leer('00008003-0000-0000-0000-000000000001',NULL,'ORDER',1,0)->'items')<>1
+  OR operaciones.preparacion_directorio_leer('00008003-0000-0000-0000-000000000001',NULL,'ORDER',1,0)->>'next_offset'<>'1'
+ THEN RAISE EXCEPTION 'Preparation directory pagination mismatch'; END IF;
  PERFORM set_config('app.current_operation','operations.orders.cancel',true);
  item:=operaciones.pedido_cancelar('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000002',1,'CUSTOMER_REQUEST',NULL);
  IF item->>'status'<>'CANCELLED' OR item->'inventory'->>'status'<>'RELEASED'
@@ -89,6 +93,9 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  IF item->>'status'<>'COMPLETED' OR operaciones.pedidos_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001')->>'status'<>'READY' THEN RAISE EXCEPTION 'Preparation completion mismatch'; END IF;
  PERFORM set_config('app.current_operation','operations.routes.create',true);
  route:=operaciones.ruta_crear('00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001',current_date,'slot','["00008008-0000-0000-0000-000000000001"]','fulfillment-route');rid:=(route->>'id')::uuid;
+ IF operaciones.rutas_directorio_leer('00008003-0000-0000-0000-000000000001',NULL,'ORDER-READY',1,0)->>'total'<>'1'
+  OR operaciones.rutas_directorio_leer('00008003-0000-0000-0000-000000000001',NULL,rid::text,1,0)->'items'->0->>'id'<>rid::text
+ THEN RAISE EXCEPTION 'Routes directory search mismatch'; END IF;
  IF route->'stops'->0->>'order_number'<>'ORDER-READY'
   OR route->'stops'->0->'items'->0->>'name'<>'Public product'
   OR route->'stops'->0->'items'->0->>'quantity'<>'1'
