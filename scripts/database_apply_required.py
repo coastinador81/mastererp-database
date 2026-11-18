@@ -20,7 +20,7 @@ OPERATIONS_PATHS={
 
 def batch_for_paths(requested,paths):
     batch=requested or 'customer'
-    if any(p in ('schema/071_catalog_product_relations.sql','tests/catalog_product_relations_test.sql') for p in paths):return 'catalog'
+    if any(p in ('schema/071_catalog_product_relations.sql','tests/catalog_product_relations_test.sql','schema/072_catalog_pagination.sql','tests/catalog_pagination_test.sql') for p in paths):return 'catalog'
     if any(p in OPERATIONS_PATHS for p in paths):return 'operations'
     if any(p in ('schema/046_sales_order_command.sql','tests/sales_order_command_test.sql',
                  'schema/047_sales_confirmation_contract.sql','tests/sales_confirmation_contract_test.sql',
