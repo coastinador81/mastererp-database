@@ -92,6 +92,7 @@ SCHEMA_FILES = (
     "066_operations_order_cancellation_matrix.sql",
     "067_sales_administrative_order_origin.sql",
     "068_finance_cancelled_payment_trace.sql",
+    "069_finance_cancelled_order_refunds.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -388,7 +389,8 @@ def lambda_handler(event, context):
                       "063_operations_order_returns.sql", "064_finance_order_return_settlement.sql",
                       "065_order_customer_snapshot_contact.sql",
                       "066_operations_order_cancellation_matrix.sql",
-                      "068_finance_cancelled_payment_trace.sql")
+                      "068_finance_cancelled_payment_trace.sql",
+                      "069_finance_cancelled_order_refunds.sql")
     operations = event.get("action") in ("apply_operations_model", "validate_operations_candidate")
     selected_schema = applied_schema[1:] if operations else applied_schema[:1]
     selected_tests = (("operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql",
