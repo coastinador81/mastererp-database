@@ -12,6 +12,7 @@ OPERATIONS_PATHS={
     'schema/057_operations_orders_search.sql',
     'schema/058_driver_delivery_flow.sql',
     'schema/059_delivery_contract_consistency.sql',
+    'schema/068_finance_cancelled_payment_trace.sql',
     'tests/operations_fulfillment_ecommerce_test.sql',
     'tests/storefront_store_payment_methods_test.sql',
 }
