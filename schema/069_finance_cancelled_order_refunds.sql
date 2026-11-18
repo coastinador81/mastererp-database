@@ -60,7 +60,7 @@ DECLARE tenant uuid:=plataforma.current_app_tenant_id();actor uuid:=plataforma.c
  pedido operaciones.pedidos%ROWTYPE;venta administracion.ventas_origen%ROWTYPE;origen administracion.documentos%ROWTYPE;credito administracion.documentos%ROWTYPE;
  cuenta administracion.cuentas_tesoreria%ROWTYPE;cached plataforma.idempotency_keys%ROWTYPE;
  rid uuid:=gen_random_uuid();oid uuid:=gen_random_uuid();mid uuid:=gen_random_uuid();
- fingerprint text;correlation uuid;base char(3);response jsonb;
+ fingerprint text;correlation uuid;base char(3);response jsonb;treasury_key varchar(128);
 BEGIN
  IF p_importe<=0 OR p_fecha IS NULL OR length(btrim(COALESCE(p_metodo,''))) NOT BETWEEN 1 AND 80
  OR length(btrim(COALESCE(p_referencia,''))) NOT BETWEEN 1 AND 200
@@ -74,6 +74,7 @@ BEGIN
  fingerprint:=encode(public.digest(jsonb_build_object('company',p_empresa,'order',p_pedido,'account',p_cuenta,
   'amount',p_importe,'currency',p_moneda,'date',p_fecha,'method',btrim(p_metodo),'reference',btrim(p_referencia),
   'credit_note',p_nota_credito)::text,'sha256'),'hex');
+ treasury_key:='refund-treasury:'||substr(encode(public.digest(p_idempotency_key,'sha256'),'hex'),1,64);
  SELECT * INTO cached FROM plataforma.idempotency_keys WHERE idempotency_key=p_idempotency_key;
  IF FOUND THEN
   IF cached.actor_user_id<>actor OR cached.request_tenant_id<>tenant OR cached.operation<>'administration.order_refunds.write'
@@ -100,8 +101,10 @@ BEGIN
  THEN RAISE EXCEPTION 'Order already refunded' USING ERRCODE='23505'; END IF;
  INSERT INTO plataforma.idempotency_keys(idempotency_key,actor_user_id,operation,resource_id,request_fingerprint,request_tenant_id)
  VALUES(p_idempotency_key,actor,'administration.order_refunds.write',rid,fingerprint,tenant);
+ INSERT INTO plataforma.idempotency_keys(idempotency_key,actor_user_id,operation,resource_id,request_fingerprint,request_tenant_id)
+ VALUES(treasury_key,actor,'administracion.tesoreria.crear',oid,fingerprint,tenant);
  INSERT INTO administracion.operaciones_tesoreria(id,tenant_id,empresa_id,sucursal_id,tipo,tercero_id,fecha,idempotency_key,origen_sistema,referencia_externa,creado_por)
- VALUES(oid,tenant,p_empresa,pedido.sucursal_id,'pago',pedido.cliente_id,p_fecha,p_idempotency_key,'order_cancellation',p_pedido::text,actor);
+ VALUES(oid,tenant,p_empresa,pedido.sucursal_id,'pago',pedido.cliente_id,p_fecha,treasury_key,'order_cancellation',p_pedido::text,actor);
  INSERT INTO administracion.movimientos_tesoreria(id,tenant_id,empresa_id,sucursal_id,operacion_id,cuenta_id,sentido,moneda,importe,moneda_base,tipo_cambio,cambio_fecha,cambio_fuente,creado_por)
  VALUES(mid,tenant,p_empresa,pedido.sucursal_id,oid,p_cuenta,'salida',p_moneda,p_importe,base,origen.tipo_cambio,origen.cambio_fecha,origen.cambio_fuente,actor);
  INSERT INTO administracion.reembolsos_pedido(id,tenant_id,empresa_id,pedido_id,operacion_id,movimiento_id,nota_credito_id,metodo,referencia,creado_por,idempotency_key)
