@@ -23,22 +23,38 @@ INSERT INTO catalogo.terceros(id,tenant_id,codigo,nombre) VALUES('00008005-0000-
 INSERT INTO catalogo.roles_tercero VALUES('00008002-0000-0000-0000-000000000001','00008005-0000-0000-0000-000000000001','cliente');
 INSERT INTO catalogo.productos(id,tenant_id,codigo,nombre,precio,estado) VALUES('00008006-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','PRODUCT','Public product',15,'ACTIVE');
 INSERT INTO catalogo.inventarios(tenant_id,empresa_id,nodo_id,producto_id,existencia,reservado,actualizado_por)
- VALUES('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001',10,2,'00008001-0000-0000-0000-000000000001');
+ VALUES('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001',10,3,'00008001-0000-0000-0000-000000000001');
 INSERT INTO plataforma.idempotency_keys(idempotency_key,actor_user_id,operation,request_tenant_id,request_fingerprint)
  VALUES('fulfillment-reservation','00008001-0000-0000-0000-000000000001','catalog.inventory.reserve','00008002-0000-0000-0000-000000000001',repeat('b',64)),
  ('fulfillment-order','00008001-0000-0000-0000-000000000001','operations.orders.create','00008002-0000-0000-0000-000000000001',repeat('b',64)),
  ('fulfillment-cancel-reservation','00008001-0000-0000-0000-000000000001','catalog.inventory.reserve','00008002-0000-0000-0000-000000000001',repeat('b',64)),
- ('fulfillment-cancel-order','00008001-0000-0000-0000-000000000001','operations.orders.create','00008002-0000-0000-0000-000000000001',repeat('b',64));
+ ('fulfillment-cancel-order','00008001-0000-0000-0000-000000000001','operations.orders.create','00008002-0000-0000-0000-000000000001',repeat('b',64)),
+ ('fulfillment-preparing-reservation','00008001-0000-0000-0000-000000000001','catalog.inventory.reserve','00008002-0000-0000-0000-000000000001',repeat('b',64)),
+ ('fulfillment-preparing-order','00008001-0000-0000-0000-000000000001','operations.orders.create','00008002-0000-0000-0000-000000000001',repeat('b',64)),
+ ('fulfillment-ready-cancel-reservation','00008001-0000-0000-0000-000000000001','catalog.inventory.reserve','00008002-0000-0000-0000-000000000001',repeat('b',64)),
+ ('fulfillment-ready-cancel-order','00008001-0000-0000-0000-000000000001','operations.orders.create','00008002-0000-0000-0000-000000000001',repeat('b',64));
 INSERT INTO catalogo.reservas_inventario(id,tenant_id,empresa_id,nodo_id,referencia_externa,idempotency_key,creado_por)
  VALUES('00008007-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','ORDER-READY','fulfillment-reservation','00008001-0000-0000-0000-000000000001');
 INSERT INTO catalogo.reservas_inventario(id,tenant_id,empresa_id,nodo_id,referencia_externa,idempotency_key,creado_por)
  VALUES('00008007-0000-0000-0000-000000000002','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','ORDER-CANCEL','fulfillment-cancel-reservation','00008001-0000-0000-0000-000000000001');
+INSERT INTO catalogo.reservas_inventario(id,tenant_id,empresa_id,nodo_id,estado,referencia_externa,idempotency_key,creado_por) VALUES
+ ('00008007-0000-0000-0000-000000000003','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','ACTIVE','ORDER-PREPARING','fulfillment-preparing-reservation','00008001-0000-0000-0000-000000000001'),
+ ('00008007-0000-0000-0000-000000000004','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','COMMITTED','ORDER-READY-CANCEL','fulfillment-ready-cancel-reservation','00008001-0000-0000-0000-000000000001');
 INSERT INTO catalogo.reserva_inventario_lineas VALUES('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008007-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001',1);
 INSERT INTO catalogo.reserva_inventario_lineas VALUES('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008007-0000-0000-0000-000000000002','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001',1);
+INSERT INTO catalogo.reserva_inventario_lineas VALUES
+ ('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008007-0000-0000-0000-000000000003','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001',1),
+ ('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008007-0000-0000-0000-000000000004','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001',1);
 INSERT INTO operaciones.pedidos(id,tenant_id,empresa_id,sucursal_id,cliente_id,numero,estado,moneda,subtotal,cliente_snapshot,entrega_snapshot,pago_snapshot,ventana_entrega_ref,metodo_entrega,reserva_inventario_ref,idempotency_key,creado_por,version)
  VALUES('00008008-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008005-0000-0000-0000-000000000001','ORDER-READY','CONFIRMED','USD',15,'{}','{"latitude":10.48,"longitude":-66.9}','{}','slot','realtime','00008007-0000-0000-0000-000000000001','fulfillment-order','00008001-0000-0000-0000-000000000001',1);
 INSERT INTO operaciones.pedidos(id,tenant_id,empresa_id,sucursal_id,cliente_id,numero,estado,moneda,subtotal,cliente_snapshot,entrega_snapshot,pago_snapshot,ventana_entrega_ref,metodo_entrega,reserva_inventario_ref,idempotency_key,creado_por,version)
  VALUES('00008008-0000-0000-0000-000000000002','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008005-0000-0000-0000-000000000001','ORDER-CANCEL','PENDING','USD',15,'{}','{}','{"method":"cash","status":"PENDING_COLLECTION"}','slot','realtime','00008007-0000-0000-0000-000000000002','fulfillment-cancel-order','00008001-0000-0000-0000-000000000001',1);
+INSERT INTO operaciones.pedidos(id,tenant_id,empresa_id,sucursal_id,cliente_id,numero,estado,moneda,subtotal,cliente_snapshot,entrega_snapshot,pago_snapshot,ventana_entrega_ref,metodo_entrega,reserva_inventario_ref,idempotency_key,creado_por,version) VALUES
+ ('00008008-0000-0000-0000-000000000003','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008005-0000-0000-0000-000000000001','ORDER-PREPARING','PREPARING','USD',15,'{}','{}','{}','slot','realtime','00008007-0000-0000-0000-000000000003','fulfillment-preparing-order','00008001-0000-0000-0000-000000000001',2),
+ ('00008008-0000-0000-0000-000000000004','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008005-0000-0000-0000-000000000001','ORDER-READY-CANCEL','READY','USD',15,'{}','{}','{}','slot','realtime','00008007-0000-0000-0000-000000000004','fulfillment-ready-cancel-order','00008001-0000-0000-0000-000000000001',3);
+INSERT INTO operaciones.preparaciones(tenant_id,empresa_id,pedido_id,nodo_id,estado,iniciado_por,completado_en,version) VALUES
+ ('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000003','00008004-0000-0000-0000-000000000001','IN_PROGRESS','00008001-0000-0000-0000-000000000001',NULL,1),
+ ('00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000004','00008004-0000-0000-0000-000000000001','COMPLETED','00008001-0000-0000-0000-000000000001',transaction_timestamp(),2);
 INSERT INTO operaciones.pedido_lineas(id,tenant_id,empresa_id,pedido_id,posicion,producto_id,producto_nombre,cantidad,precio_unitario)
  VALUES('00008009-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001',1,'00008006-0000-0000-0000-000000000001','Public product',1,15);
 INSERT INTO operaciones.pedido_lineas(id,tenant_id,empresa_id,pedido_id,posicion,producto_id,producto_nombre,cantidad,precio_unitario)
@@ -52,8 +68,18 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  PERFORM set_config('app.current_operation','operations.orders.cancel',true);
  item:=operaciones.pedido_cancelar('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000002',1,'CUSTOMER_REQUEST',NULL);
  IF item->>'status'<>'CANCELLED' OR item->'inventory'->>'status'<>'RELEASED'
- OR catalogo.inventario_leer('00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001')->>'reserved'<>'1'
+ OR catalogo.inventario_leer('00008003-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001','00008006-0000-0000-0000-000000000001')->>'reserved'<>'2'
  THEN RAISE EXCEPTION 'Coordinated cancellation mismatch'; END IF;
+ PERFORM set_config('app.current_operation','operations.orders.cancel',true);
+ item:=operaciones.pedido_cancelar('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000003',2,'CUSTOMER_REQUEST',NULL);
+ IF item->>'status'<>'CANCELLED' OR item->'inventory'->>'status'<>'RELEASED'
+  OR operaciones.preparacion_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000003')->>'status'<>'CANCELLED'
+ THEN RAISE EXCEPTION 'Preparing cancellation mismatch'; END IF;
+ PERFORM set_config('app.current_operation','operations.orders.cancel',true);
+ item:=operaciones.pedido_cancelar('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000004',3,'CUSTOMER_REQUEST',NULL);
+ IF item->>'status'<>'CANCELLED' OR item->'inventory'->>'status'<>'REVERSED'
+  OR operaciones.preparacion_leer('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000004')->>'status'<>'CANCELLED'
+ THEN RAISE EXCEPTION 'Ready cancellation mismatch'; END IF;
  PERFORM set_config('app.current_operation','operations.preparation.start',true);
  item:=operaciones.preparacion_iniciar('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001','00008004-0000-0000-0000-000000000001',1);
  PERFORM set_config('app.current_operation','operations.preparation.item.update',true);
@@ -74,6 +100,11 @@ DO $$ DECLARE item jsonb; route jsonb; store jsonb; rid uuid; BEGIN
  IF NOT item->'history' @> jsonb_build_array(jsonb_build_object(
   'status','OUT_FOR_DELIVERY','reason','ROUTE_STARTED','detail',rid::text))
  THEN RAISE EXCEPTION 'Route start history mismatch'; END IF;
+ PERFORM set_config('app.current_operation','operations.orders.cancel',true);
+ BEGIN
+  PERFORM operaciones.pedido_cancelar('00008003-0000-0000-0000-000000000001','00008008-0000-0000-0000-000000000001',(item->>'version')::bigint,'CUSTOMER_REQUEST',NULL);
+  RAISE EXCEPTION 'In-route cancellation was accepted';
+ EXCEPTION WHEN check_violation THEN NULL; END;
  PERFORM set_config('app.current_operation','transport.deliveries.execute',true);
  BEGIN
   PERFORM operaciones.ruta_entrega_registrar('00008003-0000-0000-0000-000000000001',rid,'00008008-0000-0000-0000-000000000001','DELIVERED','{"latitude":11.48,"longitude":-66.9,"accuracy_meters":10}');

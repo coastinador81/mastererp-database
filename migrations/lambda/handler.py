@@ -89,6 +89,7 @@ SCHEMA_FILES = (
     "063_operations_order_returns.sql",
     "064_finance_order_return_settlement.sql",
     "065_order_customer_snapshot_contact.sql",
+    "066_operations_order_cancellation_matrix.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',

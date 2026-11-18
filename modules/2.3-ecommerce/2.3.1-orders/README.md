@@ -18,15 +18,23 @@ evento inmutable del pedido; todavía requiere el workflow y smoke DEV.
 El mismo candidato incorpora `pedido_direccion_corregir`: exige estado seguro,
 ausencia de ruta activa, versión optimista, permiso específico, motivo y contexto
 auditable, y conserva intacta la dirección maestra del cliente.
-`063_operations_order_returns.sql` es el candidato local para devoluciones
+`063_operations_order_returns.sql` está aplicado en DEV para devoluciones
 administrativas coordinadas. Modela solicitud, decisión, recepción física,
 reintegro selectivo, referencias obligatorias de reembolso y nota de crédito e
 historial inmutable. Pedidos conserva el expediente, Inventario el movimiento
 `RETURN` y Finanzas confirma referencias de documentos reales. No habilita
-solicitudes desde Storefront ni acredita todavía API/UI o aplicación en DEV.
+solicitudes desde Storefront. El flujo de Pedidos fue validado funcionalmente
+en DEV hasta `RECEIVED`; el cierre `COMPLETED` depende de Finanzas.
 `064_finance_order_return_settlement.sql` impide completar con textos libres:
 exige una salida de tesorería y una nota de crédito de cliente cerrada,
 vinculadas al mismo expediente, cliente, empresa y factura del pedido.
+
+`066_operations_order_cancellation_matrix.sql` es el candidato local del punto
+9. Amplía el comando coordinado a `PREPARING` y `READY`: cancela la preparación,
+libera reservas activas o revierte una reserva consumida mediante movimiento
+`RESTOCK`. Rechaza expresamente `OUT_FOR_DELIVERY`; primero debe cerrarse la
+parada como no entregada y retornar físicamente la mercancía. Conserva versión,
+motivo, permisos, evento y auditoría dentro de una sola transacción.
 
 
 ## Contrato y estado de esta capa
