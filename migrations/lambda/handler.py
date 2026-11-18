@@ -384,7 +384,8 @@ def lambda_handler(event, context):
                       "059_delivery_contract_consistency.sql", "060_operations_order_delivery_trace.sql",
                       "061_driver_route_history.sql", "062_driver_route_start.sql",
                       "063_operations_order_returns.sql", "064_finance_order_return_settlement.sql",
-                      "065_order_customer_snapshot_contact.sql")
+                      "065_order_customer_snapshot_contact.sql",
+                      "066_operations_order_cancellation_matrix.sql")
     operations = event.get("action") in ("apply_operations_model", "validate_operations_candidate")
     selected_schema = applied_schema[1:] if operations else applied_schema[:1]
     selected_tests = (("operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql",
