@@ -20,6 +20,7 @@ OPERATIONS_PATHS={
 
 def batch_for_paths(requested,paths):
     batch=requested or 'customer'
+    if any(p in ('schema/071_catalog_product_relations.sql','tests/catalog_product_relations_test.sql') for p in paths):return 'catalog'
     if any(p in OPERATIONS_PATHS for p in paths):return 'operations'
     if any(p in ('schema/046_sales_order_command.sql','tests/sales_order_command_test.sql',
                  'schema/047_sales_confirmation_contract.sql','tests/sales_confirmation_contract_test.sql',
@@ -44,7 +45,7 @@ if __name__=='__main__':
         if before=='0'*40:raise ValueError('Initial push requires explicit reviewed batch')
         paths=subprocess.check_output(['git','diff','--name-only',before,os.environ['GITHUB_SHA']],text=True).splitlines()
         batch=batch_for_paths(batch,paths)
-    if batch not in ('customer','sales','operations'):raise ValueError('Unknown migration batch')
+    if batch not in ('customer','sales','operations','catalog'):raise ValueError('Unknown migration batch')
     with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
         out.write('required='+value+'\n'+'batch='+batch+'\n')
     print('Database apply required: '+value)
