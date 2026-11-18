@@ -24,6 +24,9 @@ reintegro selectivo, referencias obligatorias de reembolso y nota de crédito e
 historial inmutable. Pedidos conserva el expediente, Inventario el movimiento
 `RETURN` y Finanzas confirma referencias de documentos reales. No habilita
 solicitudes desde Storefront ni acredita todavía API/UI o aplicación en DEV.
+`064_finance_order_return_settlement.sql` impide completar con textos libres:
+exige una salida de tesorería y una nota de crédito de cliente cerrada,
+vinculadas al mismo expediente, cliente, empresa y factura del pedido.
 
 
 ## Contrato y estado de esta capa

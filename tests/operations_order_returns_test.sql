@@ -71,11 +71,13 @@ DO $$ DECLARE result jsonb; return_id uuid; return_item uuid; BEGIN
  IF (catalogo.inventario_leer('00016303-0000-0000-0000-000000000001','00016304-0000-0000-0000-000000000001',
   '00016307-0000-0000-0000-000000000001')->>'stock')::numeric<>6 THEN RAISE EXCEPTION 'Return stock mismatch'; END IF;
  PERFORM set_config('app.current_operation','administration.returns.settle',true);
- result:=operaciones.devolucion_completar('00016303-0000-0000-0000-000000000001',return_id,3,
-  'REFUND-1','CREDIT-1','Finanzas confirmó ambos documentos');
- IF result->>'status'<>'COMPLETED' OR jsonb_array_length(result->'history')<>4
- OR result->>'refund_reference'<>'REFUND-1' OR result->>'credit_note_reference'<>'CREDIT-1'
- THEN RAISE EXCEPTION 'Return settlement mismatch'; END IF;
+ BEGIN PERFORM operaciones.devolucion_completar('00016303-0000-0000-0000-000000000001',return_id,3,
+  '00016311-0000-0000-0000-000000000001','00016312-0000-0000-0000-000000000001','Referencias inexistentes');
+  RAISE EXCEPTION 'Unverified financial references accepted';
+ EXCEPTION WHEN check_violation THEN NULL; END;
+ result:=operaciones.devoluciones_leer('00016303-0000-0000-0000-000000000001','00016308-0000-0000-0000-000000000001',return_id);
+ IF result->>'status'<>'RECEIVED' OR jsonb_array_length(result->'history')<>3
+ THEN RAISE EXCEPTION 'Unverified settlement changed return'; END IF;
  IF has_table_privilege('mastererp_app','operaciones.devoluciones_pedido','INSERT,UPDATE,DELETE')
  THEN RAISE EXCEPTION 'Direct return DML leaked'; END IF;
 END $$;
