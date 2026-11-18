@@ -98,10 +98,14 @@ DO $$ BEGIN
   AND pago_snapshot='{"method":"pos","status":"PENDING_COLLECTION","moment":"delivery"}')
  OR NOT EXISTS(SELECT 1 FROM operaciones.pedidos WHERE idempotency_key='qa50-custom'
   AND pago_snapshot @> '{"method":"custom","status":"PENDING_VERIFICATION","methodId":"zelle","name":"Zelle","reference":"778899"}')
- OR NOT EXISTS(SELECT 1 FROM operaciones.pedidos WHERE idempotency_key='qa50-pos'
-  AND cliente_snapshot @> '{"name":"Cliente 50","email":"customer50@example.invalid","phone":"+584121234567"}')
  OR (SELECT count(*) FROM operaciones.pedidos WHERE cliente_id='00005000-0000-0000-0000-000000000005')<>2 THEN
   RAISE EXCEPTION 'Store payment snapshots mismatch';END IF;
+ IF NOT EXISTS(SELECT 1 FROM operaciones.pedidos WHERE idempotency_key='qa50-pos'
+  AND cliente_snapshot->>'name'='Cliente 50') THEN RAISE EXCEPTION 'Order customer name snapshot mismatch';END IF;
+ IF NOT EXISTS(SELECT 1 FROM operaciones.pedidos WHERE idempotency_key='qa50-pos'
+  AND cliente_snapshot->>'email'='customer50@example.invalid') THEN RAISE EXCEPTION 'Order customer email snapshot mismatch';END IF;
+ IF NOT EXISTS(SELECT 1 FROM operaciones.pedidos WHERE idempotency_key='qa50-pos'
+  AND cliente_snapshot->>'phone'='+584121234567') THEN RAISE EXCEPTION 'Order customer phone snapshot mismatch';END IF;
  UPDATE ventas_digitales.tiendas SET configuracion='{"payments":{"punto-venta-entrega":false}}'
   WHERE id='00005000-0000-0000-0000-000000000006';
 END $$;
