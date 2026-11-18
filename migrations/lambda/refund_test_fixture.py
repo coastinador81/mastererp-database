@@ -8,7 +8,8 @@ ORDER='ceb56cf0-e25b-4152-a9e8-dfae1551286a'
 
 def execute(connection,event,context):
     _dev_guard(context)
-    if event != {'action':'seed_refund_trace_fixture','tenant_id':TENANT,'company_id':COMPANY,'order_id':ORDER}:
+    operation=event.get('action')
+    if operation not in ('seed_refund_trace_fixture','inspect_refund_trace_fixture') or event != {'action':operation,'tenant_id':TENANT,'company_id':COMPANY,'order_id':ORDER}:
         raise ValueError('Exact approved refund fixture manifest required')
     account=str(uuid5(NAMESPACE_URL,'mastererp-dev:refund-account:'+COMPANY))
     invoice=str(uuid5(NAMESPACE_URL,'mastererp-dev:refund-invoice:'+ORDER))
@@ -31,6 +32,24 @@ def execute(connection,event,context):
         if len(scope)!=1 or any(value is None for value in scope[0]):raise ValueError('Approved cancelled order scope not satisfied')
         tenant,company,order_id,number,branch,customer,currency,total,base,sale,rate,rate_date,rate_source,actor=map(str,scope[0])
         connection.run("SELECT set_config('app.current_user_id',:actor,true),set_config('app.current_tenant_id',:tenant,true),set_config('app.current_company_id',:company,true),set_config('app.correlation_id',:correlation,true)",actor=actor,tenant=tenant,company=company,correlation=str(uuid4()))
+        if operation=='inspect_refund_trace_fixture':
+            state=connection.run("""SELECT p.estado,p.pago_snapshot->>'status',v.estado,
+              (SELECT count(*) FROM administracion.reembolsos_pedido r WHERE (r.tenant_id,r.empresa_id,r.pedido_id)=(p.tenant_id,p.empresa_id,p.id)),
+              (SELECT count(*) FROM administracion.cuentas_tesoreria c WHERE c.tenant_id=p.tenant_id AND c.empresa_id=p.empresa_id AND c.moneda=p.moneda),
+              (SELECT count(*) FROM administracion.documentos d WHERE d.tenant_id=p.tenant_id AND d.empresa_id=p.empresa_id AND d.id=:credit AND d.clase='credito_cliente' AND d.cerrado AND d.tercero_id=p.cliente_id AND d.moneda=p.moneda AND d.total=p.total AND d.referencia_externa=p.id::text)
+              FROM operaciones.pedidos p JOIN administracion.ventas_origen v ON (v.tenant_id,v.empresa_id,v.pedido_id)=(p.tenant_id,p.empresa_id,p.id)
+              WHERE p.id=:order_id""",credit=credit,order_id=ORDER)[0]
+            connection.run("SELECT set_config('app.current_operation','administration.order_refunds.write',true)")
+            connection.run('SAVEPOINT refund_probe')
+            try:
+                connection.run("SELECT administracion.reembolso_pedido_registrar(:company,:order_id,:account,47,'USD',CURRENT_DATE,'Pago móvil','QA-PROBE',:credit,'qa-refund-probe-v1')",company=COMPANY,order_id=ORDER,account=account,credit=credit)
+                probe='accepted'
+            except Exception as error:
+                data=error.args[0] if error.args and isinstance(error.args[0],dict) else {}
+                probe=data.get('M','unknown')
+                connection.run('ROLLBACK TO SAVEPOINT refund_probe')
+            connection.run('ROLLBACK')
+            return {'status':'succeeded','inspection_only':True,'order_status':state[0],'payment_status':state[1],'sale_status':state[2],'refund_count':state[3],'account_count':state[4],'credit_note_count':state[5],'probe':probe}
         connection.run("""INSERT INTO administracion.cuentas_tesoreria(id,tenant_id,empresa_id,sucursal_id,creado_por,codigo,nombre,tipo,moneda,referencia_bancaria)
           VALUES(:id,:tenant,:company,:branch,:actor,'QA-USD-REFUNDS','Caja QA USD para reembolsos','caja','USD','PRUEBA DEV; no representa fondos reales')
           ON CONFLICT(tenant_id,empresa_id,codigo) DO NOTHING""",id=account,tenant=tenant,company=company,branch=branch,actor=actor)

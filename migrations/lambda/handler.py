@@ -301,7 +301,7 @@ def lambda_handler(event, context):
             return seed(connection, event, context)
         finally:
             connection.close()
-    if event.get("action") == "seed_refund_trace_fixture":
+    if event.get("action") in ("seed_refund_trace_fixture","inspect_refund_trace_fixture"):
         from refund_test_fixture import execute
         try:
             return execute(connection,event,context)
