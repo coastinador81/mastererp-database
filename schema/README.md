@@ -21,3 +21,6 @@ referencia externa y empresa autorizada; tampoco concede DML directo.
 dentro de tenant y empresa para Rutas e integraciones de migración autorizadas.
 `031_transport_migration_lookup.sql` resuelve Repartidores por referencia
 externa bajo el permiso y alcance de Transporte.
+`074_storefront_nodes_variants.sql` permite elegir únicamente nodos activos de
+la empresa de la tienda, publica existencias del nodo seleccionado y conserva
+la variante comercial elegida en cada línea del pedido.
