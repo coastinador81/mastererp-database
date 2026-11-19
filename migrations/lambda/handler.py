@@ -93,6 +93,7 @@ SCHEMA_FILES = (
     "067_sales_administrative_order_origin.sql",
     "068_finance_cancelled_payment_trace.sql",
     "069_finance_cancelled_order_refunds.sql",
+    "070_finance_supplier_codes.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -154,6 +155,7 @@ TEST_FILES = (
     "storefront_store_payment_methods_test.sql",
     "operations_preparation_flow_test.sql",
     "operations_order_returns_test.sql",
+    "finance_supplier_codes_test.sql",
 )
 SQL_FILES = SCHEMA_FILES + SEED_FILES + TEST_FILES
 PHASE6_SOURCE_SHA256 = "6a6d9c5030bd7c63070a91876b9114b0d8d36553cddf8c15bc103589084a212d"
@@ -392,10 +394,12 @@ def lambda_handler(event, context):
                       "068_finance_cancelled_payment_trace.sql",
                       "069_finance_cancelled_order_refunds.sql")
     operations = event.get("action") in ("apply_operations_model", "validate_operations_candidate")
-    selected_schema = applied_schema[1:] if operations else applied_schema[:1]
+    selected_schema = applied_schema[1:] if operations else (*applied_schema[:1], "070_finance_supplier_codes.sql")
     selected_tests = (("operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql",
                        "storefront_store_payment_methods_test.sql", "operations_order_returns_test.sql") if operations else
         ("operations_preparation_flow_test.sql", "operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql", "storefront_store_payment_methods_test.sql", "storefront_customer_payment_methods_test.sql", "customer_legacy_contact_test.sql", "customer_administration_test.sql", "common_party_code_test.sql", "administration_parties_test.sql", "party_details_test.sql", "catalog_brands_suppliers_test.sql"))
+    if not operations:
+        selected_tests += ("finance_supplier_codes_test.sql",)
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL AND EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='ventas_digitales' AND p.proname='checkout_crear') AND to_regprocedure('administracion.party_write_v2(uuid,text,text,uuid,text,text,bigint,text,jsonb,bigint,bigint)') IS NOT NULL AND NOT has_table_privilege('mastererp_app','catalogo.terceros','UPDATE')")[0][0] is not True:
         connection.close()
         raise RuntimeError("Compatible 001-040 baseline required; no automatic bootstrap")
