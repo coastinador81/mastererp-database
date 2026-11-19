@@ -8,7 +8,8 @@ from uonify_access import EMAIL, _identity
 def provision(connection, event, context):
     _dev_guard(context)
     if (event.get('tenant_code') != 'tumandaito' or event.get('issuer') != ISSUER
-            or event.get('role_code') != 'tenant.owner' or event.get('operation') not in ('inspect', 'apply')):
+            or event.get('role_code') != 'tenant.owner' or event.get('full_catalog_access') is not True
+            or event.get('operation') not in ('inspect', 'apply')):
         raise ValueError('Explicit Tumandaito owner contract required')
     subject = str(UUID(str(event.get('subject', ''))))
     approver = str(UUID(str(event.get('approved_by_subject', ''))))
@@ -36,11 +37,13 @@ def provision(connection, event, context):
         actor, identity = _identity(connection, subject, email)
         rows = connection.run("SELECT id,role_id,status,permissions_override FROM plataforma.user_tenants WHERE tenant_id=:tenant AND user_id=:actor",
                               tenant=tenant, actor=actor)
-        if rows and (len(rows) != 1 or [str(rows[0][1]), rows[0][2], rows[0][3]] != [role, 'active', {}]):
-            raise ValueError('Existing membership differs; preserved unchanged')
-        expected = sorted(r[0] for r in connection.run('SELECT permission_code FROM plataforma.role_permissions WHERE role_id=:role', role=role))
+        role_permissions = {r[0] for r in connection.run('SELECT permission_code FROM plataforma.role_permissions WHERE role_id=:role', role=role)}
         declared = {r[0] for r in connection.run('SELECT code FROM plataforma.permissions')}
-        if not expected:
+        overrides = {code: True for code in sorted(declared - role_permissions)}
+        if rows and (len(rows) != 1 or [str(rows[0][1]), rows[0][2], rows[0][3]] != [role, 'active', overrides]):
+            raise ValueError('Existing membership differs; preserved unchanged')
+        expected = sorted(declared)
+        if not role_permissions:
             raise ValueError('Owner role has no permissions; no grants are added here')
         changed = False
         if event['operation'] == 'apply' and not rows:
@@ -52,8 +55,8 @@ def provision(connection, event, context):
                 connection.run("INSERT INTO plataforma.external_identities(issuer,subject,user_id,status) VALUES(:issuer,:subject,:actor,'active')",
                                issuer=ISSUER, subject=subject, actor=actor)
             member = str(connection.run("""INSERT INTO plataforma.user_tenants(tenant_id,user_id,role_id,status,permissions_override,joined_at)
-                VALUES(:tenant,:actor,:role,'active','{}'::jsonb,transaction_timestamp()) RETURNING id""",
-                tenant=tenant, actor=actor, role=role)[0][0])
+                VALUES(:tenant,:actor,:role,'active',CAST(:overrides AS jsonb),transaction_timestamp()) RETURNING id""",
+                tenant=tenant, actor=actor, role=role, overrides=json.dumps(overrides))[0][0])
             changed = True
         verified = False
         permissions, modules = [], []
@@ -83,8 +86,8 @@ def provision(connection, event, context):
         return {'status': 'succeeded', 'operation': event['operation'], 'changed': changed,
                 'identity': identity, 'membership': 'active' if rows or changed else 'absent',
                 'tenant_code': 'tumandaito', 'role': 'tenant.owner', 'verified_as': 'mastererp_app' if verified else None,
-                'permission_count': len(permissions), 'role_permission_count': len(expected), 'modules': modules,
-                'permissions_not_in_owner_role': sorted(declared - set(expected)),
+                'permission_count': len(permissions), 'role_permission_count': len(role_permissions), 'modules': modules,
+                'individual_grants': sorted(overrides),
                 'correlation_id': correlation}
     except Exception as error:
         connection.run('ROLLBACK')
