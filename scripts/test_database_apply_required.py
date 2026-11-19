@@ -9,6 +9,7 @@ class ClassifierTests(unittest.TestCase):
         self.assertEqual(batch_for_paths(None,['schema/071_catalog_product_relations.sql']),'catalog')
         self.assertEqual(batch_for_paths(None,['schema/072_catalog_pagination.sql']),'catalog')
         self.assertEqual(batch_for_paths(None,['schema/074_storefront_nodes_variants.sql']),'catalog')
+        self.assertEqual(batch_for_paths(None,['schema/075_canonical_exchange_rates.sql']),'catalog')
     def test_explicit_dispatch(self):self.assertTrue(required('workflow_dispatch','','a'*40))
     def test_initial_push_fails_safe(self):self.assertTrue(required('push','0'*40,'a'*40))
     def test_code_only_skips_application(self):

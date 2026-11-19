@@ -24,3 +24,7 @@ externa bajo el permiso y alcance de Transporte.
 `074_storefront_nodes_variants.sql` permite elegir únicamente nodos activos de
 la empresa de la tienda, publica existencias del nodo seleccionado y conserva
 la variante comercial elegida en cada línea del pedido.
+`075_canonical_exchange_rates.sql` conserva la tasa diaria USD/VES por fecha y
+fuente, actualiza idempotentemente una segunda captura del mismo día y expone
+funciones acotadas de escritura programada y lectura compartida. La tabla no
+concede acceso directo a `mastererp_app`.
