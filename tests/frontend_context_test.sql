@@ -8,8 +8,9 @@ INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES('00008002-0000-0
 INSERT INTO plataforma.user_tenants(tenant_id,user_id,role_id,status) VALUES('00008002-0000-0000-0000-000000000015','00008001-0000-0000-0000-000000000015','00008000-0000-0000-0000-000000000015','active');
 INSERT INTO plataforma.tenant_modules(tenant_id,module_id,status)
  SELECT '00008002-0000-0000-0000-000000000015',id,'active' FROM plataforma.modules WHERE code='erp.finance';
-INSERT INTO organizacion.companies(id,tenant_id,legal_name,country_code,base_currency_code,timezone)
- VALUES('00008003-0000-0000-0000-000000000015','00008002-0000-0000-0000-000000000015','Frontend context company','US','USD','UTC');
+INSERT INTO organizacion.companies(id,tenant_id,legal_name,trade_name,country_code,tax_identifier,base_currency_code,timezone,settings)
+ VALUES('00008003-0000-0000-0000-000000000015','00008002-0000-0000-0000-000000000015','Frontend context company legal','Frontend company','VE','J-12345678-9','USD','America/Caracas',
+ '{"fiscal":{"address":"Av. Principal","phone":"0212-5550000","email":"facturas@example.invalid"},"branding":{"logoUrl":"https://example.invalid/logo.png","primaryColor":"#123456"},"secret":"must-not-leak"}');
 SET LOCAL ROLE mastererp_app;
 SELECT set_config('app.current_user_id','00008001-0000-0000-0000-000000000015',true),set_config('app.current_tenant_id','00008002-0000-0000-0000-000000000015',true);
 DO $$ DECLARE c jsonb; rejected boolean:=false; BEGIN
@@ -17,6 +18,12 @@ DO $$ DECLARE c jsonb; rejected boolean:=false; BEGIN
  c:=plataforma.current_frontend_context();
  IF jsonb_array_length(c->'companies')<>1 OR NOT(c->'permissions' ? 'administration.parties.read')
  OR c->'permissions' ? 'administration.parties.write' THEN RAISE EXCEPTION 'Wrong context'; END IF;
+ IF c->'companies'->0->>'name'<>'Frontend company'
+ OR c->'companies'->0->>'legal_name'<>'Frontend context company legal'
+ OR c->'companies'->0->>'tax_identifier'<>'J-12345678-9'
+ OR c->'companies'->0->>'address'<>'Av. Principal'
+ OR c->'companies'->0->>'phone'<>'0212-5550000'
+ OR c->'companies'->0 ? 'secret' THEN RAISE EXCEPTION 'Fiscal projection mismatch or sensitive setting leaked'; END IF;
  PERFORM set_config('app.current_tenant_id','00000000-0000-0000-0000-000000000000',true);
  BEGIN PERFORM plataforma.current_frontend_context(); EXCEPTION WHEN insufficient_privilege THEN rejected:=true; END;
  IF NOT rejected THEN RAISE EXCEPTION 'Foreign context accepted'; END IF;
