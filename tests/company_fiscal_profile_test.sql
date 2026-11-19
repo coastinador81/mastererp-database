@@ -1,8 +1,9 @@
 BEGIN;
 INSERT INTO plataforma.roles(code,name) VALUES('qa-company-fiscal','Company fiscal profile test');
 INSERT INTO plataforma.role_permissions(role_id,permission_code)
- SELECT id,code FROM plataforma.roles CROSS JOIN (VALUES('digital_sales.ecommerce.read'),('digital_sales.ecommerce.write')) p(code)
- WHERE plataforma.roles.code='qa-company-fiscal';
+ SELECT r.id,p.permission_code FROM plataforma.roles r CROSS JOIN
+ (VALUES('digital_sales.ecommerce.read'),('digital_sales.ecommerce.write')) p(permission_code)
+ WHERE r.code='qa-company-fiscal';
 INSERT INTO plataforma.users(id,email,display_name) VALUES('00007701-0000-0000-0000-000000000001','qa-company-fiscal@example.invalid','Fiscal test');
 INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES('00007702-0000-0000-0000-000000000001','qa-company-fiscal','qa-company-fiscal','Fiscal test','active');
 INSERT INTO plataforma.user_tenants(tenant_id,user_id,role_id,status)
