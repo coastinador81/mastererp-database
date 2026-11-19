@@ -1,23 +1,23 @@
 BEGIN;
-INSERT INTO plataforma.roles(code,name) VALUES('qa-parties-sql','Parties SQL fixture');
-INSERT INTO plataforma.role_permissions(role_id,permission_code) SELECT r.id,p.code FROM plataforma.roles r CROSS JOIN plataforma.permissions p WHERE r.code='qa-parties-sql' AND p.code IN ('administration.parties.read','administration.parties.write','administration.purchases.read');
-INSERT INTO plataforma.users(id,email,display_name) VALUES('00008001-0000-0000-0000-000000000001','qa-parties-local@example.invalid','Parties test');
-INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES('00008002-0000-0000-0000-000000000001','qa-parties-local','qa-parties-local','Parties test','active');
+INSERT INTO plataforma.roles(code,name) VALUES('qa-finance-supplier-code','Finance supplier code fixture');
+INSERT INTO plataforma.role_permissions(role_id,permission_code) SELECT r.id,p.code FROM plataforma.roles r CROSS JOIN plataforma.permissions p WHERE r.code='qa-finance-supplier-code' AND p.code IN ('administration.parties.read','administration.parties.write','administration.purchases.read');
+INSERT INTO plataforma.users(id,email,display_name) VALUES('00008001-0000-0000-0000-000000000078','qa-finance-supplier-code@example.invalid','Finance supplier code test');
+INSERT INTO plataforma.tenants(id,code,slug,name,status) VALUES('00008002-0000-0000-0000-000000000078','qa-finance-supplier-code','qa-finance-supplier-code','Finance supplier code test','active');
 INSERT INTO plataforma.user_tenants(tenant_id,user_id,role_id,status)
- SELECT '00008002-0000-0000-0000-000000000001','00008001-0000-0000-0000-000000000001',id,'active' FROM plataforma.roles WHERE code='qa-parties-sql';
+ SELECT '00008002-0000-0000-0000-000000000078','00008001-0000-0000-0000-000000000078',id,'active' FROM plataforma.roles WHERE code='qa-finance-supplier-code';
 INSERT INTO plataforma.tenant_modules(tenant_id,module_id,status)
- SELECT '00008002-0000-0000-0000-000000000001',id,'active' FROM plataforma.modules WHERE code='erp.finance';
+ SELECT '00008002-0000-0000-0000-000000000078',id,'active' FROM plataforma.modules WHERE code='erp.finance';
 INSERT INTO organizacion.companies(id,tenant_id,legal_name,country_code,base_currency_code,timezone)
- VALUES('00008003-0000-0000-0000-000000000001','00008002-0000-0000-0000-000000000001','Parties test','US','USD','UTC');
-SELECT set_config('app.current_user_id','00008001-0000-0000-0000-000000000001',true),
- set_config('app.current_tenant_id','00008002-0000-0000-0000-000000000001',true),
+ VALUES('00008003-0000-0000-0000-000000000078','00008002-0000-0000-0000-000000000078','Finance supplier code test','US','USD','UTC');
+SELECT set_config('app.current_user_id','00008001-0000-0000-0000-000000000078',true),
+ set_config('app.current_tenant_id','00008002-0000-0000-0000-000000000078',true),
  set_config('app.current_operation','administration.proveedor.create',true),
- set_config('app.correlation_id','00008004-0000-0000-0000-000000000001',true);
+ set_config('app.correlation_id','00008004-0000-0000-0000-000000000078',true);
 
 SET LOCAL ROLE mastererp_app;
 DO $$
 DECLARE
- company constant uuid:='00008003-0000-0000-0000-000000000001';
+ company constant uuid:='00008003-0000-0000-0000-000000000078';
  first_supplier jsonb;
  replay jsonb;
 BEGIN

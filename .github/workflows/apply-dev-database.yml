@@ -10,7 +10,7 @@ on:
       batch:
         description: Explicit reviewed migration batch
         type: choice
-        options: [customer, sales, operations, catalog]
+        options: [customer, sales, operations, catalog, supplier]
         default: customer
   push:
     branches: [dev]
@@ -85,6 +85,10 @@ jobs:
           if [ "$BATCH" = 'catalog' ]; then
             payload='{"action":"validate_catalog_candidate"}'
             if [ "$APPLY_MODEL" = 'true' ]; then payload='{"action":"apply_catalog_model"}'; fi
+          fi
+          if [ "$BATCH" = 'supplier' ]; then
+            payload='{"action":"validate_supplier_candidate"}'
+            if [ "$APPLY_MODEL" = 'true' ]; then payload='{"action":"apply_supplier_model"}'; fi
           fi
           aws lambda invoke \
             --function-name mastererp-dev-database-migrator \

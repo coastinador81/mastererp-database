@@ -399,7 +399,7 @@ def lambda_handler(event, context):
             return configure_payments(connection, event, context)
         finally:
             connection.close()
-    if event.get("action", "apply_model") not in ("apply_model", "validate_common_party_code_candidate", "validate_customer_admin_candidate", "apply_operations_model", "validate_operations_candidate", "apply_catalog_model", "validate_catalog_candidate"):
+    if event.get("action", "apply_model") not in ("apply_model", "validate_common_party_code_candidate", "validate_customer_admin_candidate", "apply_operations_model", "validate_operations_candidate", "apply_catalog_model", "validate_catalog_candidate", "apply_supplier_model", "validate_supplier_candidate"):
         connection.close()
         raise ValueError("Unsupported migration action")
     phase = "lock"
@@ -421,12 +421,13 @@ def lambda_handler(event, context):
     applied_schema = applied_schema + ("070_operations_directories_pagination.sql",)
     operations = event.get("action") in ("apply_operations_model", "validate_operations_candidate")
     catalog = event.get("action") in ("apply_catalog_model", "validate_catalog_candidate")
-    selected_schema = ("071_catalog_product_relations.sql","072_catalog_pagination.sql","073_catalog_inventory_product_visibility.sql","074_storefront_nodes_variants.sql","075_canonical_exchange_rates.sql","076_company_fiscal_frontend_context.sql","077_company_fiscal_profile.sql") if catalog else applied_schema[1:] if operations else (*applied_schema[:1], "078_finance_supplier_codes.sql")
+    selected_schema = ("071_catalog_product_relations.sql","072_catalog_pagination.sql","073_catalog_inventory_product_visibility.sql","074_storefront_nodes_variants.sql","075_canonical_exchange_rates.sql","076_company_fiscal_frontend_context.sql","077_company_fiscal_profile.sql") if catalog else applied_schema[1:] if operations else applied_schema[:1]
     selected_tests = (("catalog_products_test.sql","catalog_brands_suppliers_test.sql","catalog_product_relations_test.sql","catalog_pagination_test.sql","catalog_inventory_product_visibility_test.sql","storefront_customer_identity_test.sql","canonical_exchange_rates_test.sql","frontend_context_test.sql","company_fiscal_profile_test.sql") if catalog else ("operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql",
                        "storefront_store_payment_methods_test.sql", "operations_order_returns_test.sql") if operations else
         ("operations_preparation_flow_test.sql", "operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql", "storefront_store_payment_methods_test.sql", "storefront_customer_payment_methods_test.sql", "customer_legacy_contact_test.sql", "customer_administration_test.sql", "common_party_code_test.sql", "administration_parties_test.sql", "party_details_test.sql", "catalog_brands_suppliers_test.sql"))
-    if not operations and not catalog:
-        selected_tests += ("finance_supplier_codes_test.sql",)
+    if event.get("action") in ("apply_supplier_model", "validate_supplier_candidate"):
+        selected_schema = ("078_finance_supplier_codes.sql",)
+        selected_tests = ("finance_supplier_codes_test.sql",)
     if connection.run("SELECT to_regclass('administracion.perfiles_tercero') IS NOT NULL AND to_regclass('catalogo.proveedores_catalogo') IS NOT NULL AND EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='ventas_digitales' AND p.proname='checkout_crear') AND to_regprocedure('administracion.party_write_v2(uuid,text,text,uuid,text,text,bigint,text,jsonb,bigint,bigint)') IS NOT NULL AND NOT has_table_privilege('mastererp_app','catalogo.terceros','UPDATE')")[0][0] is not True:
         connection.close()
         raise RuntimeError("Compatible 001-040 baseline required; no automatic bootstrap")
@@ -443,7 +444,7 @@ def lambda_handler(event, context):
                 run_rollback_fixture(connection, sql_dir / filename)
         finally:
             connection.run("ROLLBACK")
-        if event.get("action") in ("validate_common_party_code_candidate", "validate_customer_admin_candidate", "validate_operations_candidate", "validate_catalog_candidate"):
+        if event.get("action") in ("validate_common_party_code_candidate", "validate_customer_admin_candidate", "validate_operations_candidate", "validate_catalog_candidate", "validate_supplier_candidate"):
             return {"status":"succeeded","tests":"passed","validation_only":True,
                     "committed_passes":0,"files_applied":list(selected_schema),
                     "schemas":[],"table_count":None,"correlation_id":correlation_id}

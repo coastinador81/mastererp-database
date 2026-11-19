@@ -20,6 +20,7 @@ OPERATIONS_PATHS={
 
 def batch_for_paths(requested,paths):
     batch=requested or 'customer'
+    if any(p in ('schema/078_finance_supplier_codes.sql','tests/finance_supplier_codes_test.sql') for p in paths):return 'supplier'
     if any(p in ('schema/071_catalog_product_relations.sql','tests/catalog_product_relations_test.sql','schema/072_catalog_pagination.sql','tests/catalog_pagination_test.sql','schema/073_catalog_inventory_product_visibility.sql','tests/catalog_inventory_product_visibility_test.sql','schema/074_storefront_nodes_variants.sql','tests/storefront_customer_identity_test.sql','schema/075_canonical_exchange_rates.sql','tests/canonical_exchange_rates_test.sql','schema/076_company_fiscal_frontend_context.sql','schema/077_company_fiscal_profile.sql','tests/company_fiscal_profile_test.sql') for p in paths):return 'catalog'
     if any(p in OPERATIONS_PATHS for p in paths):return 'operations'
     if any(p in ('schema/046_sales_order_command.sql','tests/sales_order_command_test.sql',
@@ -45,7 +46,7 @@ if __name__=='__main__':
         if before=='0'*40:raise ValueError('Initial push requires explicit reviewed batch')
         paths=subprocess.check_output(['git','diff','--name-only',before,os.environ['GITHUB_SHA']],text=True).splitlines()
         batch=batch_for_paths(batch,paths)
-    if batch not in ('customer','sales','operations','catalog'):raise ValueError('Unknown migration batch')
+    if batch not in ('customer','sales','operations','catalog','supplier'):raise ValueError('Unknown migration batch')
     with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
         out.write('required='+value+'\n'+'batch='+batch+'\n')
     print('Database apply required: '+value)
