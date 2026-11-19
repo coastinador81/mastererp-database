@@ -93,7 +93,7 @@ BEGIN
    'reference',payment_reference,'recipient',payment_recipient);
  END IF;
  SELECT * INTO node FROM operaciones.nodos WHERE tenant_id=tenant AND empresa_id=store.empresa_id
-  AND id=COALESCE(p_nodo,store.nodo_id) AND estado='ACTIVE' AND acepta_pedidos FOR UPDATE;
+  AND id=COALESCE(p_nodo,store.nodo_id) AND estado='ACTIVE' AND acepta_pedidos;
  IF NOT FOUND THEN RAISE EXCEPTION 'Store node unavailable' USING ERRCODE='42501';END IF;
  fingerprint:=encode(public.digest(jsonb_build_object('domain',lower(p_dominio),'node_id',node.id,'items',p_items,
   'delivery',p_entrega,'delivery_method',p_metodo_entrega,'payment',p_pago)::text,'sha256'),'hex');
