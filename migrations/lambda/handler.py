@@ -364,6 +364,12 @@ def lambda_handler(event, context):
             return provision_finance_member(connection, event, context)
         finally:
             connection.close()
+    if event.get("action") == "provision_business_owner":
+        from business_owner_access import provision
+        try:
+            return provision(connection, event, context)
+        finally:
+            connection.close()
     if event.get("action") == "validate_administration":
         from administration_validation import validate, concurrency
         try:

@@ -22,6 +22,7 @@ def package(destination, dependencies):
     files["common_code_validation.py"] = handler.with_name("common_code_validation.py")
     files["business_samples.py"] = handler.with_name("business_samples.py")
     files["business_order_samples.py"] = handler.with_name("business_order_samples.py")
+    files["business_owner_access.py"] = handler.with_name("business_owner_access.py")
     files["refund_test_fixture.py"] = handler.with_name("refund_test_fixture.py")
     files["party_validation.py"] = handler.with_name("party_validation.py")
     files["administration_validation.py"] = handler.with_name("administration_validation.py")

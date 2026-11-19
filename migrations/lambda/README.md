@@ -27,3 +27,13 @@ Evento (sin datos reales en el código; correo y `sub` llegan en la invocación)
 ## Ordenes ficticias autorizadas de Tumandaito
 
 Accion existente `seed_tumandaito_suppliers`, operaciones `inspect_orders` / `seed_orders`, mediante workflow manual separado. Reutiliza comandos de compras como mastererp_app y no aplica migraciones. Ver [procedimiento, idempotencia y recuperacion](../../documentation/tumandaito-order-samples.md).
+
+## Administrador completo de Tumandaito DEV
+
+La accion `provision_business_owner` incorpora, previa aprobacion explicita del propietario, una identidad Cognito real al rol existente `tenant.owner` exclusivamente dentro de Tumandaito. Usa issuer + sub, nunca enlaza por coincidencia de correo, y exige el sub de un propietario activo que autoriza. `inspect` es READ ONLY; `apply` crea solo usuario/identidad y pertenencia ausentes, comprueba permisos efectivos como mastererp_app y audita la aprobacion. Repetir devuelve changed=false. Una pertenencia existente con rol, estado u overrides diferentes se conserva y se rechaza.
+
+Evento: action, operation (inspect/apply), tenant_code=tumandaito, role_code=tenant.owner, issuer (DEV), subject, email y approved_by_subject (propietario activo existente). Los datos personales se suministran al invocar, no se versionan. Solo us-west-1, cuenta 277352717693, migrador oficial y ENVIRONMENT=dev. No cambia el propietario original, otras pertenencias, permisos del rol compartido, Cognito, modulos contratados ni datos de negocio.
+
+Se heredan los permisos actuales y futuros que se asignen al rol tenant.owner. No existe comodin universal: cada nueva capacidad debe declarar sus permisos y asignarlos al rol por el mecanismo oficial. Se mantienen las denegaciones, RLS y requisitos de modulo/tenant/empresa activos; no se habilitan modulos ni se otorga acceso a otros tenants, AWS o GitHub.
+
+Publicacion: cambios solo del migrador/empaquetado/documentacion en dev -> workflow existente actualiza Lambda -> apply se omite por no cambiar schema/, seeds/ ni tests/. Esperar exito y verificar inspect antes de invocar apply por AWS CLI. No invocar apply_model ni reaplicar migraciones. Despues repetir apply e inspect para verificar idempotencia y persistencia. Un error revierte toda la transaccion. Retirar acceso requiere solicitud explicita y operacion acotada; revertir codigo no revierte una pertenencia confirmada. La contrasena temporal y la prueba de login corresponden al invitado; nunca se utilizan ni restablecen para validar sus permisos.
