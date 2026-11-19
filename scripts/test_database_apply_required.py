@@ -12,6 +12,7 @@ class ClassifierTests(unittest.TestCase):
         self.assertEqual(batch_for_paths(None,['schema/075_canonical_exchange_rates.sql']),'catalog')
         self.assertEqual(batch_for_paths(None,['schema/076_company_fiscal_frontend_context.sql']),'catalog')
         self.assertEqual(batch_for_paths(None,['schema/077_company_fiscal_profile.sql']),'catalog')
+        self.assertEqual(batch_for_paths(None,['tests/company_fiscal_profile_test.sql']),'catalog')
     def test_explicit_dispatch(self):self.assertTrue(required('workflow_dispatch','','a'*40))
     def test_initial_push_fails_safe(self):self.assertTrue(required('push','0'*40,'a'*40))
     def test_code_only_skips_application(self):
