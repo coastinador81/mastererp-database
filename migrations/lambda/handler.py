@@ -97,6 +97,7 @@ SCHEMA_FILES = (
     "071_catalog_product_relations.sql",
     "072_catalog_pagination.sql",
     "073_catalog_inventory_product_visibility.sql",
+    "074_storefront_nodes_variants.sql",
 )
 CONFIRMED_BASELINE_SCHEMAS = (
     '015_frontend_context.sql',
@@ -407,7 +408,7 @@ def lambda_handler(event, context):
     applied_schema = applied_schema + ("070_operations_directories_pagination.sql",)
     operations = event.get("action") in ("apply_operations_model", "validate_operations_candidate")
     catalog = event.get("action") in ("apply_catalog_model", "validate_catalog_candidate")
-    selected_schema = ("071_catalog_product_relations.sql","072_catalog_pagination.sql","073_catalog_inventory_product_visibility.sql") if catalog else applied_schema[1:] if operations else applied_schema[:1]
+    selected_schema = ("071_catalog_product_relations.sql","072_catalog_pagination.sql","073_catalog_inventory_product_visibility.sql","074_storefront_nodes_variants.sql") if catalog else applied_schema[1:] if operations else applied_schema[:1]
     selected_tests = (("catalog_products_test.sql","catalog_brands_suppliers_test.sql","catalog_product_relations_test.sql","catalog_pagination_test.sql","catalog_inventory_product_visibility_test.sql") if catalog else ("operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql",
                        "storefront_store_payment_methods_test.sql", "operations_order_returns_test.sql") if operations else
         ("operations_preparation_flow_test.sql", "operations_orders_test.sql", "operations_fulfillment_ecommerce_test.sql", "storefront_store_payment_methods_test.sql", "storefront_customer_payment_methods_test.sql", "customer_legacy_contact_test.sql", "customer_administration_test.sql", "common_party_code_test.sql", "administration_parties_test.sql", "party_details_test.sql", "catalog_brands_suppliers_test.sql"))
