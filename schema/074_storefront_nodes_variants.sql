@@ -11,7 +11,10 @@ BEGIN
  SELECT * INTO selected_node FROM operaciones.nodos WHERE tenant_id=store.tenant_id AND empresa_id=store.empresa_id AND id=COALESCE(p_nodo,store.nodo_id) AND estado='ACTIVE' AND acepta_pedidos;
  IF NOT FOUND THEN RAISE EXCEPTION 'Store node unavailable' USING ERRCODE='P0002';END IF;
  RETURN jsonb_build_object('store',jsonb_build_object('id',store.id,'name',store.nombre,'node_id',selected_node.id,'default_node_id',store.nodo_id,'branding',store.marca,'configuration',store.configuracion||jsonb_build_object('deliveryFee',selected_node.tarifa_entrega),'modules',store.modulos,
-  'nodes',(SELECT COALESCE(jsonb_agg(jsonb_build_object('id',n.id,'name',n.nombre) ORDER BY n.nombre),'[]') FROM operaciones.nodos n WHERE n.tenant_id=store.tenant_id AND n.empresa_id=store.empresa_id AND n.estado='ACTIVE' AND n.acepta_pedidos)),
+  'nodes',(SELECT COALESCE(jsonb_agg(jsonb_build_object('id',n.id,'name',b.name) ORDER BY b.name),'[]')
+   FROM operaciones.nodos n JOIN organizacion.branches b
+    ON (b.tenant_id,b.company_id,b.id)=(n.tenant_id,n.empresa_id,n.id)
+   WHERE n.tenant_id=store.tenant_id AND n.empresa_id=store.empresa_id AND n.estado='ACTIVE' AND n.acepta_pedidos)),
   'categories',(SELECT COALESCE(jsonb_agg(jsonb_build_object('slug',slug,'name',nombre,'image_url',imagen_url) ORDER BY orden,nombre),'[]') FROM catalogo.categorias WHERE tenant_id=store.tenant_id AND estado='ACTIVE'),
   'products',(SELECT COALESCE(jsonb_agg(jsonb_build_object('id',p.id,'name',p.nombre,'description',p.descripcion,'price',p.precio,'image_url',p.imagen_url,'category_ref',p.categoria_ref,'brand_ref',p.marca_ref,'attributes',p.atributos,'available',i.disponible) ORDER BY p.nombre),'[]') FROM catalogo.productos p JOIN catalogo.inventarios i ON i.tenant_id=p.tenant_id AND i.producto_id=p.id WHERE p.tenant_id=store.tenant_id AND p.estado='ACTIVE' AND i.empresa_id=store.empresa_id AND i.nodo_id=selected_node.id AND i.ventas_habilitadas AND i.disponible>0 LIMIT p_limit));
 END $$;
