@@ -397,7 +397,7 @@ def lambda_handler(event, context):
                       "050_storefront_store_payment_methods.sql", "052_operations_order_history_read.sql",
                       "053_operations_order_cancellation_notes.sql", "054_finance_payment_review.sql",
                       "055_finance_receipts_history.sql", "056_finance_receipt_exchange_rate.sql",
-                      "057_operations_orders_search.sql", "058_driver_delivery_flow.sql",
+                      "057_storefront_payment_declaration.sql", "057_operations_orders_search.sql", "058_driver_delivery_flow.sql",
                       "059_delivery_contract_consistency.sql", "060_operations_order_delivery_trace.sql",
                       "061_driver_route_history.sql", "062_driver_route_start.sql",
                       "063_operations_order_returns.sql", "064_finance_order_return_settlement.sql",
