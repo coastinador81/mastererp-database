@@ -3,7 +3,7 @@
 Objetivo específico: Canal conversacional y de voz para consultar y coordinar operaciones con los módulos propietarios (`docs/MODULE_REGISTRY.md:7`). Por decisión del dueño (D1, 08-11-2026), `0-uonify` acoge además toda la app de Uonify de https://dev.uonify.com, en `0.2-app`.
 
 Responsabilidad: en database, qué datos de Uonify existen, dónde viven y cómo se cambian sin tocar por accidente la base compartida.
-Estado: reglas escritas. Uonify no tiene SQL propio en la RDS compartida; `0.2-app/migrations` guarda las 139 migraciones de su base propia (D4), en git desde `48bbbfa` (PR #4, 08-11-2026).
+Estado: reglas escritas. Uonify no tiene SQL propio en la RDS compartida; `0.2-app/migrations` guarda las 140 migraciones de su base propia (D4): 139 en git desde `48bbbfa` (PR #4, 08-11-2026) y la 143 desde `25c7c2f` (PR #9, 10-11-2026).
 
 ## Contrato y estado de esta capa
 
@@ -196,7 +196,7 @@ Lo común (dónde vive Uonify, qué lanza cada fusión y qué no se toca) está 
 | Ruta | De quién | Estado |
 | --- | --- | --- |
 | `README.md` | Uonify | Reglas de la carpeta (este fichero) |
-| `0.2-app/` | Uonify | Las 139 migraciones de la base propia (D4), en git desde `48bbbfa` (PR #4); ver su README |
+| `0.2-app/` | Uonify | Las 140 migraciones de la base propia (D4): 139 desde `48bbbfa` (PR #4) y la 143 desde `25c7c2f` (PR #9). Además, `ci/`, el código del puente de migraciones (plan F1). Ver su README |
 | `screens/conversation/` y `screens/hello-world/` | Equipo | Solo README, sin datos propios. Solo existen en database: ni platform ni infrastructure tienen `0-uonify/screens`. No se tocan; qué hacer con ellas lo decide el dueño con el arquitecto |
 
 ### Uonify en el SQL compartido, hoy
@@ -212,7 +212,7 @@ Lo común (dónde vive Uonify, qué lanza cada fusión y qué no se toca) está 
    - Alta en `SCHEMA_FILES` y `TEST_FILES` y un lote propio del migrador: un módulo como `migrations/lambda/sales_validation.py`, una opción en `batch` (`apply-dev-database.yml:10-14`) y su clasificación en `scripts/database_apply_required.py:19-22`. Son ficheros del equipo. Sin lote, el SQL viaja en el paquete pero no se aplica: hoy los lotes solo aplican la 045 (`handler.py:349`) y la 048 (`sales_validation.py:7`).
    - Tablas en el schema `uonify` (aún no existe), con `tenant_id`, RLS y `REVOKE` a `mastererp_app`; acceso solo por funciones `SECURITY DEFINER` con `search_path` fijo, que comprueban `plataforma.has_current_tenant_capability` y auditan en `auditoria.events` sin contenido (patrón: `schema/046_sales_order_command.sql:22-35` y `:130-132`). Nunca conversaciones. Ningún permiso nuevo sin decisión del dueño (`docs/FOUNDATION_INTEGRATION.md:18`).
    - Aplicación real: solo a mano (`workflow_dispatch`, `apply_model=true` y el lote de Uonify), tras un snapshot de la RDS (como en `docs/SALES_READ_UI.md:9`) y con OK del dueño. La RDS no lleva registro de migraciones (`docs/ADMINISTRATION_DEV.md:9`) y la prueba con ROLLBACK no revierte un esquema confirmado (`docs/DEVELOPMENT_STANDARD.md:27`): lo aplicado se queda.
-2. **Para la base propia de Uonify**: solo en `0.2-app/migrations` (D4), que ningún pipeline ejecuta; reglas en su README. Nunca en `schema/`, en `migration/` (cargas offline del equipo) ni en la raíz `migrations/` (reservada, `migrations/README.md:1`).
+2. **Para la base propia de Uonify**: solo en `0.2-app/migrations` (D4). Ningún pipeline las aplica en DEV ni en la RDS: el puente de migraciones de Uonify las prueba en un PostgreSQL desechable y publica el conjunto en S3. Reglas en su README. Nunca en `schema/`, en `migration/` (cargas offline del equipo) ni en la raíz `migrations/` (reservada, `migrations/README.md:1`).
 
 ### Qué ejecuta cada ruta de este repo
 
@@ -224,6 +224,7 @@ Resumen en Reglas comunes, sección 6. Detalle de esta capa:
 | `migrations/lambda/**`, `scripts/package_migrator.py` y los YAML del migrador | Solo el redespliegue del migrador, sin validación SQL (`scripts/database_apply_required.py:9`) |
 | Lanzamiento manual con `apply_model=true` | Redespliegue del migrador y `COMMIT` en la RDS, en dos pasadas (`handler.py:374-384`; `sales_validation.py:92-103`). El workflow no usa entornos protegidos: GitHub no pide otra aprobación |
 | `infrastructure/rds-dev-us-west-1.yaml` | ⚠ `deploy-dev-rds.yml` redespliega la RDS compartida: `DeletionPolicy` y `UpdateReplacePolicy` en `Delete`, `DeletionProtection: false` y copias de 1 día (`:53-54`, `:69` y `:72`). Un reemplazo borraría datos reales. No se toca nunca |
-| `modules/**`, `docs/`, `documentation/`, `migration/` | Solo «Validate structure» |
+| `modules/0-uonify/0.2-app/migrations/**`, `modules/0-uonify/0.2-app/ci/**` y `.github/workflows/uonify-migraciones-puente.yml` | «Uonify puente de migraciones», en cada PR y en cada push a `dev`: prueba las migraciones en un PostgreSQL desechable del runner y, en el push que fusiona la cuenta `uonify`, sube `migraciones/<commit>.tar.gz` al bucket de artefactos de DEV (S3, escritura única). No aplica nada en DEV ni en la RDS (README de `0.2-app`, «CI») |
+| El resto de `modules/**`, `docs/`, `documentation/`, `migration/` | Solo «Validate structure» |
 
-Un PR de Uonify en este repo solo toca `modules/0-uonify/**` y, para dar de alta una carpeta, `docs/MODULE_REGISTRY.md` (ver Reglas comunes, sección 11); cualquier otra ruta, solo con decisión del dueño. Tras fusionar, el `gh run list` de la sección 6 solo muestra «Validate structure».
+Un PR de Uonify en este repo solo toca `modules/0-uonify/**` y, para dar de alta una carpeta, `docs/MODULE_REGISTRY.md` (ver Reglas comunes, sección 11); cualquier otra ruta, solo con decisión del dueño, como `.github/workflows/uonify-migraciones-puente.yml` (CI en GitHub Actions por orden del dueño del 19-11-2026; el arquitecto aprobó el plan F1 el 20-11-2026). Tras fusionar, el `gh run list` de la sección 6 solo muestra «Validate structure» y, si se tocan `0.2-app/migrations`, `0.2-app/ci` o ese workflow, también «Uonify puente de migraciones».
