@@ -169,6 +169,22 @@ Ninguna fusión publica dev.uonify.com ni despliega su backend: la web se public
 
 - El roadmap vive fuera de los repos (D7): lo lleva el dueño y se pinta en el chat en cada hito. No se sube a git.
 - Cada README lleva solo reglas y el estado verificable de su carpeta: qué hay, con qué evidencia (commit, sha256 o ejecución de workflow) y qué falta, sin inflarlo (`AGENTS.md:46`). Una carpeta o un README no acreditan implementación.
+
+### 13. Tipos de código (arquitectura del dueño, 20-11-2026)
+
+Modelo del dueño, al estilo de Odoo, decidido el 20-11-2026: «primero el Estudio, con la arquitectura mínima dentro». El análisis y los pasos están en el roadmap (D-ARQUITECTURA-3-TIPOS-20261120).
+
+| Tipo | Qué es | Dónde corre | Regla |
+| --- | --- | --- | --- |
+| 1 | Código inteligente de Uonify: lógica de negocio, Uony, motor creativo, montaje | AWS de Uonify | Nunca sale de AWS ni llega al navegador. |
+| 2a | Artefacto cerrado de un módulo, que el cliente ejecuta en su Google Cloud (Cloud Run o Functions) y paga él | Proyecto de Google del cliente | Solo código de enlace sin valor propio: en el proyecto del cliente nada es secreto. Se instala con su sí y una credencial corta, y queda registrado qué versión corre en cada cliente. |
+| 2b | Código fuente que el cliente posee y personaliza bajo licencia | Repo del cliente | Solo para módulos cuyo valor aguante estar a la vista. Hoy no hay ninguno. |
+| 3 | API de un módulo para que otros lo usen | Donde vive su tipo 1 | Contrato versionado (`/v1/…`) con su esquema, en una carpeta técnica `contracts/` del módulo que la ofrece. Quien la consume prueba contra ese esquema. |
+
+- Invariante B: lo que corre fuera de AWS (un 2a, un 2b o el programa local de un conector) habla con el núcleo solo por API de red. Nunca empaqueta ni enlaza el núcleo ni `backend/shared`.
+- Cada módulo dice en su README qué baja al cliente: nada, datos, 2a, 2b o un programa en su ordenador. El Estudio solo baja datos, a su Google Cloud y a su Drive.
+- «Si el cliente lo modifica, pierde las actualizaciones y el soporte» es un principio de diseño. No se le promete al cliente mientras no existan licencia, sistema de versiones y partners.
+- Los datos del cliente viven en su Google, y en AWS solo hay referencias. Sin intermediarios: tecnología del fabricante, con la cuenta del cliente.
 <!-- uonify-reglas-comunes:end -->
 
 ## Esta capa: database
