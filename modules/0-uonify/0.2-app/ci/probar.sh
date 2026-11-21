@@ -176,6 +176,17 @@ caso rol-sesion 'prohibida[rol-identidad]' reglas escribir 003_rol_sesion.sql $'
 caso rol-guc 'prohibida[rol-identidad]' reglas escribir 003_rol_guc.sql $'SET role = \'escritor\';\n'
 caso rol-autorizacion 'prohibida[rol-identidad]' reglas escribir 003_autorizacion.sql $'SET SESSION AUTHORIZATION escritor;\n'
 caso rol-set-config 'prohibida[rol-identidad]' reglas escribir 003_set_config.sql $'SELECT set_config(\'role\', \'escritor\', true);\n'
+# Las mismas con el nombre entre comillas o como parámetro, y las que pidió REA el 21-11: también la
+# forma local de SESSION AUTHORIZATION; RESET ROLE solo pasa; una columna llamada role sale (rechazo
+# esperado, documentado) y se escribe SET (role) = ROW(…).
+caso rol-comillas 'prohibida[rol-identidad]' reglas escribir 003_rol_comillas.sql $'SET "role" = \'escritor\';\n'
+caso rol-local-comillas 'prohibida[rol-local-sin-reset]' reglas escribir 003_rol_local.sql $'SET LOCAL "role" = \'escritor\';\n'
+caso rol-autorizacion-guc 'prohibida[rol-identidad]' reglas escribir 003_autorizacion.sql $'SET session_authorization = \'escritor\';\n'
+caso rol-autorizacion-local 'prohibida[rol-identidad]' reglas escribir 003_autorizacion.sql $'SET LOCAL SESSION AUTHORIZATION escritor;\n'
+caso rol-config-autorizacion 'prohibida[rol-identidad]' reglas escribir 003_set_config.sql $'SELECT set_config(\'session_authorization\', \'escritor\', false);\n'
+caso rol-reset-solo pasa reglas escribir 003_reset.sql $'RESET ROLE;\n'
+caso rol-columna 'prohibida[rol-identidad]' reglas escribir 003_columna.sql $'UPDATE c SET role = \'lector\';\n'
+caso rol-columna-fila pasa reglas escribir 003_columna.sql $'UPDATE c SET (role) = ROW(\'lector\');\n'
 # Reglas desde el ancla: una 003 con CREATE ROLE entra en un push que no la para y el siguiente
 # solo añade la 004. Contra su base pasa; desde el ancla, no.
 pushes 003_rol.sql $'CREATE ROLE intruso;\n' 004_d.sql $'SELECT 1;\n'

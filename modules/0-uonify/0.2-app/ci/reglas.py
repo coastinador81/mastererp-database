@@ -53,9 +53,12 @@ PROHIBIDAS = [(regla, re.compile(patron, re.I)) for regla, patron in (
     # sobre un objeto a un rol que ya existe (GRANT SELECT ON t TO r) sí se puede.
     ('rol-pertenencia', r'\bGRANT\b(?:(?!\bON\b)[^;])*?\bTO\b|\bREVOKE\b(?:(?!\bON\b)[^;])*?\bFROM\b'),
     # migrate() aplica todas en una transacción y una conexión: un SET ROLE de sesión (también en su
-    # forma «SET role = …») seguiría tras el commit, igual que SESSION AUTHORIZATION y set_config.
-    # Sale también un UPDATE … SET role = … de una columna llamada role. SET LOCAL ROLE: ver ROL_LOCAL.
-    ('rol-identidad', r"\bSET\s+(?:SESSION\s+)?ROLE\b|\bSESSION\s+AUTHORIZATION\b"
+    # forma «SET role = …» y con el nombre entre comillas) seguiría tras el commit, igual que SESSION
+    # AUTHORIZATION, su forma de parámetro (SET session_authorization = …) y set_config. Sale además
+    # un UPDATE … SET role = … de una columna llamada role: se escribe SET (role) = ROW(…).
+    # SET LOCAL ROLE: ver ROL_LOCAL.
+    ('rol-identidad', r'\bSET\s+(?:SESSION\s+)?"?ROLE\b|\bSESSION\s+AUTHORIZATION\b'
+                      r'|\bSET\s+(?:SESSION\s+|LOCAL\s+)?"?session_authorization\b'
                       r"|\bset_config\s*\(\s*'(?:role|session_authorization)'"),
     ('ficheros-servidor',
      r'\b(?:pg_read_file|pg_read_binary_file|pg_ls_dir|pg_stat_file|pg_file_write|lo_import|lo_export)\b'),
@@ -74,9 +77,9 @@ PROHIBIDAS = [(regla, re.compile(patron, re.I)) for regla, patron in (
 # SET LOCAL ROLE dura hasta el final de la transacción de migrate(), que es la de todas: solo pasa
 # con un RESET ROLE detrás del último, como el relleno de la 116. Aun así queda un aviso: el orden
 # del texto no prueba el de la ejecución (un IF o un RETURN pueden saltarse el RESET), y eso lo
-# comprueba REA.
-ROL_LOCAL = re.compile(r'\bSET\s+LOCAL\s+ROLE\b', re.I)
-RESET_ROL = re.compile(r'\bRESET\s+ROLE\b', re.I)
+# comprueba REA. Los dos patrones admiten el nombre entre comillas («SET LOCAL "role" = …»).
+ROL_LOCAL = re.compile(r'\bSET\s+LOCAL\s+"?ROLE\b', re.I)
+RESET_ROL = re.compile(r'\bRESET\s+"?ROLE\b', re.I)
 
 AVISOS = [(regla, re.compile(patron, re.I)) for regla, patron in (
     ('no-aditiva', r'\bDROP\s+(?:TABLE|COLUMN|SCHEMA|VIEW|MATERIALIZED\s+VIEW|TYPE|SEQUENCE|INDEX'
