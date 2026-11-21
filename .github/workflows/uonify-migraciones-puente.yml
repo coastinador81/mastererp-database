@@ -1,0 +1,295 @@
+# Uonify: puente de migraciones de la base propia (paso F1.4 del plan F1, aprobado por Miguel el
+# 20-11-2026). Valida modules/0-uonify/0.2-app/migrations y, en el push a dev que fusiona la cuenta
+# uonify, publica el conjunto una sola vez en
+# s3://uonify-dev-artefactos-277352717693-eu-west-1/migraciones/<commit>.tar.gz, de donde lo toma la
+# CI de platform (migrations.lock). No aplica nada en DEV ni en la RDS compartida y no despliega.
+# Reglas y detalle: README de modules/0-uonify/0.2-app y su carpeta ci/.
+# ⚠ El nombre de este fichero forma parte de la confianza del rol uonify-dev-gha-migraciones
+# (job_workflow_ref exacto): renombrarlo deja al job publicar sin credenciales.
+name: Uonify puente de migraciones
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'modules/0-uonify/0.2-app/migrations/**'
+      - 'modules/0-uonify/0.2-app/ci/**'
+      - '.github/workflows/uonify-migraciones-puente.yml'
+  push:
+    branches: [dev]
+    paths:
+      - 'modules/0-uonify/0.2-app/migrations/**'
+      - 'modules/0-uonify/0.2-app/ci/**'
+      - '.github/workflows/uonify-migraciones-puente.yml'
+
+permissions: {}
+
+# En un PR, un push nuevo cancela el run anterior. En dev, cada commit tiene su grupo: si no, con
+# varias fusiones seguidas GitHub cancelaría el run pendiente y ese commit se quedaría sin validar
+# y sin migraciones/<commit>. Cada push escribe una clave distinta, así que no chocan.
+concurrency:
+  group: uonify-migraciones-puente-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  validar:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      DIR_CI: modules/0-uonify/0.2-app/ci
+      # dev justo antes del puente: las 140 migraciones, de la 001 a la 143, con huella d0d768cec2a4….
+      # Desde el ancla, la guarda mira la historia de dev commit a commit y las reglas revisan todo lo
+      # añadido. Mover el ancla es cambiar este fichero, con su PR y su revisión.
+      ANCLA: dadbf38e080e765dff3f0907520271c2afe4d88f
+    outputs:
+      ficheros: ${{ steps.paquete.outputs.ficheros }}
+      ultima: ${{ steps.paquete.outputs.ultima }}
+      huella: ${{ steps.paquete.outputs.huella }}
+      tar_sha256: ${{ steps.paquete.outputs.tar_sha256 }}
+      tarball_sha256: ${{ steps.paquete.outputs.tarball_sha256 }}
+    steps:
+      - name: Solo en runners alojados por GitHub
+        run: |
+          [ "${RUNNER_ENVIRONMENT:-}" = github-hosted ] || { echo "runner no alojado por GitHub: paro"; exit 1; }
+
+      - name: Checkout con toda la historia (base y ancla)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Pruebas de la guarda y de las reglas (casos M, D, T, enlace y más)
+        run: bash "$DIR_CI/probar.sh"
+
+      - name: Guarda «solo añadir» y reglas de las migraciones añadidas desde el ancla
+        env:
+          ANTES: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              # HEAD es el merge de prueba del PR: su primer padre es el dev con el que se fusiona.
+              [ "$(git rev-list --parents -n 1 HEAD | wc -w)" -eq 3 ] || { echo "HEAD no es el merge de prueba del PR"; exit 1; }
+              base=$(git rev-parse HEAD^1) ;;
+            push) base=$ANTES ;;
+            *) echo "evento no previsto: $GITHUB_EVENT_NAME"; exit 1 ;;
+          esac
+          if ! [[ "$base" =~ ^[0-9a-f]{40}$ ]] || [ "$base" = 0000000000000000000000000000000000000000 ]; then
+            echo "base no válida: $base"
+            exit 1
+          fi
+          bash "$DIR_CI/guarda.sh" "$base" "$ANCLA"
+          # Desde el ancla y no desde la base: lo que entró en dev sin un run que lo parara (en rojo,
+          # cancelado o con [skip ci]) se vuelve a revisar aquí.
+          python3 -I "$DIR_CI/reglas.py" "$ANCLA"
+
+      # Con el python3 del sistema, antes de setup-python: publicar lo rehace con el mismo.
+      - name: Tarball reproducible y manifiesto, desde git
+        id: paquete
+        run: |
+          set -euo pipefail
+          python3 -I "$DIR_CI/empaquetar.py" HEAD "$RUNNER_TEMP/paquete" > "$RUNNER_TEMP/paquete.txt"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/paquete.txt"
+
+      - name: Python 3.12 para la réplica de migrate()
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: psycopg 3.3.6 (el de la imagen API), con hashes
+        run: |
+          python -m pip install --disable-pip-version-check --no-input --require-hashes \
+            --only-binary=:all: --no-deps -r "$DIR_CI/requirements.lock"
+
+      - name: PostgreSQL 17 desechable (el de DEV, por digest) y sin red
+        env:
+          IMAGEN_PG: docker.io/library/postgres:17-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+        run: |
+          set -euo pipefail
+          # Como el servicio db del compose de DEV (infrastructure, host/runtime/compose.yaml): raíz
+          # de solo lectura y solo las capacidades que pide el entrypoint. Datos en memoria; la única
+          # entrada es el socket, en una carpeta del runner.
+          sock="$RUNNER_TEMP/pg-socket"
+          mkdir -p "$sock"
+          docker pull --quiet "$IMAGEN_PG" > /dev/null
+          docker run -d --name uonify-pg-prueba --network none --read-only \
+            --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add FOWNER \
+            --cap-add SETGID --cap-add SETUID --security-opt no-new-privileges:true \
+            --shm-size 128m --tmpfs /var/lib/postgresql/data:size=1g --tmpfs /tmp:size=64m \
+            -v "$sock:/var/run/postgresql" \
+            -e POSTGRES_USER=uonify -e POSTGRES_DB=uonify -e POSTGRES_HOST_AUTH_METHOD=trust \
+            "$IMAGEN_PG" > /dev/null
+          # Por TCP dentro del contenedor, como el healthcheck de DEV: en la primera inicialización,
+          # el servidor temporal solo escucha en el socket.
+          for _ in $(seq 1 90); do
+            if docker exec uonify-pg-prueba pg_isready -q -h 127.0.0.1 -U uonify -d uonify; then exit 0; fi
+            sleep 1
+          done
+          echo "PostgreSQL no está listo tras 90 s"
+          exit 1
+
+      - name: Cadena 001→N dos veces con la réplica literal de migrate()
+        env:
+          # sha256 de app/database.py de platform (backend/modules/0-uonify/0.2-app, commit 7608ad5).
+          SHA256_REPLICA: e301a663a72deac99617ec71dc4111e73fac7d1061b401bce9aed1a5f9a6d390
+        run: python -I "$DIR_CI/cadena.py" "$RUNNER_TEMP/paquete" "$DIR_CI/database.py" "$SHA256_REPLICA" "$RUNNER_TEMP/pg-socket"
+
+      - name: Registro de PostgreSQL (solo si algo falla)
+        if: failure()
+        run: docker logs --tail 80 uonify-pg-prueba 2>&1 || true
+
+      - name: Resumen del paquete validado
+        run: |
+          set -euo pipefail
+          {
+            echo "### Paquete de migraciones validado"
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/paquete.txt"
+            echo '```'
+            echo
+            echo "<details><summary>Manifiesto: sha256 de cada migración, en el orden de migrate()</summary>"
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/paquete/manifiesto.sha256"
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publicar:
+    # Solo el push a dev que fusiona la cuenta uonify en este repo: la confianza del rol exige este
+    # fichero en refs/heads/dev, actor_id 201381683 y repository_id 1434968443. La condición va en
+    # el job, que es el que asume el rol: un push de otra cuenta valida y no deja el run en rojo.
+    # Un re-run conserva el actor del run inicial: triggering_actor (quien lo relanza) salta el
+    # job si no es uonify. El nombre solo sirve para saltarlo; el ID lo exige la confianza.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev' && github.actor_id == '201381683' && github.triggering_actor == 'uonify' && github.repository_id == '1434968443'
+    needs: validar
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DIR_CI: modules/0-uonify/0.2-app/ci
+      BUCKET: uonify-dev-artefactos-277352717693-eu-west-1
+      CUENTA: '277352717693'
+      AWS_PAGER: ''
+    steps:
+      - name: Solo en runners alojados por GitHub
+        run: |
+          [ "${RUNNER_ENVIRONMENT:-}" = github-hosted ] || { echo "runner no alojado por GitHub: paro"; exit 1; }
+
+      - name: Checkout del commit del push
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Mismo commit, mismo runner y mismo python3 del sistema que validar: mismos bytes. Lo que se
+      # sube sale de git en este job, no de un artefacto de validar.
+      - name: Rehacer el paquete desde git y exigir que sea el validado
+        env:
+          VALIDADO: |-
+            ficheros=${{ needs.validar.outputs.ficheros }}
+            ultima=${{ needs.validar.outputs.ultima }}
+            huella=${{ needs.validar.outputs.huella }}
+            tar_sha256=${{ needs.validar.outputs.tar_sha256 }}
+            tarball_sha256=${{ needs.validar.outputs.tarball_sha256 }}
+        run: |
+          set -euo pipefail
+          [ "$(git rev-parse HEAD)" = "$GITHUB_SHA" ] || { echo "HEAD no es el commit del push"; exit 1; }
+          python3 -I "$DIR_CI/empaquetar.py" HEAD "$RUNNER_TEMP/paquete" > "$RUNNER_TEMP/paquete.txt"
+          cat "$RUNNER_TEMP/paquete.txt"
+          if [ "$(cat "$RUNNER_TEMP/paquete.txt")" != "$VALIDADO" ]; then
+            echo "FALLO: el paquete rehecho no es el que validó el job validar, que dio:"
+            printf '%s\n' "$VALIDADO"
+            exit 1
+          fi
+
+      # El nombre de sesión lleva el run y el intento: en CloudTrail, cada PutObject queda atado a
+      # su run. Va en with:, no en un run, y los dos valores son números.
+      - name: Credenciales de AWS por OIDC (uonify-dev-gha-migraciones, 15 min)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::277352717693:role/uonify/uonify-dev-gha-migraciones
+          aws-region: eu-west-1
+          role-session-name: uonify-puente-${{ github.run_id }}-${{ github.run_attempt }}
+          role-duration-seconds: 900
+          allowed-account-ids: '277352717693'
+          retry-max-attempts: 3
+
+      - name: Subir migraciones/<commit>.tar.gz una sola vez y comprobar que es lo validado
+        env:
+          TARBALL_SHA256: ${{ needs.validar.outputs.tarball_sha256 }}
+          HUELLA: ${{ needs.validar.outputs.huella }}
+          FICHEROS: ${{ needs.validar.outputs.ficheros }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ && "$TARBALL_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "datos no válidos"; exit 1; }
+          clave="migraciones/$GITHUB_SHA.tar.gz"
+          tgz="$RUNNER_TEMP/paquete/migraciones.tar.gz"
+          [ "$(sha256sum "$tgz" | cut -d' ' -f1)" = "$TARBALL_SHA256" ] || { echo "el tarball local no es el validado"; exit 1; }
+          # Control positivo P6.5 del plan F1.1: el rol legítimo se asume desde este workflow.
+          arn=$(aws sts get-caller-identity --query Arn --output text)
+          case "$arn" in
+            arn:aws:sts::277352717693:assumed-role/uonify-dev-gha-migraciones/*) echo "Identidad: $arn" ;;
+            *) echo "FALLO: identidad inesperada: $arn"; exit 1 ;;
+          esac
+          aws --version
+          # Escritura única: la política del bucket exige If-None-Match. Si la clave ya existe (412),
+          # no se sustituye: se descarga y tiene que ser idéntica a lo validado.
+          if aws s3api put-object --bucket "$BUCKET" --key "$clave" --body "$tgz" --if-none-match '*' \
+               --checksum-algorithm SHA256 --content-type application/gzip \
+               --expected-bucket-owner "$CUENTA" --region eu-west-1 \
+               --query VersionId --output text > "$RUNNER_TEMP/put.txt" 2> "$RUNNER_TEMP/put.err"; then
+            estado="subido ahora (versión $(cat "$RUNNER_TEMP/put.txt"))"
+          elif grep -q '(PreconditionFailed)' "$RUNNER_TEMP/put.err"; then
+            estado="ya existía (412): no se sustituye; se compara con lo validado"
+          else
+            cat "$RUNNER_TEMP/put.err" >&2
+            exit 1
+          fi
+          echo "s3://$BUCKET/$clave: $estado"
+          aws s3api get-object --bucket "$BUCKET" --key "$clave" --expected-bucket-owner "$CUENTA" \
+            --region eu-west-1 --checksum-mode ENABLED "$RUNNER_TEMP/remoto.tar.gz" \
+            --query VersionId --output text > "$RUNNER_TEMP/get.txt"
+          remoto=$(sha256sum "$RUNNER_TEMP/remoto.tar.gz" | cut -d' ' -f1)
+          if [ "$remoto" != "$TARBALL_SHA256" ]; then
+            echo "FALLO: s3://$BUCKET/$clave tiene sha256 $remoto y lo validado es $TARBALL_SHA256"
+            exit 1
+          fi
+          echo "s3://$BUCKET/$clave coincide con validar: sha256 $remoto"
+          {
+            echo "### Migraciones publicadas"
+            echo
+            echo "| Dato | Valor |"
+            echo "| --- | --- |"
+            echo "| Objeto | \`s3://$BUCKET/$clave\` |"
+            echo "| Estado | $estado |"
+            echo "| Versión leída | \`$(cat "$RUNNER_TEMP/get.txt")\` |"
+            echo "| sha256 del tarball (igual que en validar) | \`$remoto\` |"
+            echo "| Huella del manifiesto | \`$HUELLA\` |"
+            echo "| Ficheros | $FICHEROS |"
+            echo "| Identidad (control positivo P6.5) | \`$arn\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Si el rol no se asume, el plan F1.1 (P6.5) pide comparar las claims del job con su confianza.
+      # Como la sonda F1.0: audiencia propia, que ningún rol de AWS acepta, y el token no se imprime.
+      - name: Claims OIDC del job, para comparar con la confianza (solo si algo falla)
+        if: failure()
+        run: |
+          printf 'Authorization: bearer %s\n' "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          | curl -sSf -H @- "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=uonify-sonda-sin-aws" \
+          | python3 -I -c '
+          import base64, json, sys
+          seg = json.load(sys.stdin)["value"].split(".")[1]
+          claims = json.loads(base64.urlsafe_b64decode(seg + "=" * (-len(seg) % 4)))
+          keep = ["sub", "repository_id", "repository_owner_id", "actor", "actor_id", "job_workflow_ref",
+                  "ref", "event_name", "runner_environment"]
+          print(json.dumps({k: claims.get(k) for k in keep}, indent=2, ensure_ascii=False))
+          '
