@@ -106,7 +106,6 @@ Migraciones ya aplicadas en DEV que llegaron como copia exacta (lista cerrada; v
 - Con K: revisión obligatoria (CODEOWNERS) de `ci/` y de este workflow, para que una fusión no pueda neutralizarlos en silencio (ciberseguridad, C-F14·1). Hasta entonces, `dev` sigue sin proteger por decisión del dueño.
 - Que la imagen de la API tome estas migraciones del puente, porque las necesita en `/app/migrations` (`app/database.py:18`): platform fija `migraciones/<commit>.tar.gz` en `migrations.lock`, y su CI lo descarga con un rol OIDC de solo lectura y comprueba su sha256, sin secretos (plan F1, paso F1.5a).
 - Que esa CI de platform exija también que `app/database.py` tenga el sha256 fijado aquí para la réplica de `migrate()`. Hasta entonces, mantenerlos iguales es a mano.
-- Corregir el mismo día en los 4 README de `0-uonify` las secciones 6 y 7 de las Reglas comunes (sección 11): `0.2-app/migrations` y `0.2-app/ci` ya no lanzan solo «Validate structure», y el puente sí las ejecuta, en un PostgreSQL desechable.
 - Unificar la línea CONV (108 migraciones) con la de la API.
 - Alarma de copia fallida en el host (infraestructura).
 - D6 (ver Reglas comunes, sección 3): si DEV se alinea con la RDS compartida, el historial de conversación de esta base no podrá ir allí (`documentation/onboarding-data-model.md:9`).
