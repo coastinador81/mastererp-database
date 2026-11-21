@@ -12,7 +12,8 @@ repetidos; NNN_<tema>.sql en snake_case; 500 líneas como máximo; sin secretos,
 reales) y la lista prohibida del diseño F1 (COPY … PROGRAM, ALTER SYSTEM y roles), con lo que
 también saca a la base de su sitio: ficheros del servidor, lenguajes y extensiones no confiables,
 conexiones externas, bases, tablespaces, disparadores de eventos y configuración del servidor.
-Además, UTF-8 y sin CR: así el sha256 del fichero es el checksum que guarda migrate().
+Además, UTF-8 y sin CR: así el sha256 del fichero es el checksum que guarda migrate(). Un SET
+LOCAL ROLE solo pasa con un RESET ROLE detrás, como el relleno de la 116, y con aviso para REA.
 
 Sale con 1 y una línea «RECHAZO <regla>: <fichero>: <detalle>» por incumplimiento. Los «AVISO» no
 bloquean: marcan lo que no es aditivo (DROP, TRUNCATE, RENAME…) para la revisión de REA mientras
@@ -51,8 +52,11 @@ PROHIBIDAS = [(regla, re.compile(patron, re.I)) for regla, patron in (
     # GRANT o REVOKE de un rol a otro: los que no llevan ON antes del TO o del FROM. Dar permisos
     # sobre un objeto a un rol que ya existe (GRANT SELECT ON t TO r) sí se puede.
     ('rol-pertenencia', r'\bGRANT\b(?:(?!\bON\b)[^;])*?\bTO\b|\bREVOKE\b(?:(?!\bON\b)[^;])*?\bFROM\b'),
-    # migrate() aplica todas en la misma conexión: un cambio de rol afectaría a las siguientes.
-    ('rol-identidad', r'\b(?:SET\s+(?:SESSION\s+|LOCAL\s+)?ROLE|RESET\s+ROLE|SESSION\s+AUTHORIZATION)\b'),
+    # migrate() aplica todas en una transacción y una conexión: un SET ROLE de sesión (también en su
+    # forma «SET role = …») seguiría tras el commit, igual que SESSION AUTHORIZATION y set_config.
+    # Sale también un UPDATE … SET role = … de una columna llamada role. SET LOCAL ROLE: ver ROL_LOCAL.
+    ('rol-identidad', r"\bSET\s+(?:SESSION\s+)?ROLE\b|\bSESSION\s+AUTHORIZATION\b"
+                      r"|\bset_config\s*\(\s*'(?:role|session_authorization)'"),
     ('ficheros-servidor',
      r'\b(?:pg_read_file|pg_read_binary_file|pg_ls_dir|pg_stat_file|pg_file_write|lo_import|lo_export)\b'),
     # COPY con un fichero del servidor (no el \copy de psql): lee o escribe en el disco de la base.
@@ -66,6 +70,13 @@ PROHIBIDAS = [(regla, re.compile(patron, re.I)) for regla, patron in (
     ('event-trigger', r'\bCREATE\s+(?:OR\s+REPLACE\s+)?EVENT\s+TRIGGER\b'),
     ('configuracion', r'\bpg_reload_conf\b|\bsession_replication_role\b'),
 )]
+
+# SET LOCAL ROLE dura hasta el final de la transacción de migrate(), que es la de todas: solo pasa
+# con un RESET ROLE detrás del último, como el relleno de la 116. Aun así queda un aviso: el orden
+# del texto no prueba el de la ejecución (un IF o un RETURN pueden saltarse el RESET), y eso lo
+# comprueba REA.
+ROL_LOCAL = re.compile(r'\bSET\s+LOCAL\s+ROLE\b', re.I)
+RESET_ROL = re.compile(r'\bRESET\s+ROLE\b', re.I)
 
 AVISOS = [(regla, re.compile(patron, re.I)) for regla, patron in (
     ('no-aditiva', r'\bDROP\s+(?:TABLE|COLUMN|SCHEMA|VIEW|MATERIALIZED\s+VIEW|TYPE|SEQUENCE|INDEX'
@@ -132,6 +143,14 @@ def revisar(nombre, datos, avisos):
     for regla, patron in PROHIBIDAS:
         rechazos += [(f'prohibida[{regla}]', nombre, f'línea {linea(codigo, m.start())}')
                      for m in patron.finditer(codigo)]
+    locales = list(ROL_LOCAL.finditer(codigo))
+    if locales and RESET_ROL.search(codigo, locales[-1].end()):
+        avisos += [('rol-local', nombre, f'línea {linea(codigo, m.start())}: SET LOCAL ROLE con RESET ROLE detrás')
+                   for m in locales]
+    elif locales:
+        rechazos.append(('prohibida[rol-local-sin-reset]', nombre,
+                         f'línea {linea(codigo, locales[-1].start())}: SET LOCAL ROLE sin RESET ROLE detrás; '
+                         'el rol seguiría en las migraciones siguientes'))
     for regla, patron in AVISOS:
         avisos += [(regla, nombre, f'línea {linea(codigo, m.start())}') for m in patron.finditer(codigo)]
     return rechazos
