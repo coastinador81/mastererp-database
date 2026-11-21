@@ -3,8 +3,9 @@
 # desechables que se crean aquí: los casos M, D, T y enlace que pide el diseño, más renombrar,
 # cambiar el modo, una subcarpeta, un submódulo, migrations/ convertida en enlace, bases que no
 # valen, el ancla y la historia desde él, y las reglas de las migraciones nuevas. Cada caso espera
-# un resultado exacto: «pasa», salida 1 con «RECHAZO <regla>:» o, si espera «error», salida 2 con
-# «ERROR:». Solo corre en la CI (job validar): no toca el repo real ni la red.
+# un resultado exacto: «pasa», «aviso:<regla>» (salida 0 con «AVISO <regla>:»), salida 1 con
+# «RECHAZO <regla>:» o, si espera «error», salida 2 con «ERROR:». Solo corre en la CI (job
+# validar): no toca el repo real ni la red.
 set -euo pipefail
 
 ci=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -29,12 +30,15 @@ git add -A
 git commit -q -m base
 base=$(git rev-parse HEAD)
 
-# comprobar <caso> <esperado> <código> <salida>: esperado es «pasa», «error» o la regla del RECHAZO.
+# comprobar <caso> <esperado> <código> <salida>: esperado es «pasa», «aviso:<regla>», «error» o la
+# regla del RECHAZO.
 comprobar() {
   local caso=$1 esperado=$2 codigo=$3 salida=$4 bien=0
   total=$((total + 1))
   if [ "$esperado" = pasa ]; then
     if [ "$codigo" -eq 0 ]; then bien=1; fi
+  elif [ "${esperado#aviso:}" != "$esperado" ]; then
+    if [ "$codigo" -eq 0 ] && grep -qF "AVISO ${esperado#aviso:}:" <<< "$salida"; then bien=1; fi
   elif [ "$esperado" = error ]; then
     if [ "$codigo" -eq 2 ] && grep -qF 'ERROR:' <<< "$salida"; then bien=1; fi
   elif [ "$codigo" -eq 1 ] && grep -qF "RECHAZO $esperado:" <<< "$salida"; then
@@ -162,6 +166,16 @@ caso rol-oculto 'prohibida[rol-ddl]' reglas escribir 003_rol_oculto.sql $'CREATE
 caso rol-pertenencia 'prohibida[rol-pertenencia]' reglas escribir 003_miembro.sql $'GRANT pg_read_server_files TO lector;\n'
 # Un comentario en inglés no es un GRANT: la lista prohibida no mira los comentarios.
 caso comentario pasa reglas escribir 003_comentario.sql $'-- grant read to the app\nGRANT SELECT ON c TO lector;\n'
+# Rol: el par acotado de la 116 (SET LOCAL ROLE por EXECUTE y RESET ROLE detrás) pasa con aviso para
+# REA. Sin el RESET, con el RESET delante, de sesión, como «SET role =», SESSION AUTHORIZATION o
+# set_config, no.
+caso rol-local-acotado aviso:rol-local reglas escribir 003_relleno.sql $'DO $r$ BEGIN\n  EXECUTE format(\'SET LOCAL ROLE %I\', \'escritor\');\n  UPDATE c SET id = 1;\n  RESET ROLE;\nEND $r$;\n'
+caso rol-local-sin-reset 'prohibida[rol-local-sin-reset]' reglas escribir 003_relleno.sql $'SET LOCAL ROLE escritor;\nUPDATE c SET id = 1;\n'
+caso rol-local-reset-antes 'prohibida[rol-local-sin-reset]' reglas escribir 003_relleno.sql $'RESET ROLE;\nSET LOCAL ROLE escritor;\n'
+caso rol-sesion 'prohibida[rol-identidad]' reglas escribir 003_rol_sesion.sql $'SET ROLE escritor;\n'
+caso rol-guc 'prohibida[rol-identidad]' reglas escribir 003_rol_guc.sql $'SET role = \'escritor\';\n'
+caso rol-autorizacion 'prohibida[rol-identidad]' reglas escribir 003_autorizacion.sql $'SET SESSION AUTHORIZATION escritor;\n'
+caso rol-set-config 'prohibida[rol-identidad]' reglas escribir 003_set_config.sql $'SELECT set_config(\'role\', \'escritor\', true);\n'
 # Reglas desde el ancla: una 003 con CREATE ROLE entra en un push que no la para y el siguiente
 # solo añade la 004. Contra su base pasa; desde el ancla, no.
 pushes 003_rol.sql $'CREATE ROLE intruso;\n' 004_d.sql $'SELECT 1;\n'
